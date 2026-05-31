@@ -32,6 +32,11 @@ Parameters:
     Default: arn:aws:secretsmanager:us-east-1:065424081594:secret:/openpaw/product-hunt/api-key-6cVJKD
     Description: ARN of existing Product Hunt API Key in Secrets Manager
 
+  ProductHuntApiSecretArn:
+    Type: String
+    Default: arn:aws:secretsmanager:us-east-1:065424081594:secret:/openpaw/product-hunt/api-secret-Q8s1Mx
+    Description: ARN of existing Product Hunt API Secret in Secrets Manager
+
 Resources:
   DailyDigestFunction:
     Type: AWS::Serverless::Function
@@ -45,6 +50,7 @@ Resources:
           GMAIL_CLIENT_SECRET_ARN: !Ref GmailClientSecretArn
           GMAIL_REFRESH_TOKEN_ARN: !Ref GmailRefreshTokenArn
           PRODUCT_HUNT_API_KEY_ARN: !Ref ProductHuntApiKeyArn
+          PRODUCT_HUNT_API_SECRET_ARN: !Ref ProductHuntApiSecretArn
           RECIPIENT_EMAIL: !Ref RecipientEmail
           TIMEZONE: America/Los_Angeles
       Policies:
@@ -56,6 +62,7 @@ Resources:
               - !Ref GmailClientSecretArn
               - !Ref GmailRefreshTokenArn
               - !Ref ProductHuntApiKeyArn
+              - !Ref ProductHuntApiSecretArn
       Events:
         DailyTrigger:
           Type: Schedule

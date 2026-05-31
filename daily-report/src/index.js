@@ -24,14 +24,15 @@ async function handler(event) {
 
     logger.info('Starting daily digest execution');
 
-    const [clientSecret, refreshToken, phApiKey] = await Promise.all([
+    const [clientSecret, refreshToken, phApiKey, phApiSecret] = await Promise.all([
       getSecret(process.env.GMAIL_CLIENT_SECRET_ARN),
       getSecret(process.env.GMAIL_REFRESH_TOKEN_ARN),
-      getSecret(process.env.PRODUCT_HUNT_API_KEY_ARN)
+      getSecret(process.env.PRODUCT_HUNT_API_KEY_ARN),
+      getSecret(process.env.PRODUCT_HUNT_API_SECRET_ARN)
     ]);
 
     const [phProducts, hnStories] = await Promise.allSettled([
-      fetchTopProductHuntProducts(phApiKey),
+      fetchTopProductHuntProducts(phApiKey, phApiSecret),
       fetchTopHackerNewsStories()
     ]);
 

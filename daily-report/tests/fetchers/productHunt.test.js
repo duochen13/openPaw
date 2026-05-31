@@ -1,14 +1,23 @@
 const axios = require('axios');
-const { fetchTopProductHuntProducts } = require('../../src/fetchers/productHunt');
+const { fetchTopProductHuntProducts, clearTokenCache } = require('../../src/fetchers/productHunt');
 
 jest.mock('axios');
 
 describe('Product Hunt Fetcher', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    clearTokenCache(); // Clear cached OAuth token between tests
   });
 
   test('fetches and returns top 5 products by trending score', async () => {
+    const mockOAuthResponse = {
+      data: {
+        access_token: 'fake-access-token',
+        token_type: 'Bearer',
+        expires_in: 3600
+      }
+    };
+
     const mockResponse = {
       data: {
         data: {
@@ -26,9 +35,10 @@ describe('Product Hunt Fetcher', () => {
       }
     };
 
+    axios.post.mockResolvedValueOnce(mockOAuthResponse);
     axios.post.mockResolvedValueOnce(mockResponse);
 
-    const result = await fetchTopProductHuntProducts('fake-api-key');
+    const result = await fetchTopProductHuntProducts('fake-api-key', 'fake-api-secret');
 
     expect(result).toHaveLength(5);
     expect(result[0].name).toBe('Product 2');
@@ -38,6 +48,10 @@ describe('Product Hunt Fetcher', () => {
   });
 
   test('calculates trending score correctly', async () => {
+    const mockOAuthResponse = {
+      data: { access_token: 'fake-token', token_type: 'Bearer', expires_in: 3600 }
+    };
+
     const mockResponse = {
       data: {
         data: {
@@ -50,9 +64,10 @@ describe('Product Hunt Fetcher', () => {
       }
     };
 
+    axios.post.mockResolvedValueOnce(mockOAuthResponse);
     axios.post.mockResolvedValueOnce(mockResponse);
 
-    const result = await fetchTopProductHuntProducts('fake-api-key');
+    const result = await fetchTopProductHuntProducts('fake-api-key', 'fake-api-secret');
 
     const expectedScore = (100 * 0.7) + (50 * 0.3);
     expect(result[0].trendingScore).toBe(expectedScore);
@@ -60,13 +75,15 @@ describe('Product Hunt Fetcher', () => {
 
   test('handles API timeout and tries all fallbacks', async () => {
     axios.post.mockRejectedValueOnce(new Error('timeout of 10000ms exceeded'));
-    axios.post.mockRejectedValueOnce(new Error('timeout of 10000ms exceeded'));
-    axios.post.mockRejectedValueOnce(new Error('timeout of 10000ms exceeded'));
 
-    await expect(fetchTopProductHuntProducts('fake-api-key')).rejects.toThrow();
+    await expect(fetchTopProductHuntProducts('fake-api-key', 'fake-api-secret')).rejects.toThrow();
   });
 
   test('handles missing video URLs gracefully', async () => {
+    const mockOAuthResponse = {
+      data: { access_token: 'fake-token', token_type: 'Bearer', expires_in: 3600 }
+    };
+
     const mockResponse = {
       data: {
         data: {
@@ -79,14 +96,19 @@ describe('Product Hunt Fetcher', () => {
       }
     };
 
+    axios.post.mockResolvedValueOnce(mockOAuthResponse);
     axios.post.mockResolvedValueOnce(mockResponse);
 
-    const result = await fetchTopProductHuntProducts('fake-api-key');
+    const result = await fetchTopProductHuntProducts('fake-api-key', 'fake-api-secret');
 
     expect(result[0].videoUrl).toBeNull();
   });
 
   test('falls back to yesterday when today has no products', async () => {
+    const mockOAuthResponse = {
+      data: { access_token: 'fake-token', token_type: 'Bearer', expires_in: 3600 }
+    };
+
     const emptyResponse = { data: { data: { posts: { edges: [] } } } };
     const yesterdayResponse = {
       data: {
@@ -100,18 +122,34 @@ describe('Product Hunt Fetcher', () => {
       }
     };
 
+    axios.post.mockResolvedValueOnce(mockOAuthResponse);
     axios.post.mockResolvedValueOnce(emptyResponse);
     axios.post.mockResolvedValueOnce(yesterdayResponse);
 
-    const result = await fetchTopProductHuntProducts('fake-api-key');
+    const result = await fetchTopProductHuntProducts('fake-api-key', 'fake-api-secret');
 
     expect(result).toHaveLength(1);
     expect(result[0].name).toBe('Yesterday Product');
   });
 
   test('falls back to last week when today and yesterday have no products', async () => {
-    const emptyResponse = { data: { data: { posts: { edges: [] } } } };
-    const lastWeekResponse = {
+    // Mock OAuth token request
+    axios.post.mockResolvedValueOnce({
+      data: { access_token: 'fake-token', token_type: 'Bearer', expires_in: 3600 }
+    });
+
+    // Mock today's products (empty)
+    axios.post.mockResolvedValueOnce({
+      data: { data: { posts: { edges: [] } } }
+    });
+
+    // Mock yesterday's products (empty)
+    axios.post.mockResolvedValueOnce({
+      data: { data: { posts: { edges: [] } } }
+    });
+
+    // Mock last week's products (has data)
+    axios.post.mockResolvedValueOnce({
       data: {
         data: {
           posts: {
@@ -121,25 +159,26 @@ describe('Product Hunt Fetcher', () => {
           }
         }
       }
-    };
+    });
 
-    axios.post.mockResolvedValueOnce(emptyResponse);
-    axios.post.mockResolvedValueOnce(emptyResponse);
-    axios.post.mockResolvedValueOnce(lastWeekResponse);
-
-    const result = await fetchTopProductHuntProducts('fake-api-key');
+    const result = await fetchTopProductHuntProducts('fake-api-key', 'fake-api-secret');
 
     expect(result).toHaveLength(1);
     expect(result[0].name).toBe('Last Week Product');
   });
 
   test('throws error when all time periods have no products', async () => {
+    const mockOAuthResponse = {
+      data: { access_token: 'fake-token', token_type: 'Bearer', expires_in: 3600 }
+    };
+
     const emptyResponse = { data: { data: { posts: { edges: [] } } } };
 
+    axios.post.mockResolvedValueOnce(mockOAuthResponse);
     axios.post.mockResolvedValueOnce(emptyResponse);
     axios.post.mockResolvedValueOnce(emptyResponse);
     axios.post.mockResolvedValueOnce(emptyResponse);
 
-    await expect(fetchTopProductHuntProducts('fake-api-key')).rejects.toThrow('No Product Hunt products available');
+    await expect(fetchTopProductHuntProducts('fake-api-key', 'fake-api-secret')).rejects.toThrow('No Product Hunt products available');
   });
 });

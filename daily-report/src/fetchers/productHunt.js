@@ -2,7 +2,11 @@ const axios = require('axios');
 const { logger } = require('../utils/logger');
 
 const PH_API_BASE = 'https://api.producthunt.com/v2/api/graphql';
+const PH_OAUTH_URL = 'https://api.producthunt.com/v2/oauth/token';
 const TIMEOUT_MS = 10000;
+
+let cachedAccessToken = null;
+let tokenExpiry = null;
 
 const QUERY_WITH_DATE = `
   query($postedAfter: DateTime!, $postedBefore: DateTime!) {
@@ -24,6 +28,40 @@ const QUERY_WITH_DATE = `
   }
 `;
 
+async function getAccessToken(apiKey, apiSecret) {
+  // Return cached token if still valid
+  if (cachedAccessToken && tokenExpiry && Date.now() < tokenExpiry) {
+    return cachedAccessToken;
+  }
+
+  try {
+    const response = await axios.post(
+      PH_OAUTH_URL,
+      {
+        client_id: apiKey,
+        client_secret: apiSecret,
+        grant_type: 'client_credentials'
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        timeout: TIMEOUT_MS
+      }
+    );
+
+    cachedAccessToken = response.data.access_token;
+    // Set expiry to 1 hour from now (tokens typically last longer, but being conservative)
+    tokenExpiry = Date.now() + (60 * 60 * 1000);
+
+    logger.info('Successfully obtained Product Hunt access token');
+    return cachedAccessToken;
+  } catch (error) {
+    logger.error('Failed to get Product Hunt access token', { error: error.message });
+    throw error;
+  }
+}
+
 function getDateRange(daysAgo) {
   const date = new Date();
   date.setDate(date.getDate() - daysAgo);
@@ -40,8 +78,9 @@ function getDateRange(daysAgo) {
   };
 }
 
-async function fetchProductsForDate(apiKey, daysAgo, label) {
+async function fetchProductsForDate(apiKey, apiSecret, daysAgo, label) {
   try {
+    const accessToken = await getAccessToken(apiKey, apiSecret);
     const dateRange = getDateRange(daysAgo);
 
     const response = await axios.post(
@@ -52,7 +91,7 @@ async function fetchProductsForDate(apiKey, daysAgo, label) {
       },
       {
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
+          'Authorization': `Bearer ${accessToken}`,
           'Content-Type': 'application/json'
         },
         timeout: TIMEOUT_MS
@@ -95,10 +134,10 @@ async function fetchProductsForDate(apiKey, daysAgo, label) {
   }
 }
 
-async function fetchTopProductHuntProducts(apiKey) {
+async function fetchTopProductHuntProducts(apiKey, apiSecret) {
   // Try today first
   try {
-    const todayProducts = await fetchProductsForDate(apiKey, 0, 'today');
+    const todayProducts = await fetchProductsForDate(apiKey, apiSecret, 0, 'today');
     if (todayProducts.length > 0) {
       return todayProducts;
     }
@@ -108,7 +147,7 @@ async function fetchTopProductHuntProducts(apiKey) {
 
   // Fallback to yesterday
   try {
-    const yesterdayProducts = await fetchProductsForDate(apiKey, 1, 'yesterday');
+    const yesterdayProducts = await fetchProductsForDate(apiKey, apiSecret, 1, 'yesterday');
     if (yesterdayProducts.length > 0) {
       return yesterdayProducts;
     }
@@ -118,7 +157,7 @@ async function fetchTopProductHuntProducts(apiKey) {
 
   // Fallback to last week (7 days ago)
   try {
-    const lastWeekProducts = await fetchProductsForDate(apiKey, 7, 'last week');
+    const lastWeekProducts = await fetchProductsForDate(apiKey, apiSecret, 7, 'last week');
     if (lastWeekProducts.length > 0) {
       return lastWeekProducts;
     }
@@ -132,4 +171,10 @@ async function fetchTopProductHuntProducts(apiKey) {
   throw new Error('No Product Hunt products available');
 }
 
-module.exports = { fetchTopProductHuntProducts };
+// For testing: clear cached token
+function clearTokenCache() {
+  cachedAccessToken = null;
+  tokenExpiry = null;
+}
+
+module.exports = { fetchTopProductHuntProducts, clearTokenCache };
