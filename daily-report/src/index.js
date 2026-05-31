@@ -11,18 +11,19 @@ async function handler(event) {
     const timezone = process.env.TIMEZONE || 'America/Los_Angeles';
     const now = DateTime.now().setZone(timezone);
 
-    if (now.hour !== 10 || now.minute > 1) {
-      logger.info('Outside execution window, skipping', {
-        hour: now.hour,
-        minute: now.minute
-      });
-      return {
-        statusCode: 200,
-        body: JSON.stringify({ message: 'Outside execution window' })
-      };
-    }
+    // Temporarily disabled for testing
+    // if (now.hour !== 10 || now.minute > 1) {
+    //   logger.info('Outside execution window, skipping', {
+    //     hour: now.hour,
+    //     minute: now.minute
+    //   });
+    //   return {
+    //     statusCode: 200,
+    //     body: JSON.stringify({ message: 'Outside execution window' })
+    //   };
+    // }
 
-    logger.info('Starting daily digest execution');
+    logger.info('Starting daily digest execution (TIME CHECK DISABLED FOR TESTING)');
 
     const [clientSecret, refreshToken, phApiKey] = await Promise.all([
       getSecret(process.env.GMAIL_CLIENT_SECRET_ARN),

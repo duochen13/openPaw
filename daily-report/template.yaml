@@ -17,6 +17,21 @@ Parameters:
     Type: String
     Description: Email address to send digest to
 
+  GmailClientSecretArn:
+    Type: String
+    Default: arn:aws:secretsmanager:us-east-1:065424081594:secret:/openpaw/gmail/client-secret-hWktkd
+    Description: ARN of existing Gmail Client Secret in Secrets Manager
+
+  GmailRefreshTokenArn:
+    Type: String
+    Default: arn:aws:secretsmanager:us-east-1:065424081594:secret:/openpaw/gmail/refresh-token-e8EDsT
+    Description: ARN of existing Gmail Refresh Token in Secrets Manager
+
+  ProductHuntApiKeyArn:
+    Type: String
+    Default: arn:aws:secretsmanager:us-east-1:065424081594:secret:/openpaw/product-hunt/api-key-6cVJKD
+    Description: ARN of existing Product Hunt API Key in Secrets Manager
+
 Resources:
   DailyDigestFunction:
     Type: AWS::Serverless::Function
@@ -27,9 +42,9 @@ Resources:
       Environment:
         Variables:
           GMAIL_CLIENT_ID: !Ref GmailClientId
-          GMAIL_CLIENT_SECRET_ARN: !Ref GmailClientSecret
-          GMAIL_REFRESH_TOKEN_ARN: !Ref GmailRefreshToken
-          PRODUCT_HUNT_API_KEY_ARN: !Ref ProductHuntApiKey
+          GMAIL_CLIENT_SECRET_ARN: !Ref GmailClientSecretArn
+          GMAIL_REFRESH_TOKEN_ARN: !Ref GmailRefreshTokenArn
+          PRODUCT_HUNT_API_KEY_ARN: !Ref ProductHuntApiKeyArn
           RECIPIENT_EMAIL: !Ref RecipientEmail
           TIMEZONE: America/Los_Angeles
       Policies:
@@ -38,9 +53,9 @@ Resources:
             Action:
               - secretsmanager:GetSecretValue
             Resource:
-              - !Ref GmailClientSecret
-              - !Ref GmailRefreshToken
-              - !Ref ProductHuntApiKey
+              - !Ref GmailClientSecretArn
+              - !Ref GmailRefreshTokenArn
+              - !Ref ProductHuntApiKeyArn
       Events:
         DailyTrigger:
           Type: Schedule
@@ -48,37 +63,11 @@ Resources:
             Schedule: cron(0 17 * * ? *)
             Description: Trigger daily digest at 10am PT
 
-  GmailClientSecret:
-    Type: AWS::SecretsManager::Secret
-    Properties:
-      Name: /openpaw/gmail/client-secret
-      Description: Gmail OAuth Client Secret
-
-  GmailRefreshToken:
-    Type: AWS::SecretsManager::Secret
-    Properties:
-      Name: /openpaw/gmail/refresh-token
-      Description: Gmail OAuth Refresh Token
-
-  ProductHuntApiKey:
-    Type: AWS::SecretsManager::Secret
-    Properties:
-      Name: /openpaw/product-hunt/api-key
-      Description: Product Hunt API Key
-
 Outputs:
-  DailyDigestFunction:
+  DailyDigestFunctionArn:
     Description: Daily Digest Lambda Function ARN
     Value: !GetAtt DailyDigestFunction.Arn
 
-  GmailClientSecretArn:
-    Description: Gmail Client Secret ARN
-    Value: !Ref GmailClientSecret
-
-  GmailRefreshTokenArn:
-    Description: Gmail Refresh Token ARN
-    Value: !Ref GmailRefreshToken
-
-  ProductHuntApiKeyArn:
-    Description: Product Hunt API Key ARN
-    Value: !Ref ProductHuntApiKey
+  DailyDigestFunctionName:
+    Description: Daily Digest Lambda Function Name
+    Value: !Ref DailyDigestFunction

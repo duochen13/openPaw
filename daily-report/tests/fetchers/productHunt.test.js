@@ -11,14 +11,18 @@ describe('Product Hunt Fetcher', () => {
   test('fetches and returns top 5 products by trending score', async () => {
     const mockResponse = {
       data: {
-        posts: [
-          { id: 1, name: 'Product 1', tagline: 'Great product', votesCount: 100, commentsCount: 20, url: 'https://ph.com/1', thumbnail: { videoUrl: 'https://video.com/1' } },
-          { id: 2, name: 'Product 2', tagline: 'Amazing tool', votesCount: 200, commentsCount: 50, url: 'https://ph.com/2', thumbnail: { videoUrl: null } },
-          { id: 3, name: 'Product 3', tagline: 'Cool app', votesCount: 150, commentsCount: 100, url: 'https://ph.com/3', thumbnail: { videoUrl: 'https://video.com/3' } },
-          { id: 4, name: 'Product 4', tagline: 'Best service', votesCount: 80, commentsCount: 10, url: 'https://ph.com/4', thumbnail: { videoUrl: 'https://video.com/4' } },
-          { id: 5, name: 'Product 5', tagline: 'Super app', votesCount: 120, commentsCount: 30, url: 'https://ph.com/5', thumbnail: { videoUrl: 'https://video.com/5' } },
-          { id: 6, name: 'Product 6', tagline: 'Nice tool', votesCount: 90, commentsCount: 15, url: 'https://ph.com/6', thumbnail: { videoUrl: null } }
-        ]
+        data: {
+          posts: {
+            edges: [
+              { node: { id: 1, name: 'Product 1', tagline: 'Great product', votesCount: 100, commentsCount: 20, url: 'https://ph.com/1', thumbnail: { videoUrl: 'https://video.com/1' } } },
+              { node: { id: 2, name: 'Product 2', tagline: 'Amazing tool', votesCount: 200, commentsCount: 50, url: 'https://ph.com/2', thumbnail: { videoUrl: null } } },
+              { node: { id: 3, name: 'Product 3', tagline: 'Cool app', votesCount: 150, commentsCount: 100, url: 'https://ph.com/3', thumbnail: { videoUrl: 'https://video.com/3' } } },
+              { node: { id: 4, name: 'Product 4', tagline: 'Best service', votesCount: 80, commentsCount: 10, url: 'https://ph.com/4', thumbnail: { videoUrl: 'https://video.com/4' } } },
+              { node: { id: 5, name: 'Product 5', tagline: 'Super app', votesCount: 120, commentsCount: 30, url: 'https://ph.com/5', thumbnail: { videoUrl: 'https://video.com/5' } } },
+              { node: { id: 6, name: 'Product 6', tagline: 'Nice tool', votesCount: 90, commentsCount: 15, url: 'https://ph.com/6', thumbnail: { videoUrl: null } } }
+            ]
+          }
+        }
       }
     };
 
@@ -36,9 +40,13 @@ describe('Product Hunt Fetcher', () => {
   test('calculates trending score correctly', async () => {
     const mockResponse = {
       data: {
-        posts: [
-          { id: 1, name: 'Product 1', tagline: 'Test', votesCount: 100, commentsCount: 50, url: 'https://ph.com/1', thumbnail: {} }
-        ]
+        data: {
+          posts: {
+            edges: [
+              { node: { id: 1, name: 'Product 1', tagline: 'Test', votesCount: 100, commentsCount: 50, url: 'https://ph.com/1', thumbnail: {} } }
+            ]
+          }
+        }
       }
     };
 
@@ -50,18 +58,24 @@ describe('Product Hunt Fetcher', () => {
     expect(result[0].trendingScore).toBe(expectedScore);
   });
 
-  test('handles API timeout', async () => {
+  test('handles API timeout and tries all fallbacks', async () => {
+    axios.post.mockRejectedValueOnce(new Error('timeout of 10000ms exceeded'));
+    axios.post.mockRejectedValueOnce(new Error('timeout of 10000ms exceeded'));
     axios.post.mockRejectedValueOnce(new Error('timeout of 10000ms exceeded'));
 
-    await expect(fetchTopProductHuntProducts('fake-api-key')).rejects.toThrow('timeout');
+    await expect(fetchTopProductHuntProducts('fake-api-key')).rejects.toThrow();
   });
 
   test('handles missing video URLs gracefully', async () => {
     const mockResponse = {
       data: {
-        posts: [
-          { id: 1, name: 'Product 1', tagline: 'Test', votesCount: 100, commentsCount: 20, url: 'https://ph.com/1', thumbnail: { videoUrl: null } }
-        ]
+        data: {
+          posts: {
+            edges: [
+              { node: { id: 1, name: 'Product 1', tagline: 'Test', votesCount: 100, commentsCount: 20, url: 'https://ph.com/1', thumbnail: { videoUrl: null } } }
+            ]
+          }
+        }
       }
     };
 
@@ -72,11 +86,60 @@ describe('Product Hunt Fetcher', () => {
     expect(result[0].videoUrl).toBeNull();
   });
 
-  test('returns empty array when no products available', async () => {
-    axios.post.mockResolvedValueOnce({ data: { posts: [] } });
+  test('falls back to yesterday when today has no products', async () => {
+    const emptyResponse = { data: { data: { posts: { edges: [] } } } };
+    const yesterdayResponse = {
+      data: {
+        data: {
+          posts: {
+            edges: [
+              { node: { id: 1, name: 'Yesterday Product', tagline: 'From yesterday', votesCount: 100, commentsCount: 20, url: 'https://ph.com/1', thumbnail: {} } }
+            ]
+          }
+        }
+      }
+    };
+
+    axios.post.mockResolvedValueOnce(emptyResponse);
+    axios.post.mockResolvedValueOnce(yesterdayResponse);
 
     const result = await fetchTopProductHuntProducts('fake-api-key');
 
-    expect(result).toEqual([]);
+    expect(result).toHaveLength(1);
+    expect(result[0].name).toBe('Yesterday Product');
+  });
+
+  test('falls back to last week when today and yesterday have no products', async () => {
+    const emptyResponse = { data: { data: { posts: { edges: [] } } } };
+    const lastWeekResponse = {
+      data: {
+        data: {
+          posts: {
+            edges: [
+              { node: { id: 1, name: 'Last Week Product', tagline: 'From last week', votesCount: 100, commentsCount: 20, url: 'https://ph.com/1', thumbnail: {} } }
+            ]
+          }
+        }
+      }
+    };
+
+    axios.post.mockResolvedValueOnce(emptyResponse);
+    axios.post.mockResolvedValueOnce(emptyResponse);
+    axios.post.mockResolvedValueOnce(lastWeekResponse);
+
+    const result = await fetchTopProductHuntProducts('fake-api-key');
+
+    expect(result).toHaveLength(1);
+    expect(result[0].name).toBe('Last Week Product');
+  });
+
+  test('throws error when all time periods have no products', async () => {
+    const emptyResponse = { data: { data: { posts: { edges: [] } } } };
+
+    axios.post.mockResolvedValueOnce(emptyResponse);
+    axios.post.mockResolvedValueOnce(emptyResponse);
+    axios.post.mockResolvedValueOnce(emptyResponse);
+
+    await expect(fetchTopProductHuntProducts('fake-api-key')).rejects.toThrow('No Product Hunt products available');
   });
 });

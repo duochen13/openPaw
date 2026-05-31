@@ -3,6 +3,7 @@ version = 0.1
 [default.deploy.parameters]
 stack_name = "openpaw-daily-digest"
 region = "us-east-1"
+resolve_s3 = true
 capabilities = "CAPABILITY_IAM"
-parameter_overrides = "GmailClientId=\"\" RecipientEmail=\"\""
-confirm_changeset = true
+parameter_overrides = "GmailClientId=\"438256498490-91258hh5vpr9qn0pk9aktlidpoelm3gp.apps.googleusercontent.com\" RecipientEmail=\"dc3565@columbia.edu\""
+confirm_changeset = false
