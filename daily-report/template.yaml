@@ -1,0 +1,84 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Daily Digest Email Agent
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 512
+    Runtime: nodejs18.x
+
+Parameters:
+  GmailClientId:
+    Type: String
+    Description: Gmail OAuth Client ID
+
+  RecipientEmail:
+    Type: String
+    Description: Email address to send digest to
+
+Resources:
+  DailyDigestFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: openpaw-daily-digest
+      CodeUri: .
+      Handler: src/index.handler
+      Environment:
+        Variables:
+          GMAIL_CLIENT_ID: !Ref GmailClientId
+          GMAIL_CLIENT_SECRET_ARN: !Ref GmailClientSecret
+          GMAIL_REFRESH_TOKEN_ARN: !Ref GmailRefreshToken
+          PRODUCT_HUNT_API_KEY_ARN: !Ref ProductHuntApiKey
+          RECIPIENT_EMAIL: !Ref RecipientEmail
+          TIMEZONE: America/Los_Angeles
+      Policies:
+        - Statement:
+          - Effect: Allow
+            Action:
+              - secretsmanager:GetSecretValue
+            Resource:
+              - !Ref GmailClientSecret
+              - !Ref GmailRefreshToken
+              - !Ref ProductHuntApiKey
+      Events:
+        DailyTrigger:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 17 * * ? *)
+            Description: Trigger daily digest at 10am PT
+
+  GmailClientSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: /openpaw/gmail/client-secret
+      Description: Gmail OAuth Client Secret
+
+  GmailRefreshToken:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: /openpaw/gmail/refresh-token
+      Description: Gmail OAuth Refresh Token
+
+  ProductHuntApiKey:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: /openpaw/product-hunt/api-key
+      Description: Product Hunt API Key
+
+Outputs:
+  DailyDigestFunction:
+    Description: Daily Digest Lambda Function ARN
+    Value: !GetAtt DailyDigestFunction.Arn
+
+  GmailClientSecretArn:
+    Description: Gmail Client Secret ARN
+    Value: !Ref GmailClientSecret
+
+  GmailRefreshTokenArn:
+    Description: Gmail Refresh Token ARN
+    Value: !Ref GmailRefreshToken
+
+  ProductHuntApiKeyArn:
+    Description: Product Hunt API Key ARN
+    Value: !Ref ProductHuntApiKey

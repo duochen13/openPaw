@@ -6,7 +6,9 @@
   "scripts": {
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "build": "sam build",
+    "deploy": "sam deploy --guided"
   },
   "keywords": ["email", "digest", "lambda"],
   "author": "",
