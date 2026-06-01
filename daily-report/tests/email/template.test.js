@@ -100,4 +100,22 @@ describe('Email Template Builder', () => {
 
     expect(html).toContain(today);
   });
+
+  test('includes daily joke section', () => {
+    const html = buildEmailTemplate(mockPHProducts, mockHNStories);
+
+    expect(html).toContain("Today's Tech Joke");
+    expect(html).toContain('😄');
+  });
+
+  test('joke section appears before Product Hunt', () => {
+    const html = buildEmailTemplate(mockPHProducts, mockHNStories);
+
+    const jokeIndex = html.indexOf("Today's Tech Joke");
+    const phIndex = html.indexOf('Product Hunt');
+
+    expect(jokeIndex).toBeGreaterThan(-1);
+    expect(phIndex).toBeGreaterThan(-1);
+    expect(jokeIndex).toBeLessThan(phIndex);
+  });
 });
