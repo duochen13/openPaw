@@ -37,6 +37,30 @@ Parameters:
     Default: arn:aws:secretsmanager:us-east-1:065424081594:secret:/openpaw/product-hunt/api-secret-Q8s1Mx
     Description: ARN of existing Product Hunt API Secret in Secrets Manager
 
+  PlaidClientIdArn:
+    Type: String
+    Description: ARN of Plaid client ID secret in AWS Secrets Manager
+    Default: arn:aws:secretsmanager:us-east-1:065424081594:secret:/openpaw/plaid/client-id-XXXXX
+
+  PlaidSecretArn:
+    Type: String
+    Description: ARN of Plaid secret in AWS Secrets Manager
+    Default: arn:aws:secretsmanager:us-east-1:065424081594:secret:/openpaw/plaid/secret-XXXXX
+
+  PlaidAccessTokenArn:
+    Type: String
+    Description: ARN of Plaid access token secret in AWS Secrets Manager
+    Default: arn:aws:secretsmanager:us-east-1:065424081594:secret:/openpaw/plaid/access-token-XXXXX
+
+  PlaidEnvironment:
+    Type: String
+    Description: Plaid environment (sandbox, development, or production)
+    Default: sandbox
+    AllowedValues:
+      - sandbox
+      - development
+      - production
+
 Resources:
   DailyDigestFunction:
     Type: AWS::Serverless::Function
@@ -53,6 +77,10 @@ Resources:
           PRODUCT_HUNT_API_SECRET_ARN: !Ref ProductHuntApiSecretArn
           RECIPIENT_EMAIL: !Ref RecipientEmail
           TIMEZONE: America/Los_Angeles
+          PLAID_CLIENT_ID_ARN: !Ref PlaidClientIdArn
+          PLAID_SECRET_ARN: !Ref PlaidSecretArn
+          PLAID_ACCESS_TOKEN_ARN: !Ref PlaidAccessTokenArn
+          PLAID_ENVIRONMENT: !Ref PlaidEnvironment
       Policies:
         - Statement:
           - Effect: Allow
@@ -63,6 +91,9 @@ Resources:
               - !Ref GmailRefreshTokenArn
               - !Ref ProductHuntApiKeyArn
               - !Ref ProductHuntApiSecretArn
+              - !Ref PlaidClientIdArn
+              - !Ref PlaidSecretArn
+              - !Ref PlaidAccessTokenArn
       Events:
         DailyTrigger:
           Type: Schedule
