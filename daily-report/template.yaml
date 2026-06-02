@@ -40,17 +40,17 @@ Parameters:
   PlaidClientIdArn:
     Type: String
     Description: ARN of Plaid client ID secret in AWS Secrets Manager
-    Default: arn:aws:secretsmanager:us-east-1:065424081594:secret:/openpaw/plaid/client-id-XXXXX
+    Default: arn:aws:secretsmanager:us-east-1:065424081594:secret:/openpaw/plaid/client-id-ChMp7v
 
   PlaidSecretArn:
     Type: String
     Description: ARN of Plaid secret in AWS Secrets Manager
-    Default: arn:aws:secretsmanager:us-east-1:065424081594:secret:/openpaw/plaid/secret-XXXXX
+    Default: arn:aws:secretsmanager:us-east-1:065424081594:secret:/openpaw/plaid/secret-mZUbAR
 
   PlaidAccessTokenArn:
     Type: String
     Description: ARN of Plaid access token secret in AWS Secrets Manager
-    Default: arn:aws:secretsmanager:us-east-1:065424081594:secret:/openpaw/plaid/access-token-XXXXX
+    Default: arn:aws:secretsmanager:us-east-1:065424081594:secret:/openpaw/plaid/access-token-2vtVRz
 
   PlaidEnvironment:
     Type: String
