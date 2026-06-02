@@ -60,6 +60,7 @@ async function handler(event) {
     if (products.length === 0 && stories.length === 0 && spending.transactions.length === 0) {
       throw new Error('All data sources failed');
     }
+
     const htmlBody = buildEmailTemplate(products, stories, spending);
 
     const emailResult = await sendEmail(
