@@ -8,6 +8,10 @@ module.exports = {
   testMatch: [
     '**/tests/**/*.test.js'
   ],
+  testPathIgnorePatterns: [
+    '/node_modules/',
+    '/.aws-sam/'
+  ],
   clearMocks: true,
   resetMocks: true,
   restoreMocks: true

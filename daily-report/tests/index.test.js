@@ -31,6 +31,7 @@ describe('Lambda Handler', () => {
     process.env.GMAIL_REFRESH_TOKEN_ARN = 'arn:secret2';
     process.env.RECIPIENT_EMAIL = 'test@example.com';
     process.env.PRODUCT_HUNT_API_KEY_ARN = 'arn:secret3';
+    process.env.PRODUCT_HUNT_API_SECRET_ARN = 'arn:secret4';
     process.env.TIMEZONE = 'America/Los_Angeles';
 
     DateTime.now.mockReturnValue({
@@ -43,7 +44,8 @@ describe('Lambda Handler', () => {
     getSecret
       .mockResolvedValueOnce('client-secret')
       .mockResolvedValueOnce('refresh-token')
-      .mockResolvedValueOnce('ph-api-key');
+      .mockResolvedValueOnce('ph-api-key')
+      .mockResolvedValueOnce('ph-api-secret');
   });
 
   test('executes successfully when in time window', async () => {
@@ -58,9 +60,9 @@ describe('Lambda Handler', () => {
     const result = await handler({});
 
     expect(result.statusCode).toBe(200);
-    expect(fetchTopProductHuntProducts).toHaveBeenCalledWith('ph-api-key');
+    expect(fetchTopProductHuntProducts).toHaveBeenCalledWith('ph-api-key', 'ph-api-secret');
     expect(fetchTopHackerNewsStories).toHaveBeenCalled();
-    expect(buildEmailTemplate).toHaveBeenCalledWith(mockPHProducts, mockHNStories);
+    expect(buildEmailTemplate).toHaveBeenCalledWith(mockPHProducts, mockHNStories, { total: 0, transactions: [] });
     expect(sendEmail).toHaveBeenCalled();
   });
 
@@ -90,7 +92,7 @@ describe('Lambda Handler', () => {
     const result = await handler({});
 
     expect(result.statusCode).toBe(200);
-    expect(buildEmailTemplate).toHaveBeenCalledWith([], mockHNStories);
+    expect(buildEmailTemplate).toHaveBeenCalledWith([], mockHNStories, { total: 0, transactions: [] });
   });
 
   test('handles Hacker News API failure gracefully', async () => {
@@ -104,7 +106,7 @@ describe('Lambda Handler', () => {
     const result = await handler({});
 
     expect(result.statusCode).toBe(200);
-    expect(buildEmailTemplate).toHaveBeenCalledWith(mockPHProducts, []);
+    expect(buildEmailTemplate).toHaveBeenCalledWith(mockPHProducts, [], { total: 0, transactions: [] });
   });
 
   test('throws error when both APIs fail', async () => {

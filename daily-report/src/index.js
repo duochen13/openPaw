@@ -51,7 +51,9 @@ async function handler(event) {
       throw new Error('Both data sources failed');
     }
 
-    const htmlBody = buildEmailTemplate(products, stories);
+    // TODO: Add Plaid spending data integration
+    const spendingData = { total: 0, transactions: [] };
+    const htmlBody = buildEmailTemplate(products, stories, spendingData);
 
     const emailResult = await sendEmail(
       process.env.RECIPIENT_EMAIL,
