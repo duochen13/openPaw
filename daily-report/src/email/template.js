@@ -27,7 +27,37 @@ function getDailyJoke() {
   return JOKES[jokeIndex];
 }
 
-function buildEmailTemplate(phProducts, hnStories) {
+function buildSpendingSummarySection(spendingData) {
+  const categoryEmojis = {
+    'Shopping': '🛍️',
+    'Dining': '🍔',
+    'Coffee': '☕',
+    'Transport': '🚗',
+    'Entertainment': '🎬',
+    'Other': '💳'
+  };
+
+  const transactionLines = spendingData.transactions.map(t => {
+    const emoji = categoryEmojis[t.category] || categoryEmojis['Other'];
+    return `${emoji} ${t.merchant} - $${t.amount.toFixed(2)}`;
+  }).join('<br>');
+
+  return `
+    <div class="section" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+      <h2 style="color: white; margin-top: 0;">💰 Yesterday's Spending</h2>
+      <p style="font-size: 24px; font-weight: bold; margin: 10px 0;">$${spendingData.total.toFixed(2)}</p>
+
+      <div style="margin-top: 15px;">
+        <p style="font-size: 14px; opacity: 0.9; margin-bottom: 8px;">Top Transactions:</p>
+        <div style="font-size: 15px; line-height: 1.8;">
+          ${transactionLines}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function buildEmailTemplate(phProducts, hnStories, spendingData) {
   const today = new Date().toLocaleDateString('en-US', {
     month: 'long',
     day: 'numeric',
@@ -35,6 +65,13 @@ function buildEmailTemplate(phProducts, hnStories) {
   });
 
   const dailyJoke = getDailyJoke();
+
+  const spendingSection = spendingData && spendingData.transactions.length > 0
+    ? buildSpendingSummarySection(spendingData)
+    : `<div class="section" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+         <h2 style="color: white; margin-top: 0;">💰 Yesterday's Spending</h2>
+         <p style="color: white; font-style: italic; opacity: 0.9;">Spending data unavailable for yesterday</p>
+       </div>`;
 
   const phSection = phProducts.length > 0
     ? buildProductHuntSection(phProducts)
@@ -62,6 +99,8 @@ function buildEmailTemplate(phProducts, hnStories) {
           <h2 style="color: white; margin-top: 0;">😄 Today's Tech Joke</h2>
           <p style="font-size: 16px; line-height: 1.6; margin: 0;">${dailyJoke}</p>
         </div>
+
+        ${spendingSection}
 
         <div class="section">
           <h2>🚀 Product Hunt</h2>

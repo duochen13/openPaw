@@ -118,4 +118,46 @@ describe('Email Template Builder', () => {
     expect(phIndex).toBeGreaterThan(-1);
     expect(jokeIndex).toBeLessThan(phIndex);
   });
+
+  describe('Spending Summary Section', () => {
+    const mockSpendingData = {
+      total: 87.43,
+      transactions: [
+        { merchant: 'Amazon.com', amount: 39.93, date: '2026-05-31', category: 'Shopping' },
+        { merchant: 'Chipotle', amount: 18.50, date: '2026-05-31', category: 'Dining' },
+        { merchant: 'Starbucks', amount: 14.00, date: '2026-05-31', category: 'Dining' }
+      ]
+    };
+
+    test('includes spending section when data available', () => {
+      const html = buildEmailTemplate(mockPHProducts, mockHNStories, mockSpendingData);
+
+      expect(html).toContain('Yesterday\'s Spending');
+      expect(html).toContain('$87.43');
+      expect(html).toContain('Amazon.com');
+      expect(html).toContain('$39.93');
+    });
+
+    test('shows fallback message when no transactions', () => {
+      const emptySpending = { total: 0, transactions: [] };
+      const html = buildEmailTemplate(mockPHProducts, mockHNStories, emptySpending);
+
+      expect(html).toContain('Yesterday\'s Spending');
+      expect(html).toContain('Spending data unavailable for yesterday');
+    });
+
+    test('spending section appears after joke and before Product Hunt', () => {
+      const html = buildEmailTemplate(mockPHProducts, mockHNStories, mockSpendingData);
+
+      const jokeIndex = html.indexOf('Today\'s Tech Joke');
+      const spendingIndex = html.indexOf('Yesterday\'s Spending');
+      const phIndex = html.indexOf('Product Hunt');
+
+      expect(jokeIndex).toBeGreaterThan(-1);
+      expect(spendingIndex).toBeGreaterThan(-1);
+      expect(phIndex).toBeGreaterThan(-1);
+      expect(jokeIndex).toBeLessThan(spendingIndex);
+      expect(spendingIndex).toBeLessThan(phIndex);
+    });
+  });
 });
