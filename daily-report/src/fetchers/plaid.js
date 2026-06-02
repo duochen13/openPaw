@@ -51,12 +51,12 @@ async function fetchPlaidSpending(clientId, secret, accessToken, environment) {
       category: mapCategory(t.category)
     }));
 
-    // Calculate total
-    const total = transformed.reduce((sum, t) => sum + t.amount, 0);
-
     // Sort by amount descending and take top 3
-    const sorted = transformed.sort((a, b) => b.amount - a.amount);
+    const sorted = [...transformed].sort((a, b) => b.amount - a.amount);
     const top3 = sorted.slice(0, 3);
+
+    // Calculate total from top 3
+    const total = top3.reduce((sum, t) => sum + t.amount, 0);
 
     logger.info('Plaid spending fetched', {
       transactionCount: top3.length,
@@ -82,7 +82,12 @@ function mapCategory(categories) {
   if (!categories || categories.length === 0) return 'Other';
 
   const primary = categories[0];
+  const allCategories = categories.join(' ');
 
+  // Check for coffee first (more specific than general dining)
+  if (primary.includes('Food and Drink') && allCategories.toLowerCase().includes('coffee')) {
+    return 'Coffee';
+  }
   if (primary.includes('Food and Drink')) return 'Dining';
   if (primary.includes('Shops')) return 'Shopping';
   if (primary.includes('Travel')) return 'Transport';
