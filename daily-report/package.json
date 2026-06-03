@@ -27,6 +27,7 @@
     "plaid": "^42.2.0"
   },
   "devDependencies": {
+    "@aws-sdk/client-iam": "^3.1059.0",
     "@aws-sdk/client-lambda": "^3.1058.0",
     "@types/jest": "^30.0.0",
     "aws-sdk-client-mock": "^4.1.0",
