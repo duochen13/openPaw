@@ -57,7 +57,111 @@ function buildSpendingSummarySection(spendingData) {
   `;
 }
 
-function buildEmailTemplate(phProducts, hnStories, spendingData) {
+function buildFoodOrdersSection(foodOrdersData) {
+  const { orders, summary } = foodOrdersData;
+
+  if (!orders || orders.length === 0) {
+    return `
+      <div class="section" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+        <h2 style="color: white; margin-top: 0;">🍔 Food Orders & Nutrition</h2>
+        <p style="color: white; font-style: italic; opacity: 0.9;">No food delivery orders detected yesterday</p>
+      </div>
+    `;
+  }
+
+  const platformEmojis = {
+    'UberEats': '🚗',
+    'DoorDash': '🏃',
+    'Grubhub': '🍽️'
+  };
+
+  const ordersHTML = orders.map(order => {
+    const platformEmoji = platformEmojis[order.platform] || '🍔';
+    const orderTime = new Date(order.timestamp).toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+
+    const itemsHTML = order.items.map(item => {
+      const nutrition = item.nutrition;
+      const estimateBadge = nutrition.isEstimate
+        ? '<span style="font-size: 11px; background: rgba(255,255,255,0.3); padding: 2px 6px; border-radius: 3px; margin-left: 5px;">est.</span>'
+        : '';
+
+      return `
+        <div style="margin: 8px 0; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 4px;">
+          <div style="font-weight: bold;">${item.name} ${item.quantity > 1 ? `x${item.quantity}` : ''}</div>
+          <div style="font-size: 13px; margin-top: 4px; opacity: 0.9;">
+            ${nutrition.totalCalories} cal | ${nutrition.totalProtein}g protein | ${nutrition.totalCarbs}g carbs | ${nutrition.totalFat}g fat
+            ${estimateBadge}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    return `
+      <div style="margin: 15px 0; padding: 12px; background: rgba(255,255,255,0.15); border-radius: 6px;">
+        <div style="font-weight: bold; font-size: 16px; margin-bottom: 8px;">
+          ${platformEmoji} ${orderTime} - ${order.restaurant}
+        </div>
+        ${itemsHTML}
+        <div style="margin-top: 8px; font-size: 14px; opacity: 0.9;">
+          Total: $${(order.total || 0).toFixed(2)}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  const dailyBudget = parseFloat(process.env.DAILY_FOOD_BUDGET || 32);
+  const budgetRemaining = dailyBudget - summary.totalSpent;
+  const budgetStatus = budgetRemaining >= 0
+    ? `✅ Within budget ($${budgetRemaining.toFixed(2)} remaining)`
+    : `⚠️ Over budget by $${Math.abs(budgetRemaining).toFixed(2)}`;
+
+  const estimateWarning = summary.estimatedItems > 0
+    ? `<p style="font-size: 12px; opacity: 0.8; margin-top: 10px;">⚠️ ${summary.estimatedItems} item(s) used estimated nutrition data</p>`
+    : '';
+
+  return `
+    <div class="section" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+      <h2 style="color: white; margin-top: 0;">🍔 Food Orders & Nutrition</h2>
+
+      <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 20px;">
+        <div>
+          <p style="font-size: 14px; opacity: 0.9; margin: 0;">Orders</p>
+          <p style="font-size: 24px; font-weight: bold; margin: 5px 0 0 0;">${summary.totalOrders}</p>
+        </div>
+        <div>
+          <p style="font-size: 14px; opacity: 0.9; margin: 0;">Total Calories</p>
+          <p style="font-size: 24px; font-weight: bold; margin: 5px 0 0 0;">${Math.round(summary.totalCalories)}</p>
+        </div>
+        <div>
+          <p style="font-size: 14px; opacity: 0.9; margin: 0;">Protein</p>
+          <p style="font-size: 20px; font-weight: bold; margin: 5px 0 0 0;">${Math.round(summary.totalProtein)}g</p>
+        </div>
+        <div>
+          <p style="font-size: 14px; opacity: 0.9; margin: 0;">Total Spent</p>
+          <p style="font-size: 20px; font-weight: bold; margin: 5px 0 0 0;">$${summary.totalSpent.toFixed(2)}</p>
+        </div>
+      </div>
+
+      <div style="margin-top: 15px; padding: 12px; background: rgba(255,255,255,0.2); border-radius: 6px;">
+        <p style="font-size: 14px; opacity: 0.9; margin: 0 0 5px 0;">Budget Status</p>
+        <p style="font-size: 16px; font-weight: bold; margin: 0;">${budgetStatus}</p>
+      </div>
+
+      <div style="margin-top: 20px;">
+        <p style="font-size: 14px; opacity: 0.9; margin-bottom: 10px;">Yesterday's Orders:</p>
+        ${ordersHTML}
+      </div>
+
+      ${estimateWarning}
+    </div>
+  `;
+}
+
+function buildEmailTemplate(phProducts, hnStories, spendingData, foodOrdersData = null) {
   const today = new Date().toLocaleDateString('en-US', {
     month: 'long',
     day: 'numeric',
@@ -72,6 +176,10 @@ function buildEmailTemplate(phProducts, hnStories, spendingData) {
          <h2 style="color: white; margin-top: 0;">💰 Yesterday's Spending</h2>
          <p style="color: white; font-style: italic; opacity: 0.9;">Spending data unavailable for yesterday</p>
        </div>`;
+
+  const foodOrdersSection = foodOrdersData
+    ? buildFoodOrdersSection(foodOrdersData)
+    : '';
 
   const phSection = phProducts.length > 0
     ? buildProductHuntSection(phProducts)
@@ -101,6 +209,8 @@ function buildEmailTemplate(phProducts, hnStories, spendingData) {
         </div>
 
         ${spendingSection}
+
+        ${foodOrdersSection}
 
         <div class="section">
           <h2>🚀 Product Hunt</h2>

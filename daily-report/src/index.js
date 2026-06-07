@@ -61,7 +61,11 @@ async function handler(event) {
       throw new Error('All data sources failed');
     }
 
-    const htmlBody = buildEmailTemplate(products, stories, spending);
+    // Fetch food orders (currently returns empty data - to be implemented)
+    const { fetchFoodOrdersFromEmail } = require('./fetchers/foodOrders');
+    const foodOrders = await fetchFoodOrdersFromEmail();
+
+    const htmlBody = buildEmailTemplate(products, stories, spending, foodOrders);
 
     const emailResult = await sendEmail(
       process.env.RECIPIENT_EMAIL,
