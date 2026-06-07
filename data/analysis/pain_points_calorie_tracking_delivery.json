@@ -1,0 +1,182 @@
+{
+  "domain": "calorie_tracking_delivery",
+  "timestamp": "2026-06-07T01:30:00Z",
+  "source": "web_search",
+  "pain_points": [
+    {
+      "category": "Manual Entry Friction",
+      "priority": "CRITICAL",
+      "frequency": "Very High",
+      "severity": 9,
+      "description": "Manual logging is tedious, time-consuming, and the #1 reason for app abandonment",
+      "evidence": [
+        {
+          "quote": "80% of calorie trackers fail because manual entry is tedious",
+          "source": "https://www.getmiora.com/blog/best-ai-calorie-counter-apps-2026"
+        },
+        {
+          "quote": "If logging a meal takes more than 30 seconds, most people will abandon it within two weeks",
+          "source": "https://www.welling.ai/articles/welling-vs-myfitnesspal-2026"
+        },
+        {
+          "quote": "Users spend minutes searching through endless database options, tweaking portions, and second-guessing entries, and by the time they're done, motivation is gone",
+          "source": "https://www.planeatai.com/blog/best-ai-calorie-tracker-apps-in-2026"
+        },
+        {
+          "quote": "Manual data entry quickly becomes a tedious chore, which is why a significant percentage of users abandon traditional tracking within just two weeks",
+          "source": "https://fitia.app/learn/article/top-12-nutrition-tracking-apps-2026/"
+        }
+      ],
+      "user_impact": "70% of users abandon nutrition apps within two weeks if tracking feels too complex or time-consuming",
+      "opportunity": "Eliminate manual entry through automatic order integration with delivery platforms"
+    },
+    {
+      "category": "UI/UX Degradation",
+      "priority": "HIGH",
+      "frequency": "High",
+      "severity": 8,
+      "description": "Recent app redesigns add friction and slow down daily logging workflows",
+      "evidence": [
+        {
+          "quote": "The 2026 MyFitnessPal redesign added friction with more taps to log a meal, a diary that no longer shows calories per meal at a glance, and removed or hidden shortcuts like copy-meal and multi-select. Users report their daily logging routine went from 90 seconds to several minutes",
+          "source": "https://platelens.app/blog/myfitnesspal-alternatives-2026"
+        },
+        {
+          "quote": "Many users express frustration with the user interface, especially when excessive ads, pop-ups, and sudden UI changes disrupt their experience",
+          "source": "https://kimola.com/blog/understanding-calorie-tracking-and-nutrition-apps-through-customer-feedback-analysis"
+        }
+      ],
+      "user_impact": "Daily logging time increased from 90 seconds to several minutes",
+      "opportunity": "Zero-friction interface with automatic population from delivery orders"
+    },
+    {
+      "category": "Pricing & Paywalls",
+      "priority": "HIGH",
+      "frequency": "Very High",
+      "severity": 8,
+      "description": "Premium features behind expensive paywalls, with many users feeling nickel-and-dimed",
+      "evidence": [
+        {
+          "quote": "97% of MyFitnessPal users are unhappy with the app's premium membership pricing, describing it as overly expensive",
+          "source": "https://kimola.com/blog/understanding-calorie-tracking-and-nutrition-apps-through-customer-feedback-analysis"
+        },
+        {
+          "quote": "Barcode scanning moved behind paywall in 2022, and premium now costs $80/year",
+          "source": "https://askvora.com/blog/best-myfitnesspal-alternatives-2026"
+        },
+        {
+          "quote": "Hidden pricing is the most common complaint, where users cannot see the cost until after completing the full onboarding process",
+          "source": "https://www.mynetdiary.com/how-to-find-the-best-calorie-tracker-app.html"
+        }
+      ],
+      "user_impact": "95% of Yazio users find subscription system unbalanced",
+      "opportunity": "Transparent pricing with core automation features available in free tier"
+    },
+    {
+      "category": "AI Accuracy Issues",
+      "priority": "HIGH",
+      "frequency": "Moderate",
+      "severity": 7,
+      "description": "Photo-based AI tracking provides inaccurate calorie estimates, often off by hundreds of calories",
+      "evidence": [
+        {
+          "quote": "Wildly inaccurate AI calorie estimates are a major issue, with users reporting errors of hundreds of calories (for example, an apple estimated at 438 calories, two eggs at 460)",
+          "source": "https://platelens.app/blog/myfitnesspal-alternatives-2026"
+        },
+        {
+          "quote": "The AI function is not reliable - sometimes it's amazingly accurate, but other times it gets the type of food wrong or it will misjudge the weight by a factor of two. For example, in a salad, chopped avocado was counted as chopped cucumber",
+          "source": "https://calorietrackerlab.com/reviews/snapcalorie/"
+        },
+        {
+          "quote": "SnapCalorie showed ±19.8% MAPE on weighed reference meals",
+          "source": "https://nutrola.app/en/blog/nutrola-vs-cal-ai-vs-snapcalorie-photo-calorie-tracker-2026"
+        }
+      ],
+      "user_impact": "15-20% error rate on photo-based AI tracking, with lack of user control to correct mistakes",
+      "opportunity": "Use exact menu item data from delivery platforms instead of AI estimation"
+    },
+    {
+      "category": "Database Accuracy",
+      "priority": "MEDIUM",
+      "frequency": "High",
+      "severity": 6,
+      "description": "Crowdsourced food databases contain inaccurate or outdated nutritional information",
+      "evidence": [
+        {
+          "quote": "There is often frustration with inaccuracies or gaps in the nutritional data. Users see the same issues mentioned repeatedly, including inaccurate database",
+          "source": "https://kimola.com/blog/understanding-calorie-tracking-and-nutrition-apps-through-customer-feedback-analysis"
+        },
+        {
+          "quote": "Manual database searches, especially for restaurant meals or home-cooked dishes that do not match any standard entry, can take several minutes and often end in frustration or approximation",
+          "source": "https://www.getmiora.com/blog/best-ai-calorie-counter-apps-2026"
+        }
+      ],
+      "user_impact": "Users spend minutes searching and often settle for approximations",
+      "opportunity": "Direct API access to verified restaurant menu nutrition data"
+    },
+    {
+      "category": "Integration Gaps",
+      "priority": "HIGH",
+      "frequency": "Moderate",
+      "severity": 8,
+      "description": "No seamless integration with food delivery platforms despite most users ordering regularly",
+      "evidence": [
+        {
+          "quote": "Poor integration with other apps might lead to disappointment with an app and to subsequent disengagement",
+          "source": "https://pmc.ncbi.nlm.nih.gov/articles/PMC8409150/"
+        }
+      ],
+      "user_impact": "Users must manually re-enter delivery orders into calorie tracking apps",
+      "opportunity": "First-mover advantage: automatic import from UberEats, DoorDash, Grubhub via transaction data or receipts"
+    },
+    {
+      "category": "Excessive Advertising",
+      "priority": "MEDIUM",
+      "frequency": "High",
+      "severity": 6,
+      "description": "Intrusive ads and constant upgrade prompts disrupt user experience",
+      "evidence": [
+        {
+          "quote": "The overload of ads and pressure to upgrade to premium membership negatively affect user experience. Some users express frustration about encountering ads despite having paid for the service",
+          "source": "https://kimola.com/blog/understanding-calorie-tracking-and-nutrition-apps-through-customer-feedback-analysis"
+        },
+        {
+          "quote": "95% of Yazio users find the subscription system unbalanced, with frequent complaints about misleading advertisements regarding free trials and intrusive ads appearing after meal logging",
+          "source": "https://www.mynetdiary.com/diet-app-scorecard-february-2026.html"
+        }
+      ],
+      "user_impact": "Ads appear even for paid users, disrupting tracking workflow",
+      "opportunity": "Ad-free experience with revenue from premium features, not interruptions"
+    },
+    {
+      "category": "Office Worker Friction",
+      "priority": "HIGH",
+      "frequency": "Moderate",
+      "severity": 7,
+      "description": "Office workers with late-night food budgets lack tools to track reimbursed meals effortlessly",
+      "evidence": [
+        {
+          "quote": "While most workplaces hit peak orders around noon, AI-driven companies are fueling up after hours, with the busiest hours between 5pm and 7pm. Additionally, the Bay Area leads all markets in late-night workplace orders (24% of orders after 6pm)",
+          "source": "https://about.doordash.com/en-us/news/doordash-workplace-meal-trends-report-2026"
+        },
+        {
+          "quote": "Employees are staying later at the office, and relying on workplace meals to support extended in-office collaboration",
+          "source": "https://about.doordash.com/en-us/news/doordash-workplace-meal-trends-report-2026"
+        }
+      ],
+      "user_impact": "Office workers ordering after 6:30pm with company budgets have no automated way to track nutrition",
+      "opportunity": "Target this specific persona: automatic tracking for budgeted late-night work meals"
+    }
+  ],
+  "summary": {
+    "total_pain_points": 8,
+    "critical_count": 1,
+    "high_count": 5,
+    "medium_count": 2,
+    "top_3_priorities": [
+      "Manual Entry Friction (80% abandonment rate)",
+      "Integration Gaps (no delivery platform connections)",
+      "Office Worker Friction (unmet use case for budgeted meals)"
+    ]
+  }
+}

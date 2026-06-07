@@ -1,0 +1,278 @@
+{
+  "domain": "calorie_tracking_delivery",
+  "timestamp": "2026-06-07T01:30:00Z",
+  "source": "web_search",
+  "competitors": [
+    {
+      "name": "MyFitnessPal",
+      "category": "Incumbent Leader",
+      "market_position": "Market leader with largest user base",
+      "what_they_do": "Traditional calorie tracking with large food database (millions of foods), barcode scanning (premium only since 2022), macro tracking, exercise logging",
+      "pricing": "$80/year premium",
+      "sentiment": "NEGATIVE (declining)",
+      "mention_count": "Very High",
+      "strengths": [
+        "Largest food database",
+        "Strong brand recognition",
+        "Comprehensive exercise integration"
+      ],
+      "weaknesses": [
+        "2026 redesign added friction (90s → several minutes per log)",
+        "97% of users unhappy with premium pricing",
+        "Barcode scanning moved to paywall in 2022",
+        "Feature development has slowed",
+        "Excessive ads even for premium users"
+      ],
+      "user_quotes": [
+        {
+          "quote": "The 2026 MyFitnessPal redesign added friction with more taps to log a meal, a diary that no longer shows calories per meal at a glance, and removed or hidden shortcuts like copy-meal and multi-select. Users report their daily logging routine went from 90 seconds to several minutes",
+          "source": "https://platelens.app/blog/myfitnesspal-alternatives-2026",
+          "sentiment": "negative"
+        },
+        {
+          "quote": "Free features have become more restricted, ads more prominent, and feature development has slowed while newer competitors have built AI-native experiences that feel significantly more modern",
+          "source": "https://askvora.com/blog/best-myfitnesspal-alternatives-2026",
+          "sentiment": "negative"
+        }
+      ],
+      "recent_activity": "Acquired Cal AI (March 2026) and Intent meal planning app (2025), added ChatGPT Health integration (Jan 2026)",
+      "threat_level": "MEDIUM (vulnerable to disruption despite market position)"
+    },
+    {
+      "name": "Cronometer",
+      "category": "Premium Precision",
+      "market_position": "Best-in-class for nutrient tracking",
+      "what_they_do": "Deep micronutrient tracking (84 nutrients), most precise database, barcode scanner, therapeutic diet support",
+      "pricing": "Premium tier available",
+      "sentiment": "POSITIVE",
+      "mention_count": "High",
+      "strengths": [
+        "Most accurate database",
+        "Tracks 84 micronutrients",
+        "Excellent for specific health conditions",
+        "Best barcode scanner (per user reviews)"
+      ],
+      "weaknesses": [
+        "More complex interface",
+        "Overkill for basic calorie tracking"
+      ],
+      "user_quotes": [
+        {
+          "quote": "For nutrient depth, Cronometer shines. Tracks 84 micronutrients — iron, zinc, vitamin D, B12, and more. Excellent for managing specific health conditions or following therapeutic diets",
+          "source": "https://askvora.com/blog/best-myfitnesspal-alternatives-2026",
+          "sentiment": "positive"
+        }
+      ],
+      "threat_level": "LOW (different target market: health-focused power users)"
+    },
+    {
+      "name": "Vora",
+      "category": "Modern Alternative",
+      "market_position": "Rising competitor with AI-first approach",
+      "what_they_do": "Faster logging, deep nutrient tracking, nutrition as part of complete health platform, generous free tier",
+      "pricing": "Genuinely useful free tier + premium",
+      "sentiment": "POSITIVE",
+      "mention_count": "Moderate",
+      "strengths": [
+        "Faster logging than MFP",
+        "Generous free tier without ads",
+        "Modern AI-native experience",
+        "Part of complete health platform"
+      ],
+      "weaknesses": [
+        "Smaller food database than MFP",
+        "Newer entrant with less brand recognition"
+      ],
+      "user_quotes": [
+        {
+          "quote": "Best for people who want faster logging, deep nutrient tracking, and nutrition as part of a complete health platform with a genuinely useful free tier",
+          "source": "https://askvora.com/blog/best-myfitnesspal-alternatives-2026",
+          "sentiment": "positive"
+        }
+      ],
+      "threat_level": "MEDIUM (directly competing on speed and user experience)"
+    },
+    {
+      "name": "Nutrola",
+      "category": "AI Photo Tracking",
+      "market_position": "AI-first photo-based tracking",
+      "what_they_do": "Snap & Track AI - photo of meal → automatic identification, portion estimation, calorie/macro logging in <3 seconds",
+      "pricing": "Premium model",
+      "sentiment": "POSITIVE",
+      "mention_count": "Moderate",
+      "strengths": [
+        "Fastest photo-to-log workflow (<3 seconds)",
+        "Handles homemade dishes and regional cuisines",
+        "Modern AI-native interface"
+      ],
+      "weaknesses": [
+        "AI accuracy issues for complex meals",
+        "Limited control when AI makes mistakes"
+      ],
+      "user_quotes": [
+        {
+          "quote": "Snap & Track AI: Take a photo of any meal and Nutrola identifies the food, estimates portion sizes, and logs the calories and macros in under three seconds. It handles homemade dishes, restaurant plates, and regional cuisines that other apps struggle with",
+          "source": "https://nutrola.app/en/blog/best-myfitnesspal-alternatives-2026",
+          "sentiment": "positive"
+        }
+      ],
+      "threat_level": "MEDIUM (competing on speed, but AI accuracy is limiting factor)"
+    },
+    {
+      "name": "SnapCalorie",
+      "category": "AI Photo Tracking",
+      "market_position": "Established AI photo tracker",
+      "what_they_do": "AI-powered photo calorie counting with voice, picture, or label input",
+      "pricing": "Premium model",
+      "sentiment": "MIXED",
+      "mention_count": "Moderate",
+      "strengths": [
+        "Multiple input methods (voice, photo, barcode)",
+        "Fast meal analysis (seconds)",
+        "4.7/5 App Store rating"
+      ],
+      "weaknesses": [
+        "±19.8% error rate (vs ±1.2% for PlateLens)",
+        "Unreliable AI - sometimes wrong food type or 2x weight error",
+        "Limited ability to correct AI mistakes"
+      ],
+      "user_quotes": [
+        {
+          "quote": "The AI function is not reliable - sometimes it's amazingly accurate, but other times it gets the type of food wrong or it will misjudge the weight by a factor of two. For example, in a salad, chopped avocado was counted as chopped cucumber",
+          "source": "https://calorietrackerlab.com/reviews/snapcalorie/",
+          "sentiment": "negative"
+        },
+        {
+          "quote": "SnapCalorie is on average around 15% mean caloric error (that's +/- 150 calories on a 1000 calorie dish)",
+          "source": "https://www.snapcalorie.com/faq.html",
+          "sentiment": "neutral"
+        }
+      ],
+      "threat_level": "LOW (accuracy issues limit appeal)"
+    },
+    {
+      "name": "Cal AI",
+      "category": "AI Photo Tracking",
+      "market_position": "Acquired by MyFitnessPal (March 2026)",
+      "what_they_do": "AI photo recognition for calorie tracking",
+      "pricing": "Now integrated into MFP",
+      "sentiment": "POSITIVE (pre-acquisition)",
+      "mention_count": "Moderate",
+      "strengths": [
+        "Reasonable accuracy for simple Western foods",
+        "Fast photo-to-log workflow"
+      ],
+      "weaknesses": [
+        "Accuracy decreases for complex/homemade dishes",
+        "No database cross-reference for verification"
+      ],
+      "user_quotes": [
+        {
+          "quote": "Cal AI provides reasonable calorie estimates for simple, clearly visible Western foods, but accuracy decreases significantly for complex meals, homemade dishes because it relies on AI estimation without cross-referencing a verified database",
+          "source": "https://nutriscan.app/blog/posts/cal-ai-pricing-2026-monthly-yearly-premium-abc6e7b26f",
+          "sentiment": "neutral"
+        }
+      ],
+      "recent_activity": "Acquired by MyFitnessPal in early March 2026",
+      "threat_level": "N/A (acquired)"
+    },
+    {
+      "name": "Lose It!",
+      "category": "Traditional Tracker",
+      "market_position": "Established MFP alternative",
+      "what_they_do": "Large food database (10M+ foods), barcode scanning, macro tracking, exercise logging, goal customization",
+      "pricing": "Free version includes barcode scanning, premium available",
+      "sentiment": "POSITIVE",
+      "mention_count": "High",
+      "strengths": [
+        "10M+ food database",
+        "Barcode scanning in free tier",
+        "Macro tracking in free tier",
+        "Reliable and stable"
+      ],
+      "weaknesses": [
+        "Still requires manual entry",
+        "Less innovative than AI-first competitors"
+      ],
+      "threat_level": "MEDIUM (direct MFP alternative but same manual entry friction)"
+    },
+    {
+      "name": "MacroFactor",
+      "category": "Advanced Coaching",
+      "market_position": "Premium macro coaching platform",
+      "what_they_do": "Advanced macro coaching with adaptive algorithms",
+      "pricing": "Premium subscription",
+      "sentiment": "POSITIVE",
+      "mention_count": "Moderate",
+      "strengths": [
+        "Best-in-class macro coaching",
+        "Adaptive algorithms",
+        "Data-driven recommendations"
+      ],
+      "weaknesses": [
+        "More expensive",
+        "Aimed at serious fitness enthusiasts"
+      ],
+      "threat_level": "LOW (different market segment: serious fitness tracking)"
+    },
+    {
+      "name": "Foodnoms",
+      "category": "Privacy-Focused",
+      "market_position": "Apple ecosystem specialist",
+      "what_they_do": "Simple, customizable, privacy-friendly tracking built for Apple devices",
+      "pricing": "One-time purchase model",
+      "sentiment": "POSITIVE",
+      "mention_count": "Low-Moderate",
+      "strengths": [
+        "Privacy-first design",
+        "Apple ecosystem integration",
+        "One-time purchase (no subscription)"
+      ],
+      "weaknesses": [
+        "Apple-only",
+        "Smaller food database"
+      ],
+      "threat_level": "LOW (niche: Apple users who value privacy)"
+    }
+  ],
+  "delivery_platform_integration": {
+    "current_state": "NO direct consumer nutrition apps with delivery platform integration found",
+    "api_availability": {
+      "uber_eats": {
+        "consumer_api": "Merchant-focused APIs only. OAuth 2.0, whitelisting required",
+        "nutrition_data": "Not explicitly available via public consumer API",
+        "source": "https://developer.uber.com/docs/eats/introduction"
+      },
+      "doordash": {
+        "consumer_api": "No public consumer API documented",
+        "business_api": "DoorDash for Business API available for enterprise meal programs",
+        "source": "https://business.doordash.com/"
+      },
+      "plaid": {
+        "transaction_data": "Can identify DoorDash/UberEats transactions as 'marketplace' type with 90%+ categorization accuracy",
+        "nutrition_data": "No - only transaction history, not order details",
+        "pricing": "Usage-based, pay per successful connection",
+        "source": "https://plaid.com/docs/api/products/transactions/"
+      },
+      "receipt_ocr": {
+        "technology": "2026 transformer-based AI models can extract 40+ fields including itemized line items",
+        "accuracy": "High for discrete items (grocery), lower for restaurant aggregated totals",
+        "nutrition_link": "No automatic nutrition linking - would require manual mapping",
+        "source": "https://tabscanner.com/"
+      }
+    },
+    "integration_opportunities": [
+      "Transaction-based import via Plaid API (can identify delivery orders, but no item-level data)",
+      "Receipt OCR parsing (can extract items, but requires nutrition database mapping)",
+      "Email receipt parsing (UberEats/DoorDash send detailed email receipts with itemized orders)",
+      "Unified food delivery APIs (KitchenHub, MealMe) - focus on restaurant POS, not consumer nutrition"
+    ],
+    "gap_analysis": "MAJOR OPPORTUNITY: No existing consumer app automatically imports delivery orders into calorie tracking. All current solutions require manual re-entry."
+  },
+  "market_trends": {
+    "shift_to_ai": "Market moving from manual entry to AI photo tracking, but accuracy remains a blocker",
+    "premium_fatigue": "Users frustrated with expensive subscriptions and features behind paywalls",
+    "workplace_meals": "24% of Bay Area delivery orders after 6pm are workplace orders, growing trend for late-night office meals",
+    "api_ecosystem": "Nutrition APIs (Nutritionix, Edamam, Spoonacular) mature and available, but not connected to delivery platforms"
+  }
+}
