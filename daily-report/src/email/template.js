@@ -64,7 +64,19 @@ function buildFoodOrdersSection(foodOrdersData) {
     return `
       <div class="section" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
         <h2 style="color: white; margin-top: 0;">🍔 Food Orders & Nutrition</h2>
-        <p style="color: white; font-style: italic; opacity: 0.9;">No food delivery orders detected yesterday</p>
+        <p style="color: white; opacity: 0.9; margin-bottom: 15px;">No food delivery orders detected yesterday</p>
+
+        <div style="margin-top: 15px; padding: 12px; background: rgba(255,255,255,0.15); border-radius: 6px; border-left: 4px solid rgba(255,255,255,0.4);">
+          <p style="font-size: 14px; margin: 0; line-height: 1.6;">
+            📊 <strong>Tracks orders from:</strong> UberEats, DoorDash, Grubhub
+            <br><br>
+            🥗 <strong>Automatically fetches:</strong> Items, calories, protein, carbs, fat
+            <br><br>
+            💰 <strong>Daily budget:</strong> $${parseFloat(process.env.DAILY_FOOD_BUDGET || 32).toFixed(2)}
+            <br><br>
+            📄 <strong>Uber Eats PDFs:</strong> Download receipts to <code style="background: rgba(0,0,0,0.2); padding: 2px 6px; border-radius: 3px;">~/Downloads/uber-receipts/</code> for itemized tracking
+          </p>
+        </div>
       </div>
     `;
   }
@@ -126,9 +138,11 @@ function buildFoodOrdersSection(foodOrdersData) {
   const pdfOnlyWarning = summary.pdfOnlyCount > 0
     ? `<div style="margin-top: 15px; padding: 12px; background: rgba(255,255,255,0.2); border-radius: 6px; border-left: 4px solid rgba(255,255,255,0.5);">
          <p style="font-size: 13px; margin: 0;">
-           ⚠️ <strong>${summary.pdfOnlyCount} receipt(s)</strong> only show total amount. Uber Eats no longer includes itemized data in emails.
+           ⚠️ <strong>${summary.pdfOnlyCount} Uber Eats receipt(s)</strong> only show total amount.
            <br><br>
-           <strong>Next step:</strong> We'll add PDF parsing to extract item details automatically.
+           <strong>To get itemized data:</strong> Download the PDF receipt from your email and save it to <code style="background: rgba(0,0,0,0.2); padding: 2px 4px; border-radius: 3px;">~/Downloads/uber-receipts/</code>
+           <br><br>
+           The system will automatically parse it and match items with nutrition data!
          </p>
        </div>`
     : '';
@@ -188,9 +202,20 @@ function buildEmailTemplate(phProducts, hnStories, spendingData, foodOrdersData 
          <p style="color: white; font-style: italic; opacity: 0.9;">Spending data unavailable for yesterday</p>
        </div>`;
 
+  // Always show food orders section (even if no data)
   const foodOrdersSection = foodOrdersData
     ? buildFoodOrdersSection(foodOrdersData)
-    : '';
+    : buildFoodOrdersSection({ orders: [], summary: {
+        totalOrders: 0,
+        totalCalories: 0,
+        totalProtein: 0,
+        totalCarbs: 0,
+        totalFat: 0,
+        totalSpent: 0,
+        estimatedItems: 0,
+        pdfOnlyCount: 0,
+        ordersByPlatform: {}
+      }});
 
   const phSection = phProducts.length > 0
     ? buildProductHuntSection(phProducts)
