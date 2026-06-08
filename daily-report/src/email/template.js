@@ -186,6 +186,82 @@ function buildFoodOrdersSection(foodOrdersData) {
   `;
 }
 
+function buildUberEatsHighlightsSection(foodOrdersData) {
+  const { orders } = foodOrdersData;
+
+  // Filter only UberEats orders
+  const uberEatsOrders = orders.filter(order => order.platform === 'UberEats');
+
+  if (uberEatsOrders.length === 0) {
+    return ''; // Don't show section if no UberEats orders
+  }
+
+  // Calculate UberEats-specific stats
+  const totalSpent = uberEatsOrders.reduce((sum, order) => sum + order.total, 0);
+  const totalCalories = uberEatsOrders.reduce((sum, order) =>
+    sum + order.items.reduce((itemSum, item) =>
+      itemSum + (item.nutrition?.totalCalories || 0), 0
+    ), 0
+  );
+  const totalItems = uberEatsOrders.reduce((sum, order) => sum + order.items.length, 0);
+  const avgOrderValue = totalSpent / uberEatsOrders.length;
+
+  // Find top restaurant (most expensive order)
+  const topOrder = uberEatsOrders.reduce((max, order) =>
+    order.total > max.total ? order : max
+  , uberEatsOrders[0]);
+
+  return `
+    <div class="section" style="background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); color: white; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+      <h2 style="color: white; margin-top: 0;">🚗 Uber Eats Highlights</h2>
+
+      <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 20px;">
+        <div>
+          <p style="font-size: 14px; opacity: 0.9; margin: 0;">Orders</p>
+          <p style="font-size: 24px; font-weight: bold; margin: 5px 0 0 0;">${uberEatsOrders.length}</p>
+        </div>
+        <div>
+          <p style="font-size: 14px; opacity: 0.9; margin: 0;">Total Spent</p>
+          <p style="font-size: 24px; font-weight: bold; margin: 5px 0 0 0;">$${totalSpent.toFixed(2)}</p>
+        </div>
+        <div>
+          <p style="font-size: 14px; opacity: 0.9; margin: 0;">Total Calories</p>
+          <p style="font-size: 24px; font-weight: bold; margin: 5px 0 0 0;">${Math.round(totalCalories)}</p>
+        </div>
+        <div>
+          <p style="font-size: 14px; opacity: 0.9; margin: 0;">Avg per Order</p>
+          <p style="font-size: 24px; font-weight: bold; margin: 5px 0 0 0;">$${avgOrderValue.toFixed(2)}</p>
+        </div>
+      </div>
+
+      <div style="padding: 12px; background: rgba(255,255,255,0.2); border-radius: 6px; border-left: 4px solid rgba(255,255,255,0.5);">
+        <p style="font-size: 14px; opacity: 0.9; margin: 0 0 5px 0;">🏆 Biggest Order</p>
+        <p style="font-size: 16px; font-weight: bold; margin: 0;">${topOrder.restaurant} - $${topOrder.total.toFixed(2)}</p>
+        <p style="font-size: 13px; opacity: 0.9; margin: 5px 0 0 0;">${topOrder.items.length} items • ${topOrder.items.reduce((sum, item) => sum + (item.nutrition?.totalCalories || 0), 0)} cal</p>
+      </div>
+
+      <div style="margin-top: 15px;">
+        <p style="font-size: 14px; opacity: 0.9; margin-bottom: 10px;">All Restaurants:</p>
+        ${uberEatsOrders.map(order => {
+          const orderTime = new Date(order.timestamp).toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+          });
+          return `
+            <div style="padding: 10px; background: rgba(255,255,255,0.15); border-radius: 6px; margin-bottom: 8px;">
+              <div style="font-weight: bold; font-size: 15px;">${order.restaurant}</div>
+              <div style="font-size: 13px; opacity: 0.9; margin-top: 4px;">
+                🕐 ${orderTime} • $${order.total.toFixed(2)} • ${order.items.length} items
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    </div>
+  `;
+}
+
 function buildEmailTemplate(phProducts, hnStories, spendingData, foodOrdersData = null) {
   const today = new Date().toLocaleDateString('en-US', {
     month: 'long',
@@ -217,6 +293,11 @@ function buildEmailTemplate(phProducts, hnStories, spendingData, foodOrdersData 
         ordersByPlatform: {}
       }});
 
+  // Uber Eats highlights section (only shows if there are UberEats orders)
+  const uberEatsSection = foodOrdersData
+    ? buildUberEatsHighlightsSection(foodOrdersData)
+    : '';
+
   const phSection = phProducts.length > 0
     ? buildProductHuntSection(phProducts)
     : '<p style="color: #999; font-style: italic;">Product Hunt data unavailable today</p>';
@@ -247,6 +328,8 @@ function buildEmailTemplate(phProducts, hnStories, spendingData, foodOrdersData 
         ${spendingSection}
 
         ${foodOrdersSection}
+
+        ${uberEatsSection}
 
         <div class="section">
           <h2>🚀 Product Hunt</h2>
