@@ -61,9 +61,13 @@ async function handler(event) {
       throw new Error('All data sources failed');
     }
 
-    // Fetch food orders (currently returns empty data - to be implemented)
+    // Fetch food orders from Gmail
     const { fetchFoodOrdersFromEmail } = require('./fetchers/foodOrders');
-    const foodOrders = await fetchFoodOrdersFromEmail();
+    const foodOrders = await fetchFoodOrdersFromEmail({
+      clientId: process.env.GMAIL_CLIENT_ID,
+      clientSecret,
+      refreshToken
+    });
 
     const htmlBody = buildEmailTemplate(products, stories, spending, foodOrders);
 

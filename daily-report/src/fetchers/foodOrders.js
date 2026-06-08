@@ -8,6 +8,21 @@
 const { parseDeliveryReceipt } = require('./receiptParser');
 const { matchNutrition, calculateDailySummary } = require('./nutrition');
 const { logger } = require('../utils/logger');
+const path = require('path');
+const os = require('os');
+
+// Conditionally load PDF parser (requires pdf-parse package)
+let parsePdfReceipts, matchPdfToEmailReceipts;
+try {
+  const pdfParser = require('./pdfParser');
+  parsePdfReceipts = pdfParser.parsePdfReceipts;
+  matchPdfToEmailReceipts = pdfParser.matchPdfToEmailReceipts;
+} catch (error) {
+  // pdf-parse not installed - PDF parsing will be skipped
+  logger.info('PDF parser unavailable (pdf-parse not installed) - PDF-only receipts will not be parsed');
+  parsePdfReceipts = async () => [];
+  matchPdfToEmailReceipts = (pdfs, emails) => emails;
+}
 
 /**
  * Process a food delivery receipt email
@@ -95,27 +110,132 @@ async function processFoodOrders(emails) {
 }
 
 /**
- * Mock function for testing - returns sample food orders
- * TODO: Replace with actual Gmail API integration
+ * Fetch food orders from Gmail and process them
+ * @param {Object} gmailCredentials - { clientId, clientSecret, refreshToken }
+ * @returns {Object} { orders: [], summary: {} }
  */
-async function fetchFoodOrdersFromEmail() {
-  // For now, return empty data
-  // This will be replaced with Gmail API call to fetch recent delivery receipts
-  logger.info('Food orders fetch not yet implemented - returning empty data');
-
-  return {
-    orders: [],
-    summary: {
-      totalOrders: 0,
-      totalSpent: 0,
-      totalCalories: 0,
-      totalProtein: 0,
-      totalCarbs: 0,
-      totalFat: 0,
-      ordersByPlatform: {},
-      estimatedItems: 0
+async function fetchFoodOrdersFromEmail(gmailCredentials) {
+  try {
+    if (!gmailCredentials || !gmailCredentials.clientId) {
+      logger.info('Gmail credentials not provided - returning empty data');
+      return {
+        orders: [],
+        summary: {
+          totalOrders: 0,
+          totalSpent: 0,
+          totalCalories: 0,
+          totalProtein: 0,
+          totalCarbs: 0,
+          totalFat: 0,
+          ordersByPlatform: {},
+          estimatedItems: 0,
+          pdfOnlyCount: 0
+        }
+      };
     }
-  };
+
+    const { fetchDeliveryReceipts } = require('../gmail/receiptFetcher');
+
+    logger.info('Fetching delivery receipts from Gmail');
+
+    // Fetch receipts from last 24 hours
+    const emails = await fetchDeliveryReceipts(gmailCredentials, 50);
+
+    if (emails.length === 0) {
+      logger.info('No delivery receipts found');
+      return {
+        orders: [],
+        summary: {
+          totalOrders: 0,
+          totalSpent: 0,
+          totalCalories: 0,
+          totalProtein: 0,
+          totalCarbs: 0,
+          totalFat: 0,
+          ordersByPlatform: {},
+          estimatedItems: 0,
+          pdfOnlyCount: 0
+        }
+      };
+    }
+
+    // Process emails through receipt parser
+    const result = await processFoodOrders(emails);
+
+    // Count PDF-only receipts BEFORE matching
+    const pdfOnlyCountBefore = result.orders.filter(o => o.isPdfOnly).length;
+
+    // Try to match PDF-only receipts with manually downloaded PDFs
+    if (pdfOnlyCountBefore > 0) {
+      const pdfFolderPath = process.env.PDF_RECEIPTS_FOLDER ||
+        path.join(os.homedir(), 'Downloads', 'uber-receipts');
+
+      logger.info('Attempting to match PDF-only receipts', {
+        pdfOnlyCount: pdfOnlyCountBefore,
+        pdfFolder: pdfFolderPath
+      });
+
+      // Parse PDFs from folder
+      const pdfReceipts = await parsePdfReceipts(pdfFolderPath);
+
+      if (pdfReceipts.length > 0) {
+        // Match PDFs to email receipts
+        result.orders = matchPdfToEmailReceipts(pdfReceipts, result.orders);
+
+        // Re-enrich with nutrition data for newly matched items
+        for (let i = 0; i < result.orders.length; i++) {
+          const order = result.orders[i];
+          if (order.pdfSource && order.items.length > 0) {
+            // This order was matched from PDF, enrich with nutrition
+            order.items = await matchNutrition(order.items, order.restaurant);
+          }
+        }
+
+        // Recalculate summary with new data
+        result.summary = calculateDailySummary(result.orders);
+      }
+    }
+
+    // Count remaining PDF-only receipts AFTER matching
+    const pdfOnlyCountAfter = result.orders.filter(o => o.isPdfOnly).length;
+    result.summary.pdfOnlyCount = pdfOnlyCountAfter;
+
+    if (pdfOnlyCountAfter > 0) {
+      logger.warn(`${pdfOnlyCountAfter} PDF-only receipts still need manual PDFs`, {
+        totalOrders: result.orders.length,
+        pdfOnlyCount: pdfOnlyCountAfter,
+        matched: pdfOnlyCountBefore - pdfOnlyCountAfter
+      });
+    }
+
+    if (pdfOnlyCountBefore > pdfOnlyCountAfter) {
+      logger.info('Successfully matched PDFs to email receipts', {
+        matchedCount: pdfOnlyCountBefore - pdfOnlyCountAfter
+      });
+    }
+
+    return result;
+  } catch (error) {
+    logger.error('Failed to fetch food orders from email', {
+      error: error.message,
+      stack: error.stack
+    });
+
+    return {
+      orders: [],
+      summary: {
+        totalOrders: 0,
+        totalSpent: 0,
+        totalCalories: 0,
+        totalProtein: 0,
+        totalCarbs: 0,
+        totalFat: 0,
+        ordersByPlatform: {},
+        estimatedItems: 0,
+        pdfOnlyCount: 0
+      }
+    };
+  }
 }
 
 module.exports = {

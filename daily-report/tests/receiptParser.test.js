@@ -3,7 +3,8 @@ const {
   detectPlatform,
   extractRestaurant,
   extractItems,
-  extractTotal
+  extractTotal,
+  isPdfOnlyReceipt
 } = require('../src/fetchers/receiptParser');
 
 const {
@@ -11,7 +12,8 @@ const {
   doorDashReceipt,
   grubhubReceipt,
   multiItemReceipt,
-  invalidReceipt
+  invalidReceipt,
+  uberEatsPdfOnlyReceipt
 } = require('./fixtures/sampleReceipts');
 
 describe('Receipt Parser', () => {
@@ -145,6 +147,34 @@ describe('Receipt Parser', () => {
       expect(result.raw).toBeDefined();
       expect(result.raw.from).toBe(uberEatsReceipt.from);
       expect(result.raw.subject).toBe(uberEatsReceipt.subject);
+    });
+  });
+
+  describe('PDF-only receipts', () => {
+    it('should detect PDF-only receipts', () => {
+      expect(isPdfOnlyReceipt(uberEatsPdfOnlyReceipt.body)).toBe(true);
+      expect(isPdfOnlyReceipt(uberEatsReceipt.body)).toBe(false);
+    });
+
+    it('should parse PDF-only receipt with warning', async () => {
+      const result = await parseDeliveryReceipt(uberEatsPdfOnlyReceipt);
+
+      expect(result).not.toBeNull();
+      expect(result.platform).toBe('UberEats');
+      expect(result.restaurant).toBe('Walmart');
+      expect(result.total).toBe(56.86);
+      expect(result.items).toHaveLength(0);
+      expect(result.isPdfOnly).toBe(true);
+      expect(result.requiresPdfParsing).toBe(true);
+    });
+
+    it('should detect UberEats from noreply@uber.com', () => {
+      expect(detectPlatform(uberEatsPdfOnlyReceipt)).toBe('UberEats');
+    });
+
+    it('should extract restaurant from PDF-only format', () => {
+      const restaurant = extractRestaurant(uberEatsPdfOnlyReceipt.body, 'UberEats');
+      expect(restaurant).toBe('Walmart');
     });
   });
 });

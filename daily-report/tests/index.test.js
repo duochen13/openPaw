@@ -2,6 +2,7 @@ const { handler } = require('../src/index');
 const { fetchTopProductHuntProducts } = require('../src/fetchers/productHunt');
 const { fetchTopHackerNewsStories } = require('../src/fetchers/hackerNews');
 const { fetchPlaidSpending } = require('../src/fetchers/plaid');
+const { fetchFoodOrdersFromEmail } = require('../src/fetchers/foodOrders');
 const { buildEmailTemplate } = require('../src/email/template');
 const { sendEmail } = require('../src/gmail/client');
 const { getSecret } = require('../src/utils/secrets');
@@ -10,6 +11,7 @@ const { DateTime } = require('luxon');
 jest.mock('../src/fetchers/productHunt');
 jest.mock('../src/fetchers/hackerNews');
 jest.mock('../src/fetchers/plaid');
+jest.mock('../src/fetchers/foodOrders');
 jest.mock('../src/email/template');
 jest.mock('../src/gmail/client');
 jest.mock('../src/utils/secrets');
@@ -25,6 +27,21 @@ jest.mock('luxon', () => {
 });
 
 describe('Lambda Handler', () => {
+  const mockFoodOrders = {
+    orders: [],
+    summary: {
+      totalOrders: 0,
+      totalCalories: 0,
+      totalProtein: 0,
+      totalCarbs: 0,
+      totalFat: 0,
+      totalSpent: 0,
+      estimatedItems: 0,
+      pdfOnlyCount: 0,
+      ordersByPlatform: {}
+    }
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
 
@@ -55,6 +72,8 @@ describe('Lambda Handler', () => {
       .mockResolvedValueOnce('plaid-client-id')
       .mockResolvedValueOnce('plaid-secret')
       .mockResolvedValueOnce('plaid-access-token');
+
+    fetchFoodOrdersFromEmail.mockResolvedValue(mockFoodOrders);
   });
 
   test('executes successfully when in time window', async () => {
@@ -74,7 +93,7 @@ describe('Lambda Handler', () => {
     expect(fetchTopProductHuntProducts).toHaveBeenCalledWith('ph-api-key', 'ph-api-secret');
     expect(fetchTopHackerNewsStories).toHaveBeenCalled();
     expect(fetchPlaidSpending).toHaveBeenCalledWith('plaid-client-id', 'plaid-secret', 'plaid-access-token', 'sandbox');
-    expect(buildEmailTemplate).toHaveBeenCalledWith(mockPHProducts, mockHNStories, mockSpending);
+    expect(buildEmailTemplate).toHaveBeenCalledWith(mockPHProducts, mockHNStories, mockSpending, mockFoodOrders);
     expect(sendEmail).toHaveBeenCalled();
   });
 
@@ -106,7 +125,7 @@ describe('Lambda Handler', () => {
     const result = await handler({});
 
     expect(result.statusCode).toBe(200);
-    expect(buildEmailTemplate).toHaveBeenCalledWith([], mockHNStories, mockSpending);
+    expect(buildEmailTemplate).toHaveBeenCalledWith([], mockHNStories, mockSpending, mockFoodOrders);
   });
 
   test('handles Hacker News API failure gracefully', async () => {
@@ -122,7 +141,7 @@ describe('Lambda Handler', () => {
     const result = await handler({});
 
     expect(result.statusCode).toBe(200);
-    expect(buildEmailTemplate).toHaveBeenCalledWith(mockPHProducts, [], mockSpending);
+    expect(buildEmailTemplate).toHaveBeenCalledWith(mockPHProducts, [], mockSpending, mockFoodOrders);
   });
 
   test('throws error when all data sources fail', async () => {
@@ -160,6 +179,6 @@ describe('Lambda Handler', () => {
     const result = await handler({});
 
     expect(result.statusCode).toBe(200);
-    expect(buildEmailTemplate).toHaveBeenCalledWith(mockPHProducts, mockHNStories, { total: 0, transactions: [] });
+    expect(buildEmailTemplate).toHaveBeenCalledWith(mockPHProducts, mockHNStories, { total: 0, transactions: [] }, mockFoodOrders);
   });
 });

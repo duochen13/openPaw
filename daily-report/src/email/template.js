@@ -123,6 +123,16 @@ function buildFoodOrdersSection(foodOrdersData) {
     ? `<p style="font-size: 12px; opacity: 0.8; margin-top: 10px;">⚠️ ${summary.estimatedItems} item(s) used estimated nutrition data</p>`
     : '';
 
+  const pdfOnlyWarning = summary.pdfOnlyCount > 0
+    ? `<div style="margin-top: 15px; padding: 12px; background: rgba(255,255,255,0.2); border-radius: 6px; border-left: 4px solid rgba(255,255,255,0.5);">
+         <p style="font-size: 13px; margin: 0;">
+           ⚠️ <strong>${summary.pdfOnlyCount} receipt(s)</strong> only show total amount. Uber Eats no longer includes itemized data in emails.
+           <br><br>
+           <strong>Next step:</strong> We'll add PDF parsing to extract item details automatically.
+         </p>
+       </div>`
+    : '';
+
   return `
     <div class="section" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
       <h2 style="color: white; margin-top: 0;">🍔 Food Orders & Nutrition</h2>
@@ -156,6 +166,7 @@ function buildFoodOrdersSection(foodOrdersData) {
         ${ordersHTML}
       </div>
 
+      ${pdfOnlyWarning}
       ${estimateWarning}
     </div>
   `;

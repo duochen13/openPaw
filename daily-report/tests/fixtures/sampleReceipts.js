@@ -112,10 +112,33 @@ Estimated delivery: June 10, 2026
   `.trim()
 };
 
+const uberEatsPdfOnlyReceipt = {
+  from: 'Uber Receipts <noreply@uber.com>',
+  subject: 'Uber Receipts',
+  body: `
+Thanks for ordering, Duo
+
+Here's your receipt for Walmart (9251 Alderbridge Way, Richmond).
+
+Total CA$56.86
+
+To view your full receipt go to Uber Eats, or download this PDF
+
+CA$7.58
+Uber One savings and other promotions applied
+
+Payments
+Visa ****2906
+6/7/26 8:28 AM
+CA$56.86
+  `.trim()
+};
+
 module.exports = {
   uberEatsReceipt,
   doorDashReceipt,
   grubhubReceipt,
   multiItemReceipt,
-  invalidReceipt
+  invalidReceipt,
+  uberEatsPdfOnlyReceipt
 };

@@ -61,16 +61,40 @@ function detectPlatform(email) {
 }
 
 /**
+ * Check if receipt is PDF-only (no itemized data in email)
+ * @param {string} body - Email body
+ * @returns {boolean} True if receipt requires PDF download
+ */
+function isPdfOnlyReceipt(body) {
+  const pdfIndicators = [
+    'to view your full receipt',
+    'download this pdf',
+    'view receipt',
+    'download receipt'
+  ];
+
+  const bodyLower = body.toLowerCase();
+  return pdfIndicators.some(indicator => bodyLower.includes(indicator));
+}
+
+/**
  * Extract restaurant name from receipt
  */
 function extractRestaurant(body, platform) {
   const lines = body.split('\n').map(l => l.trim()).filter(Boolean);
 
-  // UberEats: "Order from: Restaurant Name"
+  // UberEats: "Order from: Restaurant Name" OR "receipt for Restaurant Name"
   if (platform === 'UberEats') {
+    // Try "Order from:" format first
     const orderFromLine = lines.find(l => l.toLowerCase().startsWith('order from:'));
     if (orderFromLine) {
       return orderFromLine.replace(/^order from:\s*/i, '').trim();
+    }
+
+    // Try "receipt for Restaurant Name (address)" format (PDF-only receipts)
+    const receiptForMatch = body.match(/receipt for (.+?)\s*\(/i);
+    if (receiptForMatch) {
+      return receiptForMatch[1].trim();
     }
   }
 
@@ -165,15 +189,15 @@ function extractItems(body, platform) {
 function extractTotal(body) {
   const lines = body.split('\n').map(l => l.trim());
 
-  // Look for "Total: $XX.XX" or "Order total: $XX.XX"
+  // Look for "Total: $XX.XX" or "Order total: $XX.XX" or "Total CA$XX.XX"
   const totalLine = lines.find(l =>
-    /^(order )?total:?\s*\$?[\d,]+\.?\d{0,2}$/i.test(l)
+    /^(order )?total:?\s*(CA)?\$?[\d,]+\.?\d{0,2}$/i.test(l)
   );
 
   if (totalLine) {
-    const match = totalLine.match(/\$?([\d,]+\.?\d{0,2})$/);
+    const match = totalLine.match(/(CA)?\$?([\d,]+\.?\d{0,2})$/i);
     if (match) {
-      return parseFloat(match[1].replace(/,/g, ''));
+      return parseFloat(match[2].replace(/,/g, ''));
     }
   }
 
@@ -224,6 +248,33 @@ async function parseDeliveryReceipt(email) {
       return null;
     }
 
+    // Check if this is a PDF-only receipt
+    if (isPdfOnlyReceipt(email.body)) {
+      logger.warn('PDF-only receipt detected - itemized data not available in email', {
+        platform,
+        from: email.from,
+        subject: email.subject
+      });
+
+      const restaurant = extractRestaurant(email.body, platform);
+      const total = extractTotal(email.body);
+      const timestamp = extractTimestamp(email.body);
+
+      return {
+        platform,
+        restaurant,
+        items: [],
+        total,
+        timestamp,
+        isPdfOnly: true,
+        requiresPdfParsing: true,
+        raw: {
+          from: email.from,
+          subject: email.subject
+        }
+      };
+    }
+
     const restaurant = extractRestaurant(email.body, platform);
     const items = extractItems(email.body, platform);
     const total = extractTotal(email.body);
@@ -240,6 +291,7 @@ async function parseDeliveryReceipt(email) {
       items,
       total,
       timestamp,
+      isPdfOnly: false,
       raw: {
         from: email.from,
         subject: email.subject
@@ -266,5 +318,6 @@ module.exports = {
   extractRestaurant,
   extractItems,
   extractTotal,
-  extractTimestamp
+  extractTimestamp,
+  isPdfOnlyReceipt
 };

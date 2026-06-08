@@ -1,7 +1,18 @@
 const { fetchPlaidSpending } = require('../../src/fetchers/plaid');
 const plaid = require('plaid');
+const { DateTime } = require('luxon');
 
 jest.mock('plaid');
+jest.mock('luxon', () => {
+  const actual = jest.requireActual('luxon');
+  return {
+    ...actual,
+    DateTime: {
+      ...actual.DateTime,
+      now: jest.fn()
+    }
+  };
+});
 
 describe('Plaid Spending Fetcher', () => {
   let mockPlaidClient;
@@ -13,6 +24,15 @@ describe('Plaid Spending Fetcher', () => {
     };
     plaid.PlaidApi.mockImplementation(() => mockPlaidClient);
     plaid.Configuration.mockImplementation(() => ({}));
+
+    // Mock DateTime to June 2, 2026 (so "yesterday" is June 1, 2026)
+    DateTime.now.mockReturnValue({
+      setZone: jest.fn().mockReturnValue({
+        minus: jest.fn().mockReturnValue({
+          toFormat: jest.fn().mockReturnValue('2026-06-01')
+        })
+      })
+    });
   });
 
   test('fetches and transforms yesterday\'s transactions', async () => {

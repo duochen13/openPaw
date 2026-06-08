@@ -5,10 +5,12 @@ Automatic calorie tracking from food delivery orders (UberEats, DoorDash, Grubhu
 ## Overview
 
 The nutrition tracking feature automatically:
-1. **Parses email receipts** from food delivery platforms
-2. **Matches items to nutrition data** using Nutritionix API (with USDA fallback)
-3. **Tracks daily calories, macros, and spending** against your food budget
-4. **Displays in daily digest** email with beautiful formatting
+1. **Fetches receipts from Gmail** - Automatically reads delivery emails from last 24 hours
+2. **Parses email receipts** from food delivery platforms (UberEats, DoorDash, Grubhub)
+3. **Matches items to nutrition data** using Nutritionix API (with USDA fallback)
+4. **Parses PDF receipts** - For Uber Eats receipts without itemized data, download PDFs manually and they'll be auto-parsed
+5. **Tracks daily calories, macros, and spending** against your food budget
+6. **Displays in daily digest** email with beautiful formatting
 
 ---
 
@@ -43,13 +45,59 @@ npm test -- receiptParser.test.js
   - Order-by-order breakdown
   - Estimate indicators
 
-- **Complete test suite** (18 tests passing ✅)
+- **Gmail integration** ✅
+  - Automatically fetches delivery receipts from last 24 hours
+  - OAuth2 authentication
 
-### 🚧 What's Next
+- **PDF receipt parsing** ✅
+  - For Uber Eats receipts without itemized data
+  - Manual download → automatic parsing
 
-- **Gmail integration** to fetch receipts automatically
-  - Currently returns empty data
-  - Need to implement `fetchFoodOrdersFromEmail()`
+- **Complete test suite** (72 tests passing ✅)
+
+---
+
+## PDF Receipt Workflow (for Uber Eats)
+
+**Why needed?** Uber Eats changed their email format - they no longer include itemized data in emails, only a total amount and a link to view the PDF.
+
+### Setup
+
+1. Create a folder for PDF receipts:
+```bash
+mkdir -p ~/Downloads/uber-receipts
+```
+
+2. Add to your `.env` file:
+```bash
+PDF_RECEIPTS_FOLDER=/Users/your-username/Downloads/uber-receipts
+```
+
+### Usage
+
+When you receive an Uber Eats receipt email:
+
+1. **Open the email** - Click "view full receipt" or "download PDF" link
+2. **Download the PDF** - Save it to `~/Downloads/uber-receipts/`
+3. **That's it!** - Next time the digest runs, it will:
+   - Detect the PDF-only email receipt
+   - Find the matching PDF by restaurant name and total
+   - Parse the PDF to extract items
+   - Match items to nutrition database
+   - Show full calorie breakdown in your email
+
+### How Matching Works
+
+The system matches PDFs to email receipts by:
+- Restaurant name (fuzzy matching)
+- Total amount (within $0.50 tolerance)
+
+Example:
+```
+Email: "Walmart - Total CA$56.86"
+PDF: "Walmart (9251 Alderbridge Way) - $56.86 with 5 items"
+✅ Matched! Items extracted from PDF
+```
 
 ---
 
@@ -88,16 +136,22 @@ Environment:
 ```
 src/
 ├── fetchers/
-│   ├── receiptParser.js     # Parse receipts (UberEats/DoorDash/Grubhub)
-│   ├── nutrition.js          # Match to Nutritionix/USDA
-│   └── foodOrders.js         # Orchestrator
+│   ├── receiptParser.js     # Parse email receipts (UberEats/DoorDash/Grubhub)
+│   ├── pdfParser.js         # Parse PDF receipts (NEW!)
+│   ├── nutrition.js         # Match to Nutritionix/USDA
+│   └── foodOrders.js        # Orchestrator (with PDF matching)
+├── gmail/
+│   └── receiptFetcher.js    # Fetch receipts from Gmail API
 └── email/
-    └── template.js           # Updated with nutrition section
+    └── template.js          # Updated with nutrition section
 
 tests/
-├── receiptParser.test.js    # 18 tests ✅
+├── receiptParser.test.js    # 22 tests ✅
+├── fetchers/
+│   └── plaid.test.js        # 6 tests ✅
+├── index.test.js            # 7 tests ✅
 └── fixtures/
-    └── sampleReceipts.js    # Sample UberEats/DoorDash/Grubhub receipts
+    └── sampleReceipts.js    # Sample receipts (including PDF-only format)
 ```
 
 ---
@@ -138,8 +192,10 @@ Order total: $11.50
 - [x] Nutrition API integration
 - [x] Email template
 - [x] Budget tracking
-- [x] Tests
-- [ ] Gmail integration (auto-fetch receipts)
+- [x] Gmail integration (auto-fetch receipts)
+- [x] PDF-only receipt detection
+- [x] PDF receipt parsing (manual download)
+- [ ] Test with real Uber Eats PDFs
 - [ ] Weekly summaries
 - [ ] Custom budgets per day
 
