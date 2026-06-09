@@ -8,7 +8,7 @@ describe('Hacker News Fetcher', () => {
     jest.clearAllMocks();
   });
 
-  test('fetches and returns top 5 stories sorted by points', async () => {
+  test('fetches and returns top 3 stories sorted by points', async () => {
     axios.get.mockResolvedValueOnce({
       data: [101, 102, 103, 104, 105, 106, 107]
     });
@@ -24,13 +24,11 @@ describe('Hacker News Fetcher', () => {
 
     const result = await fetchTopHackerNewsStories();
 
-    expect(result).toHaveLength(5);
+    expect(result).toHaveLength(3);
     expect(result[0].title).toBe('Story 2');
     expect(result[0].points).toBe(800);
     expect(result[1].points).toBe(700);
     expect(result[2].points).toBe(600);
-    expect(result[3].points).toBe(500);
-    expect(result[4].points).toBe(400);
   });
 
   test('handles API timeout', async () => {

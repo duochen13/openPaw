@@ -124,7 +124,7 @@ async function fetchProductsForDate(apiKey, apiSecret, daysAgo, label) {
 
     const topProducts = products
       .sort((a, b) => b.trendingScore - a.trendingScore)
-      .slice(0, 5);
+      .slice(0, 3);
 
     logger.info(`Fetched ${topProducts.length} products for ${label}`);
     return topProducts;

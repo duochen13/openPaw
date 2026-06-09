@@ -9,7 +9,7 @@ describe('Product Hunt Fetcher', () => {
     clearTokenCache(); // Clear cached OAuth token between tests
   });
 
-  test('fetches and returns top 5 products by trending score', async () => {
+  test('fetches and returns top 3 products by trending score', async () => {
     const mockOAuthResponse = {
       data: {
         access_token: 'fake-access-token',
@@ -40,7 +40,7 @@ describe('Product Hunt Fetcher', () => {
 
     const result = await fetchTopProductHuntProducts('fake-api-key', 'fake-api-secret');
 
-    expect(result).toHaveLength(5);
+    expect(result).toHaveLength(3);
     expect(result[0].name).toBe('Product 2');
     expect(result[0].trendingScore).toBe(155);
     expect(result[1].name).toBe('Product 3');

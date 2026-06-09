@@ -36,7 +36,7 @@ async function fetchTopHackerNewsStories() {
         comments: story.descendants || 0
       }))
       .sort((a, b) => b.points - a.points)
-      .slice(0, 5);
+      .slice(0, 3);
 
     return validStories;
   } catch (error) {
