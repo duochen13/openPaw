@@ -1,8 +1,12 @@
+const axios = require('axios');
 const {
   WATCHLIST,
   buildSeriesAndReturn,
-  downsample
+  downsample,
+  fetchStockData
 } = require('../../src/fetchers/stocks');
+
+jest.mock('axios');
 
 describe('stocks helpers', () => {
   test('WATCHLIST has SPY plus the Magnificent 7', () => {
@@ -49,5 +53,51 @@ describe('stocks helpers', () => {
       { date: '2026-01-06', close: 90 }
     ]);
     expect(built.series).toHaveLength(3);
+  });
+});
+
+// Helper: an Alpha Vantage TIME_SERIES_DAILY body with two YTD closes.
+function avDaily(jan, latest) {
+  return {
+    data: {
+      'Time Series (Daily)': {
+        '2026-01-02': { '4. close': String(jan) },
+        '2026-06-12': { '4. close': String(latest) },
+        '2025-12-31': { '4. close': '1' } // prior year, must be filtered out
+      }
+    }
+  };
+}
+
+describe('fetchStockData — Alpha Vantage', () => {
+  test('returns holdings with YTD return, P/E, and series, sorted by return desc', async () => {
+    axios.get.mockImplementation((url, config) => {
+      const fn = config.params.function;
+      if (fn === 'TIME_SERIES_DAILY') {
+        // SPY +10%, others +20% so SPY sorts last
+        const latest = config.params.symbol === 'SPY' ? 110 : 120;
+        return Promise.resolve(avDaily(100, latest));
+      }
+      if (fn === 'OVERVIEW') {
+        const pe = config.params.symbol === 'SPY' ? 'None' : '30.5';
+        return Promise.resolve({ data: { PERatio: pe } });
+      }
+      return Promise.reject(new Error('unexpected call'));
+    });
+
+    const result = await fetchStockData('FAKEKEY', { delayMs: 0 });
+
+    expect(result.source).toBe('alphavantage');
+    expect(result.error).toBeUndefined();
+    expect(result.holdings).toHaveLength(8);
+    expect(result.holdings[result.holdings.length - 1].symbol).toBe('SPY');
+    const spy = result.holdings.find(h => h.symbol === 'SPY');
+    expect(spy.ytdReturnPct).toBeCloseTo(10, 5);
+    expect(spy.price).toBe(110);
+    expect(spy.peRatio).toBeNull();
+    expect(spy.series.length).toBeGreaterThan(0);
+    const aapl = result.holdings.find(h => h.symbol === 'AAPL');
+    expect(aapl.peRatio).toBeCloseTo(30.5, 5);
+    expect(aapl.source).toBe('alphavantage');
   });
 });

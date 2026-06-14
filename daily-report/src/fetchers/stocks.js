@@ -43,4 +43,82 @@ function downsample(series, step = 5) {
   return out;
 }
 
-module.exports = { WATCHLIST, buildSeriesAndReturn, downsample };
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function isRateLimited(data) {
+  return !!(data && (data.Note || data.Information));
+}
+
+async function fetchAlphaVantageDaily(symbol, apiKey, year) {
+  const res = await axios.get(AV_BASE, {
+    params: { function: 'TIME_SERIES_DAILY', symbol, outputsize: 'full', apikey: apiKey },
+    timeout: TIMEOUT_MS
+  });
+  const data = res.data || {};
+  if (isRateLimited(data)) throw new Error(`Alpha Vantage limit: ${data.Note || data.Information}`);
+  const ts = data['Time Series (Daily)'];
+  if (!ts) throw new Error(`Alpha Vantage: no series for ${symbol}`);
+  return Object.entries(ts)
+    .filter(([date]) => date >= `${year}-01-01`)
+    .map(([date, v]) => ({ date, close: parseFloat(v['4. close']) }))
+    .filter(c => Number.isFinite(c.close))
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+async function fetchAlphaVantagePE(symbol, apiKey) {
+  const res = await axios.get(AV_BASE, {
+    params: { function: 'OVERVIEW', symbol, apikey: apiKey },
+    timeout: TIMEOUT_MS
+  });
+  const data = res.data || {};
+  if (isRateLimited(data)) throw new Error(`Alpha Vantage limit (OVERVIEW): ${data.Note || data.Information}`);
+  const pe = parseFloat(data.PERatio);
+  return Number.isFinite(pe) ? pe : null;
+}
+
+async function fetchViaAlphaVantage(apiKey, year, delayMs) {
+  const holdings = [];
+  for (const { symbol, label } of WATCHLIST) {
+    const closes = await fetchAlphaVantageDaily(symbol, apiKey, year);
+    const built = buildSeriesAndReturn(closes);
+    if (!built) continue;
+    const peRatio = await fetchAlphaVantagePE(symbol, apiKey).catch(() => null);
+    holdings.push({
+      symbol, label,
+      price: built.price,
+      ytdReturnPct: built.ytdReturnPct,
+      peRatio,
+      series: downsample(built.series),
+      source: 'alphavantage'
+    });
+    if (delayMs) await sleep(delayMs);
+  }
+  return holdings;
+}
+
+async function fetchStockData(alphaVantageApiKey, options = {}) {
+  const { delayMs = 1500 } = options;
+  const year = new Date().getFullYear();
+  let holdings = [];
+  let source = 'alphavantage';
+
+  if (alphaVantageApiKey) {
+    try {
+      holdings = await fetchViaAlphaVantage(alphaVantageApiKey, year, delayMs);
+    } catch (error) {
+      logger.warn('Alpha Vantage failed, falling back to Yahoo', { error: error.message });
+      holdings = [];
+    }
+  }
+
+  if (holdings.length === 0) {
+    return { asOf: new Date().toISOString(), holdings: [], source, error: 'No stock data available' };
+  }
+
+  holdings.sort((a, b) => b.ytdReturnPct - a.ytdReturnPct);
+  return { asOf: new Date().toISOString(), holdings, source };
+}
+
+module.exports = { WATCHLIST, buildSeriesAndReturn, downsample, fetchStockData };
