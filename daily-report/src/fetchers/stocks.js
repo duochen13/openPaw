@@ -173,13 +173,8 @@ async function fetchStockData(alphaVantageApiKey, options = {}) {
   }
 
   if (holdings.length === 0) {
-    try {
-      holdings = await fetchViaYahoo();
-      source = 'yahoo';
-    } catch (error) {
-      logger.error('Yahoo fallback failed', { error: error.message });
-      return { asOf: new Date().toISOString(), holdings: [], source: 'yahoo', error: error.message };
-    }
+    holdings = await fetchViaYahoo();
+    source = 'yahoo';
   }
 
   if (holdings.length === 0) {
