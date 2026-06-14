@@ -2,6 +2,7 @@ const { handler } = require('../src/index');
 const { fetchTopProductHuntProducts } = require('../src/fetchers/productHunt');
 const { fetchTopHackerNewsStories } = require('../src/fetchers/hackerNews');
 const { fetchPlaidSpending } = require('../src/fetchers/plaid');
+const { fetchStockData } = require('../src/fetchers/stocks');
 const { fetchFoodOrdersFromEmail } = require('../src/fetchers/foodOrders');
 const { buildEmailTemplate } = require('../src/email/template');
 const { sendEmail } = require('../src/gmail/client');
@@ -11,6 +12,7 @@ const { DateTime } = require('luxon');
 jest.mock('../src/fetchers/productHunt');
 jest.mock('../src/fetchers/hackerNews');
 jest.mock('../src/fetchers/plaid');
+jest.mock('../src/fetchers/stocks');
 jest.mock('../src/fetchers/foodOrders');
 jest.mock('../src/email/template');
 jest.mock('../src/gmail/client');
@@ -73,6 +75,7 @@ describe('Lambda Handler', () => {
       .mockResolvedValueOnce('plaid-secret')
       .mockResolvedValueOnce('plaid-access-token');
 
+    fetchStockData.mockResolvedValue({ holdings: [] });
     fetchFoodOrdersFromEmail.mockResolvedValue(mockFoodOrders);
   });
 
@@ -93,7 +96,7 @@ describe('Lambda Handler', () => {
     expect(fetchTopProductHuntProducts).toHaveBeenCalledWith('ph-api-key', 'ph-api-secret');
     expect(fetchTopHackerNewsStories).toHaveBeenCalled();
     expect(fetchPlaidSpending).toHaveBeenCalledWith('plaid-client-id', 'plaid-secret', 'plaid-access-token', 'sandbox');
-    expect(buildEmailTemplate).toHaveBeenCalledWith(mockPHProducts, mockHNStories, mockSpending, mockFoodOrders);
+    expect(buildEmailTemplate).toHaveBeenCalledWith(mockPHProducts, mockHNStories, mockSpending, mockFoodOrders, { holdings: [] });
     expect(sendEmail).toHaveBeenCalled();
   });
 
@@ -125,7 +128,7 @@ describe('Lambda Handler', () => {
     const result = await handler({});
 
     expect(result.statusCode).toBe(200);
-    expect(buildEmailTemplate).toHaveBeenCalledWith([], mockHNStories, mockSpending, mockFoodOrders);
+    expect(buildEmailTemplate).toHaveBeenCalledWith([], mockHNStories, mockSpending, mockFoodOrders, { holdings: [] });
   });
 
   test('handles Hacker News API failure gracefully', async () => {
@@ -141,7 +144,7 @@ describe('Lambda Handler', () => {
     const result = await handler({});
 
     expect(result.statusCode).toBe(200);
-    expect(buildEmailTemplate).toHaveBeenCalledWith(mockPHProducts, [], mockSpending, mockFoodOrders);
+    expect(buildEmailTemplate).toHaveBeenCalledWith(mockPHProducts, [], mockSpending, mockFoodOrders, { holdings: [] });
   });
 
   test('throws error when all data sources fail', async () => {
@@ -179,6 +182,6 @@ describe('Lambda Handler', () => {
     const result = await handler({});
 
     expect(result.statusCode).toBe(200);
-    expect(buildEmailTemplate).toHaveBeenCalledWith(mockPHProducts, mockHNStories, { total: 0, transactions: [] }, mockFoodOrders);
+    expect(buildEmailTemplate).toHaveBeenCalledWith(mockPHProducts, mockHNStories, { total: 0, transactions: [] }, mockFoodOrders, { holdings: [] });
   });
 });
