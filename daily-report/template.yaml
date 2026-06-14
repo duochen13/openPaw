@@ -61,6 +61,12 @@ Parameters:
       - development
       - production
 
+  AlphaVantageApiKey:
+    Type: String
+    Default: ''
+    Description: Alpha Vantage API key for the stock watchlist (optional; falls back to Yahoo Finance)
+    NoEcho: true
+
 Resources:
   DailyDigestFunction:
     Type: AWS::Serverless::Function
@@ -81,6 +87,7 @@ Resources:
           PLAID_SECRET_ARN: !Ref PlaidSecretArn
           PLAID_ACCESS_TOKEN_ARN: !Ref PlaidAccessTokenArn
           PLAID_ENVIRONMENT: !Ref PlaidEnvironment
+          ALPHA_VANTAGE_API_KEY: !Ref AlphaVantageApiKey
       Policies:
         - Statement:
           - Effect: Allow
