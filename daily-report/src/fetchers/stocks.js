@@ -21,6 +21,7 @@ const WATCHLIST = [
 function buildSeriesAndReturn(closes) {
   if (!closes || closes.length === 0) return null;
   const base = closes[0].close;
+  if (!base) return null;
   const series = closes.map(c => ({
     date: c.date,
     cumulativeReturnPct: ((c.close - base) / base) * 100
@@ -34,7 +35,7 @@ function buildSeriesAndReturn(closes) {
 
 // Keep every `step`th point, always including the last.
 function downsample(series, step = 5) {
-  if (series.length <= step) return series;
+  if (!series || series.length <= step) return series;
   const out = [];
   for (let i = 0; i < series.length; i += step) out.push(series[i]);
   const last = series[series.length - 1];

@@ -37,4 +37,17 @@ describe('stocks helpers', () => {
     const series = [{ date: 'd0', cumulativeReturnPct: 0 }];
     expect(downsample(series, 5)).toEqual(series);
   });
+
+  test('buildSeriesAndReturn returns null when base price is zero', () => {
+    expect(buildSeriesAndReturn([{ date: '2026-01-02', close: 0 }, { date: '2026-01-03', close: 5 }])).toBeNull();
+  });
+
+  test('buildSeriesAndReturn preserves all series points', () => {
+    const built = buildSeriesAndReturn([
+      { date: '2026-01-02', close: 100 },
+      { date: '2026-01-03', close: 110 },
+      { date: '2026-01-06', close: 90 }
+    ]);
+    expect(built.series).toHaveLength(3);
+  });
 });
