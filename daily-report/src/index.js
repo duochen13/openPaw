@@ -2,6 +2,7 @@ const { DateTime } = require('luxon');
 const { fetchTopProductHuntProducts } = require('./fetchers/productHunt');
 const { fetchTopHackerNewsStories } = require('./fetchers/hackerNews');
 const { fetchPlaidSpending } = require('./fetchers/plaid');
+const { fetchStockData } = require('./fetchers/stocks');
 const { buildEmailTemplate } = require('./email/template');
 const { sendEmail } = require('./gmail/client');
 const { getSecret } = require('./utils/secrets');
@@ -35,15 +36,21 @@ async function handler(event) {
       getSecret(process.env.PLAID_ACCESS_TOKEN_ARN)
     ]);
 
-    const [phProducts, hnStories, spendingData] = await Promise.allSettled([
+    const [phProducts, hnStories, spendingData, stockResult] = await Promise.allSettled([
       fetchTopProductHuntProducts(phApiKey, phApiSecret),
       fetchTopHackerNewsStories(),
-      fetchPlaidSpending(plaidClientId, plaidSecret, plaidAccessToken, process.env.PLAID_ENVIRONMENT || 'sandbox')
+      fetchPlaidSpending(plaidClientId, plaidSecret, plaidAccessToken, process.env.PLAID_ENVIRONMENT || 'sandbox'),
+      fetchStockData(process.env.ALPHA_VANTAGE_API_KEY)
     ]);
 
     const products = phProducts.status === 'fulfilled' ? phProducts.value : [];
     const stories = hnStories.status === 'fulfilled' ? hnStories.value : [];
     const spending = spendingData.status === 'fulfilled' ? spendingData.value : { total: 0, transactions: [] };
+    const stocks = stockResult.status === 'fulfilled' ? stockResult.value : { holdings: [] };
+
+    if (stockResult.status === 'rejected') {
+      logger.warn('Stock fetch failed', { error: stockResult.reason.message });
+    }
 
     if (phProducts.status === 'rejected') {
       logger.warn('Product Hunt fetch failed', { error: phProducts.reason.message });
@@ -69,7 +76,7 @@ async function handler(event) {
       refreshToken
     });
 
-    const htmlBody = buildEmailTemplate(products, stories, spending, foodOrders);
+    const htmlBody = buildEmailTemplate(products, stories, spending, foodOrders, stocks);
 
     const emailResult = await sendEmail(
       process.env.RECIPIENT_EMAIL,
