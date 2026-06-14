@@ -153,3 +153,19 @@ describe('fetchStockData — Yahoo fallback', () => {
     expect(result.holdings).toHaveLength(8);
   });
 });
+
+describe('fetchStockData — total failure', () => {
+  test('returns empty holdings with error when both sources fail', async () => {
+    axios.get.mockImplementation((url) => {
+      if (url === 'https://www.alphavantage.co/query') {
+        return Promise.resolve({ data: { Note: 'limit' } }); // AV rate-limited
+      }
+      return Promise.reject(new Error('network down')); // Yahoo chart + quote fail
+    });
+
+    const result = await fetchStockData('FAKEKEY', { delayMs: 0 });
+
+    expect(result.holdings).toEqual([]);
+    expect(result.error).toBeDefined();
+  });
+});
