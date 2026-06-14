@@ -166,12 +166,35 @@ async function previewTestEmail() {
       transactions: []
     };
 
+    // Sample stock watchlist data (sorted by YTD return, as the fetcher returns it)
+    const mkSeries = (start, end) => [
+      { date: '2026-01-02', cumulativeReturnPct: 0 },
+      { date: '2026-02-13', cumulativeReturnPct: (start + end) / 4 },
+      { date: '2026-04-10', cumulativeReturnPct: (start + end) / 2 },
+      { date: '2026-06-12', cumulativeReturnPct: end }
+    ];
+    const stockData = {
+      asOf: '2026-06-12T17:00:00.000Z',
+      source: 'alphavantage',
+      holdings: [
+        { symbol: 'NVDA', label: 'NVIDIA', price: 130.52, ytdReturnPct: 42.1, peRatio: 55.2, series: mkSeries(10, 42.1) },
+        { symbol: 'META', label: 'Meta', price: 712.18, ytdReturnPct: 18.7, peRatio: 27.4, series: mkSeries(5, 18.7) },
+        { symbol: 'AAPL', label: 'Apple', price: 221.34, ytdReturnPct: 9.3, peRatio: 31.8, series: mkSeries(2, 9.3) },
+        { symbol: 'MSFT', label: 'Microsoft', price: 467.21, ytdReturnPct: 6.5, peRatio: 36.1, series: mkSeries(1, 6.5) },
+        { symbol: 'AMZN', label: 'Amazon', price: 198.77, ytdReturnPct: 4.2, peRatio: 41.0, series: mkSeries(1, 4.2) },
+        { symbol: 'GOOGL', label: 'Alphabet', price: 178.05, ytdReturnPct: 1.1, peRatio: 24.6, series: mkSeries(0, 1.1) },
+        { symbol: 'SPY', label: 'S&P 500', price: 610.23, ytdReturnPct: -3.4, peRatio: null, series: mkSeries(-1, -3.4) },
+        { symbol: 'TSLA', label: 'Tesla', price: 244.90, ytdReturnPct: -12.8, peRatio: 62.5, series: mkSeries(-4, -12.8) }
+      ]
+    };
+
     console.log('✉️  Building email template...');
     const htmlBody = buildEmailTemplate(
       phProducts,
       hnStories,
       spendingData,
-      foodOrdersData
+      foodOrdersData,
+      stockData
     );
 
     const outputPath = path.join(__dirname, 'test-email-preview.html');
