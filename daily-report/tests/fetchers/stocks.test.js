@@ -101,3 +101,55 @@ describe('fetchStockData — Alpha Vantage', () => {
     expect(aapl.source).toBe('alphavantage');
   });
 });
+
+describe('fetchStockData — Yahoo fallback', () => {
+  test('falls back to Yahoo when Alpha Vantage is rate-limited', async () => {
+    axios.get.mockImplementation((url, config) => {
+      if (url === 'https://www.alphavantage.co/query') {
+        return Promise.resolve({ data: { Note: 'Thank you for using Alpha Vantage! 25 requests/day reached.' } });
+      }
+      if (url === 'https://query1.finance.yahoo.com/v7/finance/quote') {
+        return Promise.resolve({
+          data: { quoteResponse: { result: [{ symbol: 'AAPL', trailingPE: 28.2 }] } }
+        });
+      }
+      return Promise.resolve({
+        data: {
+          chart: {
+            result: [{
+              timestamp: [1735819200, 1749700800],
+              indicators: { quote: [{ close: [100, 125] }] }
+            }]
+          }
+        }
+      });
+    });
+
+    const result = await fetchStockData('FAKEKEY', { delayMs: 0 });
+
+    expect(result.source).toBe('yahoo');
+    expect(result.error).toBeUndefined();
+    expect(result.holdings).toHaveLength(8);
+    const aapl = result.holdings.find(h => h.symbol === 'AAPL');
+    expect(aapl.peRatio).toBeCloseTo(28.2, 5);
+    expect(aapl.source).toBe('yahoo');
+    expect(aapl.ytdReturnPct).toBeCloseTo(25, 5);
+    const spy = result.holdings.find(h => h.symbol === 'SPY');
+    expect(spy.peRatio).toBeNull();
+  });
+
+  test('works with no Alpha Vantage key (Yahoo only)', async () => {
+    axios.get.mockImplementation((url) => {
+      if (url === 'https://query1.finance.yahoo.com/v7/finance/quote') {
+        return Promise.resolve({ data: { quoteResponse: { result: [] } } });
+      }
+      return Promise.resolve({
+        data: { chart: { result: [{ timestamp: [1, 2], indicators: { quote: [{ close: [50, 55] }] } }] } }
+      });
+    });
+
+    const result = await fetchStockData('', { delayMs: 0 });
+    expect(result.source).toBe('yahoo');
+    expect(result.holdings).toHaveLength(8);
+  });
+});
