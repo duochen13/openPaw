@@ -135,7 +135,13 @@ A small, pure module (no network) that turns the holdings' `series` into a
 - `buildReturnChartUrl(holdings) -> string` — produces a QuickChart line-chart
   config (Chart.js schema): x-axis = dates (shared across symbols), one dataset
   per symbol of `cumulativeReturnPct`, y-axis labeled "YTD return %". Title
-  "YTD Cumulative Return". A distinct color per symbol; legend on.
+  "YTD Cumulative Return". A distinct color per symbol; legend at the bottom.
+- **Google-Finance-inspired styling** (matching the user's reference): smooth
+  lines (`lineTension`), no point markers, thin 2px strokes, very faint
+  horizontal gridlines, hidden vertical gridlines, no chart border, compact
+  bottom legend, white background. Interactivity from the reference (range tabs,
+  hover tooltips) is intentionally out of scope — the email embeds a static
+  image.
 - The config is JSON, URL-encoded into
   `https://quickchart.io/chart?w=600&h=300&c=<encoded-config>`.
 - If the encoded URL would be excessively long, rely on the weekly downsampling

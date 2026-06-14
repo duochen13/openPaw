@@ -605,24 +605,35 @@ function buildReturnChartUrl(holdings) {
     borderColor: COLORS[i % COLORS.length],
     backgroundColor: COLORS[i % COLORS.length],
     fill: false,
-    pointRadius: 0,
-    borderWidth: 2
+    pointRadius: 0,          // clean line, no dots (Google Finance look)
+    borderWidth: 2,
+    lineTension: 0.3         // smooth curve
   }));
 
+  // Google-Finance-inspired clean styling: faint horizontal gridlines,
+  // hidden vertical gridlines, no border, compact bottom legend, white bg.
   const config = {
     type: 'line',
     data: { labels, datasets },
     options: {
-      title: { display: true, text: 'YTD Cumulative Return' },
-      legend: { position: 'bottom' },
+      layout: { padding: 8 },
+      title: { display: true, text: 'YTD Cumulative Return', fontSize: 15, fontColor: '#1f2937' },
+      legend: { position: 'bottom', labels: { boxWidth: 12, fontSize: 11, fontColor: '#374151' } },
       scales: {
-        yAxes: [{ scaleLabel: { display: true, labelString: 'YTD return %' } }],
-        xAxes: [{ ticks: { maxTicksLimit: 8 } }]
+        yAxes: [{
+          scaleLabel: { display: true, labelString: 'YTD return %', fontColor: '#6b7280' },
+          gridLines: { color: 'rgba(0,0,0,0.06)', drawBorder: false, zeroLineColor: 'rgba(0,0,0,0.15)' },
+          ticks: { fontColor: '#6b7280', callback: undefined }
+        }],
+        xAxes: [{
+          gridLines: { display: false, drawBorder: false },
+          ticks: { fontColor: '#6b7280', maxTicksLimit: 8, maxRotation: 0 }
+        }]
       }
     }
   };
 
-  return `${QUICKCHART_BASE}?w=600&h=300&c=${encodeURIComponent(JSON.stringify(config))}`;
+  return `${QUICKCHART_BASE}?w=600&h=300&bkg=white&c=${encodeURIComponent(JSON.stringify(config))}`;
 }
 
 module.exports = { buildReturnChartUrl };
