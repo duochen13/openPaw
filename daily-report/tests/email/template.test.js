@@ -160,4 +160,38 @@ describe('Email Template Builder', () => {
       expect(spendingIndex).toBeLessThan(phIndex);
     });
   });
+
+  const mockStockData = {
+    asOf: '2026-06-12T17:00:00.000Z',
+    source: 'alphavantage',
+    holdings: [
+      { symbol: 'NVDA', label: 'NVIDIA', price: 130.5, ytdReturnPct: 42.1, peRatio: 55.2,
+        series: [{ date: '2026-01-02', cumulativeReturnPct: 0 }, { date: '2026-06-12', cumulativeReturnPct: 42.1 }] },
+      { symbol: 'SPY', label: 'S&P 500', price: 610.2, ytdReturnPct: -3.4, peRatio: null,
+        series: [{ date: '2026-01-02', cumulativeReturnPct: 0 }, { date: '2026-06-12', cumulativeReturnPct: -3.4 }] }
+    ]
+  };
+
+  test('includes Market Watchlist section with chart and rows', () => {
+    const html = buildEmailTemplate(mockPHProducts, mockHNStories, null, null, mockStockData);
+    expect(html).toContain('Market Watchlist');
+    expect(html).toContain('quickchart.io/chart');
+    expect(html).toContain('NVDA');
+    expect(html).toContain('42.10%');
+    expect(html).toContain('S&P 500');
+    expect(html).toContain('—'); // SPY null P/E
+  });
+
+  test('stock section appears between Uber Eats and Product Hunt', () => {
+    const html = buildEmailTemplate(mockPHProducts, mockHNStories, null, null, mockStockData);
+    const stockIndex = html.indexOf('Market Watchlist');
+    const phIndex = html.indexOf('🚀 Product Hunt');
+    expect(stockIndex).toBeGreaterThan(-1);
+    expect(stockIndex).toBeLessThan(phIndex);
+  });
+
+  test('shows unavailable state when stock data missing', () => {
+    const html = buildEmailTemplate(mockPHProducts, mockHNStories, null, null, null);
+    expect(html).toContain('Market data unavailable today');
+  });
 });

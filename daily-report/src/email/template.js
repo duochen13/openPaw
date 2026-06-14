@@ -262,7 +262,59 @@ function buildUberEatsHighlightsSection(foodOrdersData) {
   `;
 }
 
-function buildEmailTemplate(phProducts, hnStories, spendingData, foodOrdersData = null) {
+function buildStockSection(stockData) {
+  const headerOpen = `
+    <div class="section" style="background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); color: white; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+      <h2 style="color: white; margin-top: 0;">📈 Market Watchlist</h2>`;
+
+  if (!stockData || stockData.error || !stockData.holdings || stockData.holdings.length === 0) {
+    return `${headerOpen}
+      <p style="color: white; font-style: italic; opacity: 0.9;">Market data unavailable today</p>
+    </div>`;
+  }
+
+  const { buildReturnChartUrl } = require('./stockChart');
+  const chartUrl = buildReturnChartUrl(stockData.holdings);
+  const chartImg = chartUrl
+    ? `<img src="${chartUrl}" alt="YTD cumulative return chart for the watchlist" width="100%" style="border-radius: 6px; background: white; margin-bottom: 15px;">`
+    : '';
+
+  const asOf = new Date(stockData.asOf).toLocaleDateString('en-US', {
+    month: 'short', day: 'numeric', year: 'numeric'
+  });
+
+  const rows = stockData.holdings.map(h => {
+    const positive = h.ytdReturnPct >= 0;
+    const arrow = positive ? '▲' : '▼';
+    const color = positive ? '#bbf7d0' : '#fecaca';
+    const pe = (h.peRatio === null || h.peRatio === undefined) ? '—' : h.peRatio.toFixed(1);
+    return `
+      <tr>
+        <td style="padding: 6px 8px;"><strong>${h.symbol}</strong> <span style="opacity: 0.8; font-size: 13px;">${h.label}</span></td>
+        <td style="padding: 6px 8px; text-align: right;">$${h.price.toFixed(2)}</td>
+        <td style="padding: 6px 8px; text-align: right; color: ${color}; font-weight: bold;">${arrow} ${h.ytdReturnPct.toFixed(2)}%</td>
+        <td style="padding: 6px 8px; text-align: right;">${pe}</td>
+      </tr>`;
+  }).join('');
+
+  return `${headerOpen}
+    ${chartImg}
+    <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+      <thead>
+        <tr style="text-align: left; opacity: 0.9; font-size: 12px;">
+          <th style="padding: 6px 8px;">Symbol</th>
+          <th style="padding: 6px 8px; text-align: right;">Price</th>
+          <th style="padding: 6px 8px; text-align: right;">YTD</th>
+          <th style="padding: 6px 8px; text-align: right;">P/E</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <p style="font-size: 12px; opacity: 0.8; margin: 12px 0 0 0;">as of ${asOf}</p>
+  </div>`;
+}
+
+function buildEmailTemplate(phProducts, hnStories, spendingData, foodOrdersData = null, stockData = null) {
   const today = new Date().toLocaleDateString('en-US', {
     month: 'long',
     day: 'numeric',
@@ -298,6 +350,8 @@ function buildEmailTemplate(phProducts, hnStories, spendingData, foodOrdersData 
     ? buildUberEatsHighlightsSection(foodOrdersData)
     : '';
 
+  const stockSection = buildStockSection(stockData);
+
   const phSection = phProducts.length > 0
     ? buildProductHuntSection(phProducts)
     : '<p style="color: #999; font-style: italic;">Product Hunt data unavailable today</p>';
@@ -330,6 +384,8 @@ function buildEmailTemplate(phProducts, hnStories, spendingData, foodOrdersData 
         ${foodOrdersSection}
 
         ${uberEatsSection}
+
+        ${stockSection}
 
         <div class="section">
           <h2>🚀 Product Hunt</h2>
