@@ -151,7 +151,7 @@ describe('Email Template Builder', () => {
 
       const jokeIndex = html.indexOf('Today\'s Tech Joke');
       const spendingIndex = html.indexOf('Yesterday\'s Spending');
-      const phIndex = html.indexOf('Product Hunt');
+      const phIndex = html.indexOf('🚀 Product Hunt');
 
       expect(jokeIndex).toBeGreaterThan(-1);
       expect(spendingIndex).toBeGreaterThan(-1);
