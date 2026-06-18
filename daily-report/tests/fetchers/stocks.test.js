@@ -108,6 +108,13 @@ describe('fetchStockData — Yahoo fallback', () => {
       if (url === 'https://www.alphavantage.co/query') {
         return Promise.resolve({ data: { Note: 'Thank you for using Alpha Vantage! 25 requests/day reached.' } });
       }
+      // Yahoo P/E crumb handshake: cookie seed -> crumb -> quote
+      if (url === 'https://fc.yahoo.com') {
+        return Promise.resolve({ headers: { 'set-cookie': ['A1=token; Path=/; Domain=.yahoo.com'] }, data: '' });
+      }
+      if (url === 'https://query1.finance.yahoo.com/v1/test/getcrumb') {
+        return Promise.resolve({ data: 'testCrumb123' });
+      }
       if (url === 'https://query1.finance.yahoo.com/v7/finance/quote') {
         return Promise.resolve({
           data: { quoteResponse: { result: [{ symbol: 'AAPL', trailingPE: 28.2 }] } }

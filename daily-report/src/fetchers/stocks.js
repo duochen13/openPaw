@@ -5,6 +5,9 @@ const TIMEOUT_MS = 10000;
 const AV_BASE = 'https://www.alphavantage.co/query';
 const YF_CHART = 'https://query1.finance.yahoo.com/v8/finance/chart';
 const YF_QUOTE = 'https://query1.finance.yahoo.com/v7/finance/quote';
+const YF_COOKIE_URL = 'https://fc.yahoo.com';
+const YF_CRUMB_URL = 'https://query1.finance.yahoo.com/v1/test/getcrumb';
+const YF_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 
 const WATCHLIST = [
   { symbol: 'SPY', label: 'S&P 500' },
@@ -116,10 +119,34 @@ async function fetchYahooDaily(symbol) {
     .sort((a, b) => a.date.localeCompare(b.date));
 }
 
+// Yahoo gates its quote (P/E) endpoint behind a cookie + crumb handshake.
+// Best-effort: grab a session cookie, exchange it for a crumb token.
+async function getYahooSession() {
+  const seed = await axios.get(YF_COOKIE_URL, {
+    headers: { 'User-Agent': YF_UA },
+    timeout: TIMEOUT_MS,
+    validateStatus: () => true // a 404 still returns Set-Cookie headers
+  });
+  const setCookie = seed.headers?.['set-cookie'] || [];
+  const cookie = setCookie.map(c => c.split(';')[0]).join('; ');
+  const crumbRes = await axios.get(YF_CRUMB_URL, {
+    headers: { 'User-Agent': YF_UA, Cookie: cookie },
+    timeout: TIMEOUT_MS,
+    responseType: 'text',
+    transformResponse: r => r
+  });
+  const crumb = String(crumbRes.data || '').trim();
+  // A valid crumb is a short token with no whitespace; "Too Many Requests" etc. are rejections.
+  if (!crumb || /\s/.test(crumb)) throw new Error(`Yahoo crumb unavailable: ${crumb.slice(0, 40)}`);
+  return { cookie, crumb };
+}
+
 async function fetchYahooPEs(symbols) {
   try {
+    const { cookie, crumb } = await getYahooSession();
     const res = await axios.get(YF_QUOTE, {
-      params: { symbols: symbols.join(',') },
+      params: { symbols: symbols.join(','), crumb },
+      headers: { 'User-Agent': YF_UA, Cookie: cookie },
       timeout: TIMEOUT_MS
     });
     const quotes = res.data?.quoteResponse?.result || [];
@@ -129,7 +156,7 @@ async function fetchYahooPEs(symbols) {
     });
     return map;
   } catch (error) {
-    logger.warn('Yahoo P/E batch fetch failed', { error: error.message });
+    logger.warn('Yahoo P/E fetch failed (crumb flow)', { error: error.message });
     return {};
   }
 }

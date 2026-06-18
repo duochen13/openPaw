@@ -1,45 +1,34 @@
 const QUICKCHART_BASE = 'https://quickchart.io/chart';
-const COLORS = ['#2563eb', '#dc2626', '#16a34a', '#d97706', '#7c3aed', '#0891b2', '#db2777', '#65a30d'];
+const BAR_COLOR = '#2563eb';
 
-// holdings: [{ symbol, series: [{ date, cumulativeReturnPct }] }]
-// Returns a QuickChart.io image URL, or null if nothing chartable.
-function buildReturnChartUrl(holdings) {
-  const usable = (holdings || []).filter(h => Array.isArray(h.series) && h.series.length > 0);
+// holdings: [{ symbol, peRatio }]
+// Returns a QuickChart.io bar-chart URL of current P/E per symbol, or null if no
+// holding has a usable P/E value (e.g. P/E data unavailable from the source).
+function buildPeBarChartUrl(holdings) {
+  const usable = (holdings || []).filter(h => typeof h.peRatio === 'number' && Number.isFinite(h.peRatio));
   if (usable.length === 0) return null;
 
-  // Use the longest series' dates as the shared x-axis labels.
-  const longest = usable.reduce((best, h) => (h.series.length > best.series.length ? h : best), usable[0]);
-  const labels = longest.series.map(p => p.date);
+  const labels = usable.map(h => h.symbol);
+  const data = usable.map(h => Number(h.peRatio.toFixed(1)));
 
-  const datasets = usable.map((h, i) => ({
-    label: h.symbol,
-    data: h.series.map(p => Number(p.cumulativeReturnPct.toFixed(2))),
-    borderColor: COLORS[i % COLORS.length],
-    backgroundColor: COLORS[i % COLORS.length],
-    fill: false,
-    pointRadius: 0,          // clean line, no dots (Google Finance look)
-    borderWidth: 2,
-    lineTension: 0.3         // smooth curve
-  }));
-
-  // Google-Finance-inspired clean styling: faint horizontal gridlines,
-  // hidden vertical gridlines, no border, compact bottom legend, white bg.
+  // Clean styling: faint horizontal gridlines, hidden vertical gridlines, no
+  // border, no legend (single series), white background.
   const config = {
-    type: 'line',
-    data: { labels, datasets },
+    type: 'bar',
+    data: { labels, datasets: [{ label: 'P/E ratio', data, backgroundColor: BAR_COLOR, borderWidth: 0 }] },
     options: {
       layout: { padding: 8 },
-      title: { display: true, text: 'YTD Cumulative Return', fontSize: 15, fontColor: '#1f2937' },
-      legend: { position: 'bottom', labels: { boxWidth: 12, fontSize: 11, fontColor: '#374151' } },
+      title: { display: true, text: 'P/E Ratio by Symbol', fontSize: 15, fontColor: '#1f2937' },
+      legend: { display: false },
       scales: {
         yAxes: [{
-          scaleLabel: { display: true, labelString: 'YTD return %', fontColor: '#6b7280' },
-          gridLines: { color: 'rgba(0,0,0,0.06)', drawBorder: false, zeroLineColor: 'rgba(0,0,0,0.15)' },
-          ticks: { fontColor: '#6b7280' }
+          scaleLabel: { display: true, labelString: 'P/E ratio', fontColor: '#6b7280' },
+          gridLines: { color: 'rgba(0,0,0,0.06)', drawBorder: false },
+          ticks: { beginAtZero: true, fontColor: '#6b7280' }
         }],
         xAxes: [{
           gridLines: { display: false, drawBorder: false },
-          ticks: { fontColor: '#6b7280', maxTicksLimit: 8, maxRotation: 0 }
+          ticks: { fontColor: '#6b7280' }
         }]
       }
     }
@@ -48,4 +37,4 @@ function buildReturnChartUrl(holdings) {
   return `${QUICKCHART_BASE}?w=600&h=300&bkg=white&c=${encodeURIComponent(JSON.stringify(config))}`;
 }
 
-module.exports = { buildReturnChartUrl };
+module.exports = { buildPeBarChartUrl };

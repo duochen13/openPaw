@@ -273,10 +273,10 @@ function buildStockSection(stockData) {
     </div>`;
   }
 
-  const { buildReturnChartUrl } = require('./stockChart');
-  const chartUrl = buildReturnChartUrl(stockData.holdings);
+  const { buildPeBarChartUrl } = require('./stockChart');
+  const chartUrl = buildPeBarChartUrl(stockData.holdings);
   const chartImg = chartUrl
-    ? `<img src="${chartUrl}" alt="YTD cumulative return chart for the watchlist" width="100%" style="border-radius: 6px; background: white; margin-bottom: 15px;">`
+    ? `<img src="${chartUrl}" alt="P/E ratio by symbol for the watchlist" width="100%" style="border-radius: 6px; background: white; margin-bottom: 15px;">`
     : '';
 
   const asOf = new Date(stockData.asOf).toLocaleDateString('en-US', {

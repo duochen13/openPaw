@@ -1,28 +1,26 @@
-const { buildReturnChartUrl } = require('../../src/email/stockChart');
+const { buildPeBarChartUrl } = require('../../src/email/stockChart');
 
-describe('buildReturnChartUrl', () => {
+describe('buildPeBarChartUrl', () => {
   const holdings = [
-    { symbol: 'AAPL', series: [
-      { date: '2026-01-02', cumulativeReturnPct: 0 },
-      { date: '2026-06-12', cumulativeReturnPct: 25 }
-    ]},
-    { symbol: 'SPY', series: [
-      { date: '2026-01-02', cumulativeReturnPct: 0 },
-      { date: '2026-06-12', cumulativeReturnPct: 10 }
-    ]}
+    { symbol: 'NVDA', peRatio: 55.2 },
+    { symbol: 'AAPL', peRatio: 31.8 },
+    { symbol: 'SPY', peRatio: null }
   ];
 
-  test('returns a QuickChart URL with one dataset per holding', () => {
-    const url = buildReturnChartUrl(holdings);
+  test('returns a QuickChart bar-chart URL with one bar per holding that has a P/E', () => {
+    const url = buildPeBarChartUrl(holdings);
     expect(url).toContain('https://quickchart.io/chart?');
     const config = JSON.parse(decodeURIComponent(url.split('c=')[1]));
-    expect(config.type).toBe('line');
-    expect(config.data.datasets).toHaveLength(2);
-    expect(config.data.datasets.map(d => d.label)).toEqual(['AAPL', 'SPY']);
+    expect(config.type).toBe('bar');
+    // SPY (null P/E) is excluded; NVDA + AAPL remain.
+    expect(config.data.labels).toEqual(['NVDA', 'AAPL']);
+    expect(config.data.datasets).toHaveLength(1);
+    expect(config.data.datasets[0].data).toEqual([55.2, 31.8]);
   });
 
-  test('returns null when no holding has a usable series', () => {
-    expect(buildReturnChartUrl([{ symbol: 'AAPL', series: [] }])).toBeNull();
-    expect(buildReturnChartUrl([])).toBeNull();
+  test('returns null when no holding has a usable P/E', () => {
+    expect(buildPeBarChartUrl([{ symbol: 'SPY', peRatio: null }])).toBeNull();
+    expect(buildPeBarChartUrl([{ symbol: 'SPY' }])).toBeNull();
+    expect(buildPeBarChartUrl([])).toBeNull();
   });
 });
