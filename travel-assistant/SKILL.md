@@ -54,3 +54,26 @@ If the collector saved **0 posts** (login wall) or **< 5 posts with content**, d
 stop. Run `WebSearch` for rednote-aggregator blogs and "best <type> in <destination>"
 plus Google Maps top-rated lists, and hand those results to the analyzer instead.
 Record which mode you used — it becomes `source_mode` (`rednote` / `fallback` / `mixed`).
+
+### Step 3 — Analyze (dispatch a subagent — do NOT read all posts yourself)
+A raw file can hold thousands of comments. Dispatch **one general-purpose `Agent`** to
+read `data/raw/{slug}_rednote_{ts}.json` (or the fallback results) and write structured
+analysis to `data/analysis/{slug}_places_{ts}.json`. Give the agent this exact schema
+and rules:
+
+- One object per place with keys: `name`, `type` (restaurant|sight|cafe|bar|shop|other),
+  `area`, `why_loved` (a **verbatim** quote from a post/comment), `source_urls`
+  (non-empty list of the posts that mention it), `mention_count` (int), `sentiment`
+  (positive|mixed|negative), `tags` (list), plus `map_link: null`, `rating: null`,
+  `lat: null`, `lng: null`.
+- Top-level: `destination`, `generated_at` (ISO), `source_mode`, `places`.
+- Rules: dedup places that are the same venue under different spellings; rank by
+  `mention_count` then sentiment; keep only places with a real source URL; copy quotes
+  verbatim (do not paraphrase into praise); never invent a place.
+
+### Step 4 — Validate before publishing
+```bash
+python3 scripts/validate_places.py data/analysis/{slug}_places_{ts}.json
+```
+Expected: `valid`. If it prints `INVALID`, fix the analyzer output (re-dispatch with the
+listed errors) until it validates. Do not publish an invalid file.
