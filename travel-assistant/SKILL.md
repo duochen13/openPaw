@@ -33,4 +33,24 @@ Never invent a place from model memory.**
 
 ## Workflow
 
-(scope → collect → fallback → analyze → validate → geocode → publish — filled in below)
+### Step 0 — Scope (ask only if ambiguous)
+Confirm with one `AskUserQuestion` only when the destination is broad or the intent
+is unclear: interest vibe (food / sights / cafes / nightlife / all) and whether to
+publish to Notion (default: yes). Pick a short slug (e.g. `lisbon`, `tokyo`). Skip
+the question for a clearly-scoped request and state your assumptions instead.
+
+### Step 1 — Collect from rednote (`scripts/collect_rednote.py`)
+Build 4–6 focused search terms mixing the destination with intent words. Prefer
+Chinese terms (rednote is Chinese-first) plus the destination name, e.g. for Lisbon:
+`里斯本美食, 里斯本必去, 里斯本攻略, Lisbon citywalk, 里斯本咖啡`.
+```bash
+python3 scripts/collect_rednote.py --destination "Lisbon" \
+  --queries "里斯本美食,里斯本必去,里斯本攻略,Lisbon citywalk,里斯本咖啡" --n 6
+```
+Output: `data/raw/{slug}_rednote_{ts}.json`.
+
+### Step 2 — Fallback when rednote is blocked or thin
+If the collector saved **0 posts** (login wall) or **< 5 posts with content**, do NOT
+stop. Run `WebSearch` for rednote-aggregator blogs and "best <type> in <destination>"
+plus Google Maps top-rated lists, and hand those results to the analyzer instead.
+Record which mode you used — it becomes `source_mode` (`rednote` / `fallback` / `mixed`).
