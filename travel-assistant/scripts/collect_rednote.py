@@ -9,7 +9,7 @@ WHY THIS WAY (expected gotchas, mirror of collect_reddit.py):
     modal and yields 0 note cards -> the caller (SKILL.md) falls back to WebSearch.
   - DOM selectors below are BEST-EFFORT and MUST be verified live (see Task 3).
 """
-import subprocess, json, os, re, time, argparse, glob, urllib.parse
+import subprocess, json, os, re, time, argparse, glob, tempfile, urllib.parse
 from datetime import datetime, timezone
 
 def slugify(text):
@@ -50,13 +50,22 @@ def run(args, timeout=70):
 def goto(url, timeout=70):
     run(["goto", url], timeout); time.sleep(2.0)
 
-def eval_js(js):
-    out = run(["eval", js])
+# This browse binary's `eval` takes a FILE PATH (not inline JS), and prints result
+# lines to stdout. Write the JS to a temp file, eval it, then parse the last line
+# that starts with `prefix` ("[" for arrays, "{" for objects). Mirrors collect_reddit.py.
+EVAL_TMP = os.path.join(tempfile.gettempdir(), "_ta_eval.js")
+
+def eval_js(js, prefix):
+    with open(EVAL_TMP, "w") as f:
+        f.write(js)
+    raw = run(["eval", EVAL_TMP])
+    ln = [l for l in raw.splitlines() if l.strip().startswith(prefix)]
+    if not ln:
+        return None
     try:
-        start = out.index("[") if "[" in out else out.index("{")
-        return json.loads(out[start:out.rindex("]" if "[" in out else "}") + 1])
+        return json.loads(ln[-1])
     except Exception:
-        return []
+        return None
 
 # BEST-EFFORT selectors — verify live in Step 2 and adjust before relying on output.
 SEARCH_LIST_JS = r'''(()=>{const o=[];document.querySelectorAll('section.note-item, div.note-item').forEach(el=>{const a=el.querySelector('a[href*="/explore/"], a[href*="/search_result/"]');const t=el.querySelector('.title, span.title, .footer .title');const lk=el.querySelector('.like-wrapper .count, .count');if(!a)return;o.push({title:(t?t.innerText:'').trim(),url:a.href,likes:(lk?lk.innerText:'0').replace(/[^0-9]/g,'')||'0'});});return JSON.stringify(o);})()'''
@@ -64,21 +73,18 @@ POST_JS = r'''(()=>{const c=document.querySelector('#detail-desc, .note-content,
 
 def get_post(url):
     goto(url)
-    out = run(["eval", POST_JS])
-    try:
-        start = out.index("{"); return json.loads(out[start:out.rindex("}") + 1])
-    except Exception:
-        return {"content": "", "comments": []}
+    pd = eval_js(POST_JS, "{")
+    return pd if pd else {"content": "", "comments": []}
 
 def collect(destination, queries, n_per_query=6):
-    run(["set-ua", UA])
+    run(["useragent", UA])
     slug = slugify(destination)
     sid = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
     all_items = []
     for q in queries:
         url = "https://www.xiaohongshu.com/search_result?keyword=" + urllib.parse.quote(q)
         goto(url)
-        items = eval_js(SEARCH_LIST_JS)
+        items = eval_js(SEARCH_LIST_JS, "[") or []
         print(f"[{q}] {len(items)} cards")
         all_items.extend(items)
     picked = rank_by_likes(dedup_by_url(all_items))[: n_per_query * len(queries)]
