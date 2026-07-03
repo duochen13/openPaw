@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Ship a Claude Code skill `/travel-research <destination>` that mines rednote (Xiaohongshu) for places/restaurants people love, deduplicates and ranks them with cited quotes, and publishes one row per place to a Notion database.
+**Goal:** Ship a Claude Code skill `/travel-research <destination>` that mines rednote (Xiaohongshu) for places/restaurants people love, deduplicates and ranks them with cited quotes, publishes one row per place to a Notion database, and marks every place as a pin on a Google Map (My Maps via KML import).
 
-**Architecture:** Mirrors the existing `market-research` skill exactly — a `SKILL.md` orchestration doc plus Python helper scripts that drive the gstack `browse` headless-browser binary. Collection is a Python script (`collect_rednote.py`); analysis is a dispatched general-purpose subagent (LLM, documented in SKILL.md); geocoding uses `WebSearch`; publishing uses the connected `notion` MCP tools driven by Claude. A small pure-Python validator (`validate_places.py`) gates the analyzer output before publish, and is the one piece under automated tests.
+**Architecture:** Mirrors the existing `market-research` skill exactly — a `SKILL.md` orchestration doc plus Python helper scripts that drive the gstack `browse` headless-browser binary. Collection is a Python script (`collect_rednote.py`); analysis is a dispatched general-purpose subagent (LLM, documented in SKILL.md); the Google Map is built by `build_map.py` (geocode via Nominatim → KML for Google My Maps); publishing uses the connected `notion` MCP tools driven by Claude. Two small pure-Python units carry automated tests: the schema validator (`validate_places.py`) that gates analyzer output before publish, and the KML builder (`build_map.py`).
 
 **Tech Stack:** Python 3 (stdlib only — `subprocess`, `json`, `urllib`), gstack `browse` binary at `~/.claude/skills/gstack/browse/dist/browse`, `notion` MCP tools, `WebSearch`. No test framework — tests are plain runnable `assert` scripts (matching the repo's zero-framework convention for skills).
 
@@ -21,11 +21,14 @@ travel-assistant/
   scripts/
     collect_rednote.py          # browse-driven rednote collector -> data/raw/*.json
     validate_places.py          # pure validator for analyzer output (importable + CLI)
+    build_map.py                # geocode (Nominatim) + KML generation -> data/maps/*.kml
     test_collect_rednote.py     # asserts pure helpers: slugify/dedup/rank
     test_validate_places.py     # asserts schema validation
+    test_build_map.py           # asserts KML generation (pure)
   data/
     raw/.gitkeep                # {slug}_rednote_{ts}.json (collector output)
     analysis/.gitkeep           # {slug}_places_{ts}.json (analyzer output)
+    maps/.gitkeep               # {slug}.kml (Google My Maps import file)
 ```
 
 **Responsibilities:**
@@ -68,12 +71,14 @@ travel-assistant/
       "sentiment": "positive",
       "map_link": null,
       "rating": null,
+      "lat": null,
+      "lng": null,
       "tags": ["food-hall", "must-book"]
     }
   ]
 }
 ```
-Enums: `type` ∈ {restaurant, sight, cafe, bar, shop, other}; `sentiment` ∈ {positive, mixed, negative}; `source_mode` ∈ {rednote, fallback, mixed}. `map_link`/`rating` are `null` until the geocode step fills them.
+Enums: `type` ∈ {restaurant, sight, cafe, bar, shop, other}; `sentiment` ∈ {positive, mixed, negative}; `source_mode` ∈ {rednote, fallback, mixed}. `map_link`/`rating`/`lat`/`lng` are `null` until the geocode step fills them. `lat`/`lng` feed the KML pins; `map_link` is the per-place Google Maps link for Notion.
 
 ---
 
@@ -213,7 +218,7 @@ WHY THIS WAY (expected gotchas, mirror of collect_reddit.py):
     modal and yields 0 note cards -> the caller (SKILL.md) falls back to WebSearch.
   - DOM selectors below are BEST-EFFORT and MUST be verified live (see Task 3).
 """
-import subprocess, json, os, re, time, argparse, glob, urllib.parse
+import subprocess, json, os, re, time, argparse, glob, tempfile, urllib.parse
 from datetime import datetime, timezone
 
 def slugify(text):
@@ -281,13 +286,22 @@ def run(args, timeout=70):
 def goto(url, timeout=70):
     run(["goto", url], timeout); time.sleep(2.0)
 
-def eval_js(js):
-    out = run(["eval", js])
+# This browse binary's `eval` takes a FILE PATH (not inline JS) and prints result
+# lines to stdout; write JS to a temp file, eval it, parse the last line starting
+# with `prefix`. Mirrors market-research/collect_reddit.py (verified convention).
+EVAL_TMP = os.path.join(tempfile.gettempdir(), "_ta_eval.js")
+
+def eval_js(js, prefix):
+    with open(EVAL_TMP, "w") as f:
+        f.write(js)
+    raw = run(["eval", EVAL_TMP])
+    ln = [l for l in raw.splitlines() if l.strip().startswith(prefix)]
+    if not ln:
+        return None
     try:
-        start = out.index("[") if "[" in out else out.index("{")
-        return json.loads(out[start:out.rindex("]" if "[" in out else "}") + 1])
+        return json.loads(ln[-1])
     except Exception:
-        return []
+        return None
 
 # BEST-EFFORT selectors — verify live in Step 2 and adjust before relying on output.
 SEARCH_LIST_JS = r'''(()=>{const o=[];document.querySelectorAll('section.note-item, div.note-item').forEach(el=>{const a=el.querySelector('a[href*="/explore/"], a[href*="/search_result/"]');const t=el.querySelector('.title, span.title, .footer .title');const lk=el.querySelector('.like-wrapper .count, .count');if(!a)return;o.push({title:(t?t.innerText:'').trim(),url:a.href,likes:(lk?lk.innerText:'0').replace(/[^0-9]/g,'')||'0'});});return JSON.stringify(o);})()'''
@@ -295,21 +309,18 @@ POST_JS = r'''(()=>{const c=document.querySelector('#detail-desc, .note-content,
 
 def get_post(url):
     goto(url)
-    out = run(["eval", POST_JS])
-    try:
-        start = out.index("{"); return json.loads(out[start:out.rindex("}") + 1])
-    except Exception:
-        return {"content": "", "comments": []}
+    pd = eval_js(POST_JS, "{")
+    return pd if pd else {"content": "", "comments": []}
 
 def collect(destination, queries, n_per_query=6):
-    run(["set-ua", UA])
+    run(["useragent", UA])
     slug = slugify(destination)
     sid = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
     all_items = []
     for q in queries:
         url = "https://www.xiaohongshu.com/search_result?keyword=" + urllib.parse.quote(q)
         goto(url)
-        items = eval_js(SEARCH_LIST_JS)
+        items = eval_js(SEARCH_LIST_JS, "[") or []
         print(f"[{q}] {len(items)} cards")
         all_items.extend(items)
     picked = rank_by_likes(dedup_by_url(all_items))[: n_per_query * len(queries)]
@@ -349,14 +360,15 @@ cd travel-assistant/scripts && python3 test_collect_rednote.py
 ```
 Expected: `all passed`
 
-Then verify the DOM selectors against live rednote using the browse tool directly (selectors change often; this step confirms/repairs them):
+Then verify the DOM selectors against live rednote using the browse tool directly (selectors change often; this step confirms/repairs them). Note the installed binary's CLI: `useragent <str>` and `js <expr>` for a one-off inline expression (the collector itself uses `eval <file>`):
 ```bash
-~/.claude/skills/gstack/browse/dist/browse set-ua "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
-~/.claude/skills/gstack/browse/dist/browse goto "https://www.xiaohongshu.com/search_result?keyword=%E9%87%8C%E6%96%AF%E6%9C%AC%E7%BE%8E%E9%A3%9F"
-~/.claude/skills/gstack/browse/dist/browse eval 'document.querySelectorAll("section.note-item, div.note-item").length'
-~/.claude/skills/gstack/browse/dist/browse stop
+BR=~/.claude/skills/gstack/browse/dist/browse
+$BR useragent "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+$BR goto "https://www.xiaohongshu.com/search_result?keyword=%E9%87%8C%E6%96%AF%E6%9C%AC%E7%BE%8E%E9%A3%9F"
+$BR js 'document.querySelectorAll("section.note-item, div.note-item").length'
+$BR stop
 ```
-Expected: a non-zero count if logged in. If it prints `0`, either (a) not logged in → the login wall is up (expected → SKILL.md fallback handles it), or (b) selectors drifted → inspect the page and update `SEARCH_LIST_JS`/`POST_JS`, then re-run. Record the working selectors.
+Expected: a non-zero count if logged in. If it prints `0`, either (a) not logged in → the login wall is up (expected → SKILL.md fallback handles it), or (b) selectors drifted → inspect the page and update `SEARCH_LIST_JS`/`POST_JS`, then re-run. Record the working selectors. (This requires running outside the sandbox and with a logged-in session; if neither is available, defer to a human live check.)
 
 - [ ] **Step 3: Commit**
 
@@ -624,6 +636,7 @@ Skip this step entirely if the user passed `--no-publish` (print the places JSON
 ```
 data/raw/       {slug}_rednote_{ts}.json          (collector output)
 data/analysis/  {slug}_places_{ts}.json           (analyzer output, validated)
+data/maps/      {slug}.kml                         (Google My Maps import file)
 ```
 Override the raw dir with env var `TA_DATA_RAW` if needed.
 
@@ -651,7 +664,236 @@ git commit -m "docs(travel): SKILL geocode + Notion publish + data layout"
 
 ---
 
-### Task 8: README + end-to-end dry run
+### Task 8: Google My Maps — geocode + KML builder (TDD)
+
+**Files:**
+- Create: `travel-assistant/scripts/build_map.py`
+- Test: `travel-assistant/scripts/test_build_map.py`
+- Create: `travel-assistant/data/maps/.gitkeep`
+
+- [ ] **Step 1: Write the failing test**
+
+Create `travel-assistant/scripts/test_build_map.py`:
+```python
+import build_map as m
+
+PLACE = {"name": "Time Out <Market>", "type": "restaurant", "area": "Cais",
+         "why_loved": "great & cheap", "source_urls": ["https://x.com/a"],
+         "rating": 4.5, "lat": 38.70, "lng": -9.14}
+
+def test_placemark_has_name_and_coords():
+    pm = m.placemark(PLACE)
+    assert "<Placemark>" in pm and "</Placemark>" in pm
+    # coordinates are lng,lat,0 order per KML spec
+    assert "-9.14,38.7,0" in pm.replace(" ", "")
+
+def test_placemark_escapes_xml():
+    pm = m.placemark(PLACE)
+    assert "&lt;Market&gt;" in pm and "&amp;" in pm
+    assert "<Market>" not in pm.replace("<Placemark>", "")
+
+def test_style_id_by_type():
+    assert m.style_id("restaurant") == "restaurant"
+    assert m.style_id("unknown-type") == "other"
+
+def test_build_kml_skips_placeless_coords_and_counts():
+    places = [PLACE, {"name": "No Coords", "type": "sight", "lat": None, "lng": None}]
+    kml, n = m.build_kml("Lisbon", places)
+    assert kml.startswith("<?xml") and "<kml" in kml
+    assert kml.count("<Placemark>") == 1 and n == 1
+    assert "Lisbon" in kml
+
+if __name__ == "__main__":
+    for name, fn in list(globals().items()):
+        if name.startswith("test_"):
+            fn(); print(f"PASS {name}")
+    print("all passed")
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run:
+```bash
+cd travel-assistant/scripts && python3 test_build_map.py
+```
+Expected: FAIL — `ModuleNotFoundError: No module named 'build_map'`.
+
+- [ ] **Step 3: Write minimal implementation**
+
+Create `travel-assistant/scripts/build_map.py`:
+```python
+#!/usr/bin/env python3
+"""Geocode places (Nominatim/OpenStreetMap) and emit a KML for Google My Maps import.
+
+WHY KML: Google Maps has no public API to add pins to a user's saved lists. The
+robust path is Google My Maps -> Create new map -> Import -> select this .kml,
+which drops every place as a colored pin on one shareable map (also visible in
+the Google Maps app under Your places -> Maps).
+
+Geocoding uses Nominatim (free, no API key). Usage policy: <=1 req/sec and a
+descriptive User-Agent. Pins are colored by place type.
+"""
+import json, os, re, time, argparse, urllib.parse, urllib.request
+
+NOMINATIM = "https://nominatim.openstreetmap.org/search"
+UA = "openpaw-travel-assistant/1.0 (personal trip planning)"
+TYPE_COLORS = {  # KML line/icon colors are aabbggrr hex
+    "restaurant": "ff0000ff", "cafe": "ff00a5ff", "bar": "ff800080",
+    "sight": "ff00ff00", "shop": "ffff0000", "other": "ff808080",
+}
+
+def style_id(place_type):
+    return place_type if place_type in TYPE_COLORS else "other"
+
+def _esc(s):
+    return (str(s).replace("&", "&amp;").replace("<", "&lt;")
+            .replace(">", "&gt;").replace('"', "&quot;"))
+
+def placemark(p):
+    sid = style_id(p.get("type", "other"))
+    desc_parts = []
+    if p.get("why_loved"): desc_parts.append(p["why_loved"])
+    if p.get("area"): desc_parts.append("Area: " + str(p["area"]))
+    if p.get("rating") not in (None, ""): desc_parts.append("Rating: " + str(p["rating"]))
+    for u in p.get("source_urls", []) or []:
+        desc_parts.append(u)
+    desc = _esc("\n".join(desc_parts))
+    return (f"    <Placemark>\n"
+            f"      <name>{_esc(p.get('name',''))}</name>\n"
+            f"      <description>{desc}</description>\n"
+            f"      <styleUrl>#{sid}</styleUrl>\n"
+            f"      <Point><coordinates>{p['lng']},{p['lat']},0</coordinates></Point>\n"
+            f"    </Placemark>")
+
+def _styles():
+    out = []
+    for sid, color in TYPE_COLORS.items():
+        out.append(f'    <Style id="{sid}"><IconStyle><color>{color}</color></IconStyle></Style>')
+    return "\n".join(out)
+
+def build_kml(destination, places):
+    marks, n = [], 0
+    for p in places:
+        if p.get("lat") is None or p.get("lng") is None:
+            continue
+        marks.append(placemark(p)); n += 1
+    body = "\n".join(marks)
+    kml = (f'<?xml version="1.0" encoding="UTF-8"?>\n'
+           f'<kml xmlns="http://www.opengis.net/kml/2.2">\n'
+           f'  <Document>\n'
+           f'    <name>{_esc("Travel — " + destination)}</name>\n'
+           f'{_styles()}\n'
+           f'{body}\n'
+           f'  </Document>\n'
+           f'</kml>\n')
+    return kml, n
+
+def geocode(query):
+    params = urllib.parse.urlencode({"q": query, "format": "json", "limit": 1})
+    req = urllib.request.Request(f"{NOMINATIM}?{params}", headers={"User-Agent": UA})
+    try:
+        with urllib.request.urlopen(req, timeout=20) as r:
+            hits = json.loads(r.read().decode())
+        if hits:
+            return float(hits[0]["lat"]), float(hits[0]["lon"])
+    except Exception as e:
+        print(f"  geocode err [{query}]: {e}")
+    return None, None
+
+def enrich_and_build(path):
+    obj = json.load(open(path, encoding="utf-8"))
+    dest = obj.get("destination", "")
+    for p in obj.get("places", []):
+        if p.get("lat") is None or p.get("lng") is None:
+            q = " ".join(str(x) for x in [p.get("name",""), p.get("area",""), dest] if x)
+            p["lat"], p["lng"] = geocode(q)
+            time.sleep(1.1)  # Nominatim: <=1 req/sec
+    json.dump(obj, open(path, "w", encoding="utf-8"), indent=2, ensure_ascii=False)
+    kml, n = build_kml(dest, obj.get("places", []))
+    maps_dir = os.path.join(os.path.dirname(__file__), "..", "data", "maps")
+    os.makedirs(maps_dir, exist_ok=True)
+    slug = re.sub(r"[^a-z0-9]+", "_", dest.strip().lower()).strip("_") or "map"
+    out = os.path.join(maps_dir, f"{slug}.kml")
+    open(out, "w", encoding="utf-8").write(kml)
+    print(f"[{slug}] {n} pins -> {out}")
+    return out
+
+if __name__ == "__main__":
+    ap = argparse.ArgumentParser()
+    ap.add_argument("file", help="path to a validated {slug}_places_*.json")
+    a = ap.parse_args()
+    enrich_and_build(a.file)
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run:
+```bash
+cd travel-assistant/scripts && python3 test_build_map.py
+```
+Expected: `PASS test_placemark_has_name_and_coords` … `all passed`
+
+- [ ] **Step 5: Add the maps data dir keep file**
+
+```bash
+touch travel-assistant/data/maps/.gitkeep
+```
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add travel-assistant/scripts/build_map.py travel-assistant/scripts/test_build_map.py travel-assistant/data/maps/.gitkeep
+git commit -m "feat(travel): geocode + KML map builder for Google My Maps"
+```
+
+---
+
+### Task 9: SKILL.md — build the Google Map step
+
+**Files:**
+- Modify: `travel-assistant/SKILL.md` (insert a map step and update the workflow one-liner)
+
+- [ ] **Step 1: Append the Google Map step after the publish section**
+
+Append to `travel-assistant/SKILL.md` (after the `## Common mistakes` section):
+```markdown
+## Step 7 — Build the Google Map (pins for the trip)
+After the places JSON is validated (and geocoded for `map_link`), build the map file:
+```bash
+python3 scripts/build_map.py data/analysis/{slug}_places_{ts}.json
+```
+`build_map.py` geocodes each place to lat/lng via Nominatim (writes `lat`/`lng` back
+into the JSON) and emits `data/maps/{slug}.kml` with one colored pin per place.
+
+Then tell the user how to load it (this is the "mark in Google Maps" step):
+1. Open **Google My Maps** (mymaps.google.com) → **Create a new map**.
+2. **Import** → upload `data/maps/{slug}.kml`.
+3. All places appear as colored pins on one map (by type). It's now under
+   *Your places → Maps* in the Google Maps app on phone + desktop.
+
+Run this even under `--no-publish` (the KML is the deliverable); only the Notion
+step is skipped in that mode.
+```
+
+- [ ] **Step 2: Update the workflow one-liner in the Overview**
+
+In `travel-assistant/SKILL.md`, the earlier fallback block ends the collect section.
+No change needed there. Just verify the map step is present:
+```bash
+grep -q "Step 7 — Build the Google Map" travel-assistant/SKILL.md && grep -q "build_map.py" travel-assistant/SKILL.md && echo "map step OK"
+```
+Expected: `map step OK`
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add travel-assistant/SKILL.md
+git commit -m "docs(travel): SKILL Google My Maps build step"
+```
+
+---
+
+### Task 10: README + end-to-end dry run
 
 **Files:**
 - Create: `travel-assistant/README.md`
@@ -663,7 +905,8 @@ Create `travel-assistant/README.md`:
 # Travel Research
 
 A Claude Code skill that mines rednote (Xiaohongshu) for the places and restaurants
-people love in a destination, then publishes them to a Notion database.
+people love in a destination, publishes them to a Notion database, and marks them
+as pins on a Google Map.
 
 ## Usage
 ```
@@ -678,14 +921,19 @@ people love in a destination, then publishes them to a Notion database.
 
 ## How it works
 scope → collect (rednote via headless browser) → fallback (WebSearch + Maps) →
-analyze (subagent dedup/rank with cited quotes) → validate → geocode → publish (Notion).
+analyze (subagent dedup/rank with cited quotes) → validate → geocode →
+build map (KML for Google My Maps) → publish (Notion).
 
-See `SKILL.md` for the full workflow and `docs/superpowers/specs/2026-07-02-travel-assistant-design.md`
-for the design rationale. Booking and Maps route-marking are planned future phases.
+The map is delivered as a `.kml` you import into Google My Maps (Create map →
+Import), producing one map with a colored pin per place — visible in the Google
+Maps app under *Your places → Maps*. See `SKILL.md` for the full workflow and
+`docs/superpowers/specs/2026-07-02-travel-assistant-design.md` for rationale.
+Booking and multi-day route *sequencing* are planned future phases.
 
 ## Scripts
 - `scripts/collect_rednote.py` — rednote collector (drives the browse browser).
 - `scripts/validate_places.py` — validates analyzer output before publishing.
+- `scripts/build_map.py` — geocodes places and emits the Google My Maps KML.
 - `python3 scripts/test_*.py` — run the unit tests for the pure helpers.
 ```
 
@@ -693,18 +941,20 @@ for the design rationale. Booking and Maps route-marking are planned future phas
 
 Run:
 ```bash
-cd travel-assistant/scripts && python3 test_collect_rednote.py && python3 test_validate_places.py
+cd travel-assistant/scripts && python3 test_collect_rednote.py && python3 test_validate_places.py && python3 test_build_map.py
 ```
-Expected: both print `all passed`.
+Expected: all three print `all passed`.
 
 - [ ] **Step 3: End-to-end dry run (manual, real destination)**
 
 Verify the full skill flow with publishing off. Invoke `/travel-research Lisbon --no-publish`
 and confirm: the collector writes a raw file (or the fallback triggers with a printed
-notice), the analyzer produces `data/analysis/lisbon_places_*.json`, and
-`python3 scripts/validate_places.py data/analysis/lisbon_places_*.json` prints `valid`.
-If rednote is login-walled, confirm the WebSearch fallback path runs and `source_mode`
-is `fallback`.
+notice), the analyzer produces `data/analysis/lisbon_places_*.json`,
+`python3 scripts/validate_places.py data/analysis/lisbon_places_*.json` prints `valid`,
+and `python3 scripts/build_map.py data/analysis/lisbon_places_*.json` writes
+`data/maps/lisbon.kml` with a pin count > 0. Open the KML in Google My Maps (Import)
+and confirm pins appear. If rednote is login-walled, confirm the WebSearch fallback
+path runs and `source_mode` is `fallback`.
 
 - [ ] **Step 4: Commit**
 
@@ -719,14 +969,15 @@ git commit -m "docs(travel): README + dry-run verification"
 
 **Spec coverage:**
 - Hybrid data source (browse rednote + WebSearch/Maps fallback) → Tasks 3, 5 (collect), Task 5-SKILL Step 2 (fallback). ✓
-- Claude Code skill shape (`/travel-research`) → Task 1 frontmatter, Task 8 README. ✓
-- Units (collector / analyzer / geocoder / publisher) → collector Tasks 2–3; analyzer Task 6; geocoder Task 7 Step 5; publisher Task 7 Step 6. ✓
+- Claude Code skill shape (`/travel-research`) → Task 1 frontmatter, Task 10 README. ✓
+- Units (collector / analyzer / geocoder / map builder / publisher) → collector Tasks 2–3; analyzer Task 6; geocoder Task 7 Step 5 + Task 8 (lat/lng via Nominatim); map builder Task 8; publisher Task 7 Step 6. ✓
 - "Every place cites a real source" principle → Task 1 overview, Task 6 rules, Task 4 validator enforces non-empty `source_urls`. ✓
 - Notion schema (all 10 fields) → Task 7 Step 1 matches the spec table. ✓
-- Error handling (login-wall fallback, thin coverage, Notion failure keeps JSON, `--no-publish`) → Task 5 Step 2, Task 7 Step 6.4, Task 6 README/skip. ✓
-- Testing (collector helpers, validator, e2e dry run) → Tasks 2, 4, 8. Collector's browser/analyzer/MCP layers are verified manually (Task 3 Step 2, Task 8 Step 3) because they depend on live login/LLM/MCP and the repo has no mocking harness for them — matching `market-research`'s zero-framework convention. ✓
-- Out-of-scope (booking, maps-routing) explicitly deferred → Task 1 overview, README. ✓
+- Google Map marking (My Maps via KML, geocode via Nominatim, colored pins) → Task 8 (build_map.py + KML), Task 9 (SKILL import step), Task 10 README. ✓
+- Error handling (login-wall fallback, thin coverage, Notion failure keeps JSON, geocode miss skips pin, `--no-publish` still builds KML) → Task 5 Step 2, Task 7 Step 6.4, Task 8 `build_kml` skips null coords, Task 9 note. ✓
+- Testing (collector helpers, validator, KML builder, e2e dry run) → Tasks 2, 4, 8, 10. Collector's browser layer, the analyzer subagent, Notion MCP, and live Nominatim/geocoding are verified via the dry run (Task 3 Step 2, Task 10 Step 3) because they depend on live login/LLM/MCP/network and the repo has no mocking harness — matching `market-research`'s zero-framework convention. ✓
+- Out-of-scope (booking, multi-day route *sequencing*) explicitly deferred → Task 1 overview, README. ✓
 
 **Placeholder scan:** No TBD/TODO; every code step shows complete code; every verify step shows an exact command + expected output.
 
-**Type consistency:** `slugify`, `dedup_by_url`, `rank_by_likes` (Task 2) are the names used in `collect()` (Task 3). `validate(obj) -> (ok, errors)` (Task 4) matches its test and the SKILL Step 4 usage. The places-object keys in the shared contract, the analyzer prompt (Task 6), the validator (Task 4), and the Notion mapping (Task 7) all agree.
+**Type consistency:** `slugify`, `dedup_by_url`, `rank_by_likes` (Task 2) are the names used in `collect()` (Task 3), and `eval_js(js, prefix)` (Task 3, corrected) matches its callers. `validate(obj) -> (ok, errors)` (Task 4) matches its test and the SKILL Step 4 usage. `placemark`/`style_id`/`build_kml`/`enrich_and_build` (Task 8) match `test_build_map.py`. The places-object keys in the shared contract (incl. `lat`/`lng`), the analyzer prompt (Task 6), the validator (Task 4), the map builder (Task 8), and the Notion mapping (Task 7) all agree.
