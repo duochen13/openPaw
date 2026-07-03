@@ -77,3 +77,42 @@ python3 scripts/validate_places.py data/analysis/{slug}_places_{ts}.json
 ```
 Expected: `valid`. If it prints `INVALID`, fix the analyzer output (re-dispatch with the
 listed errors) until it validates. Do not publish an invalid file.
+
+### Step 5 — Geocode each place
+For each place, add a Google Maps search link and (if easily found) a rating:
+- `map_link`: `https://www.google.com/maps/search/?api=1&query=` + URL-encoded
+  `"<name> <area> <destination>"`.
+- `rating`: use `WebSearch` for the Google rating only when it surfaces quickly; leave
+  `null` otherwise. Do not block the run on ratings.
+Write the enriched objects back into the same `data/analysis/{slug}_places_{ts}.json`.
+(Precise lat/lng for the map pins are resolved separately by `build_map.py` in Step 7.)
+
+### Step 6 — Publish to Notion (via the `notion` MCP tools)
+Skip this step entirely if the user passed `--no-publish` (print the places JSON instead).
+
+1. `notion-search` for a database titled `Travel — <Destination>`.
+2. If none exists, `notion-create-database` with these properties:
+   - `Name` (title), `Type` (select), `Area` (rich_text), `Why people love it`
+     (rich_text), `Source links` (url), `Map link` (url), `Rating` (number),
+     `Tags` (multi_select), `Destination` (select), `Status` (select: want-to-go /
+     booked / visited).
+3. For each place, **upsert by `Name`**: `notion-query-data-sources` to check if a row
+   with that Name exists; if yes `notion-update-page`, else `notion-create-pages`.
+   Map `why_loved`→`Why people love it`, first `source_urls`→`Source links`,
+   `map_link`→`Map link`, `Status` default `want-to-go`.
+4. On any Notion failure, keep `data/analysis/{slug}_places_{ts}.json` and report its
+   path — nothing is lost.
+
+## Data layout
+```
+data/raw/       {slug}_rednote_{ts}.json          (collector output)
+data/analysis/  {slug}_places_{ts}.json           (analyzer output, validated)
+data/maps/      {slug}.kml                         (Google My Maps import file)
+```
+Override the raw dir with env var `TA_DATA_RAW` if needed.
+
+## Common mistakes
+- Publishing paraphrased praise instead of a verbatim quote + source URL.
+- Skipping validation and pushing a malformed row to Notion.
+- Treating rednote sentiment as a survey — it skews to enthusiasts; say so if asked.
+- Giving up when the login wall appears instead of using the WebSearch fallback.
