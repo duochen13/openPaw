@@ -116,3 +116,20 @@ Override the raw dir with env var `TA_DATA_RAW` if needed.
 - Skipping validation and pushing a malformed row to Notion.
 - Treating rednote sentiment as a survey — it skews to enthusiasts; say so if asked.
 - Giving up when the login wall appears instead of using the WebSearch fallback.
+
+## Step 7 — Build the Google Map (pins for the trip)
+After the places JSON is validated (and geocoded for `map_link`), build the map file:
+```bash
+python3 scripts/build_map.py data/analysis/{slug}_places_{ts}.json
+```
+`build_map.py` geocodes each place to lat/lng via Nominatim (writes `lat`/`lng` back
+into the JSON) and emits `data/maps/{slug}.kml` with one colored pin per place.
+
+Then tell the user how to load it (this is the "mark in Google Maps" step):
+1. Open **Google My Maps** (mymaps.google.com) → **Create a new map**.
+2. **Import** → upload `data/maps/{slug}.kml`.
+3. All places appear as colored pins on one map (by type). It's now under
+   *Your places → Maps* in the Google Maps app on phone + desktop.
+
+Run this even under `--no-publish` (the KML is the deliverable); only the Notion
+step is skipped in that mode.
