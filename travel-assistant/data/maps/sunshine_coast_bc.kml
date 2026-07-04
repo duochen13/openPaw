@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <name>Travel — Sunshine Coast BC</name>
+    <Style id="restaurant"><IconStyle><color>ff0000ff</color></IconStyle></Style>
+    <Style id="cafe"><IconStyle><color>ff00a5ff</color></IconStyle></Style>
+    <Style id="bar"><IconStyle><color>ff800080</color></IconStyle></Style>
+    <Style id="sight"><IconStyle><color>ff00ff00</color></IconStyle></Style>
+    <Style id="shop"><IconStyle><color>ffff0000</color></IconStyle></Style>
+    <Style id="other"><IconStyle><color>ff808080</color></IconStyle></Style>
+    <Placemark>
+      <name>Smitty's Oyster House</name>
+      <description>Some of the best oysters around, plus chowder and fresh fish right on Gibsons Harbour with Howe Sound views.
+Area: Gibsons Landing
+https://www.emrvacationrentals.com/blog/best-restaurants-sunshine-coast-bc/
+https://www.mysunshinecoastbc.com/sunshine-coast-restaurants-cafes
+https://www.vancouverisawesome.com/travel/best-food-restaurants-gibsons-sunshine-coast-bc-guide-6016633</description>
+      <styleUrl>#restaurant</styleUrl>
+      <Point><coordinates>-123.503,49.3936,0</coordinates></Point>
+    </Placemark>
+    <Placemark>
+      <name>Smoke on the Water BBQ Shack</name>
+      <description>Fall-off-the-bone BBQ from locally sourced meat, smoked on site over real hardwood, right on the wharf.
+Area: Gibsons wharf
+https://www.emrvacationrentals.com/blog/best-restaurants-sunshine-coast-bc/
+https://www.vancouverisawesome.com/travel/best-food-restaurants-gibsons-sunshine-coast-bc-guide-6016633</description>
+      <styleUrl>#restaurant</styleUrl>
+      <Point><coordinates>-123.5028,49.3939,0</coordinates></Point>
+    </Placemark>
+    <Placemark>
+      <name>Molly's Reach</name>
+      <description>The Beachcombers TV icon — hearty breakfast and lunch with baked goods made fresh daily.
+Area: Gibsons Landing
+https://www.emrvacationrentals.com/blog/best-restaurants-sunshine-coast-bc/
+https://www.vancouverisawesome.com/travel/best-food-restaurants-gibsons-sunshine-coast-bc-guide-6016633
+https://www.mysunshinecoastbc.com/sunshine-coast-restaurants-cafes</description>
+      <styleUrl>#restaurant</styleUrl>
+      <Point><coordinates>-123.5025,49.394,0</coordinates></Point>
+    </Placemark>
+    <Placemark>
+      <name>Brassica</name>
+      <description>A newer Gibsons spot drawing strong praise among the coast's exciting new hotspots.
+Area: Gibsons
+https://www.emrvacationrentals.com/blog/best-restaurants-sunshine-coast-bc/</description>
+      <styleUrl>#restaurant</styleUrl>
+      <Point><coordinates>-123.505,49.398,0</coordinates></Point>
+    </Placemark>
+    <Placemark>
+      <name>Beachcomber Coffee</name>
+      <description>Synonymous with Gibsons — a cozy cafe with great espresso and donuts and pastries.
+Area: Gibsons
+https://www.emrvacationrentals.com/blog/best-restaurants-sunshine-coast-bc/
+https://www.mysunshinecoastbc.com/sunshine-coast-restaurants-cafes</description>
+      <styleUrl>#cafe</styleUrl>
+      <Point><coordinates>-123.5045,49.3985,0</coordinates></Point>
+    </Placemark>
+    <Placemark>
+      <name>The Gumboot Cafe</name>
+      <description>An iconic Roberts Creek institution serving healthy soups, pizzas and salads for over 20 years.
+Area: Roberts Creek
+https://happiestoutdoors.ca/things-to-do-on-the-sunshine-coast-bc/
+https://offtracktravel.ca/things-to-do-sunshine-coast-bc/
+https://www.mysunshinecoastbc.com/sunshine-coast-restaurants-cafes</description>
+      <styleUrl>#cafe</styleUrl>
+      <Point><coordinates>-123.64,49.4185,0</coordinates></Point>
+    </Placemark>
+    <Placemark>
+      <name>The Wobbly Canoe</name>
+      <description>Casual eatery on Davis Bay Beach with a great patio and fresh seafood.
+Area: Davis Bay, Sechelt
+https://www.emrvacationrentals.com/blog/best-restaurants-sunshine-coast-bc/
+https://www.mysunshinecoastbc.com/sunshine-coast-restaurants-cafes</description>
+      <styleUrl>#restaurant</styleUrl>
+      <Point><coordinates>-123.707,49.4447,0</coordinates></Point>
+    </Placemark>
+    <Placemark>
+      <name>Batch 44 Brewery</name>
+      <description>Family-owned, beloved craft brewery with flavour-forward food — the Bayou Bite burger and gyro stand out.
+Area: Sechelt
+https://www.emrvacationrentals.com/blog/best-restaurants-sunshine-coast-bc/</description>
+      <styleUrl>#bar</styleUrl>
+      <Point><coordinates>-123.755,49.474,0</coordinates></Point>
+    </Placemark>
+    <Placemark>
+      <name>The Lighthouse Pub</name>
+      <description>Expansive patio with unobstructed Sechelt Inlet ocean views, pouring pints since 1988.
+Area: Porpoise Bay, Sechelt
+https://www.emrvacationrentals.com/blog/best-restaurants-sunshine-coast-bc/
+https://www.mysunshinecoastbc.com/sunshine-coast-restaurants-cafes</description>
+      <styleUrl>#bar</styleUrl>
+      <Point><coordinates>-123.748,49.487,0</coordinates></Point>
+    </Placemark>
+    <Placemark>
+      <name>Gibsons Landing</name>
+      <description>Picture-perfect waterfront and pier with shops and galleries along Marine Drive — worth a stroll.
+Area: Gibsons
+https://happiestoutdoors.ca/things-to-do-on-the-sunshine-coast-bc/
+https://offtracktravel.ca/things-to-do-sunshine-coast-bc/
+https://godiscovertoday.com/canada-sunshine-coast/</description>
+      <styleUrl>#sight</styleUrl>
+      <Point><coordinates>-123.504,49.3935,0</coordinates></Point>
+    </Placemark>
+    <Placemark>
+      <name>Soames Hill</name>
+      <description>Short but stair-heavy hike rewarded with spectacular views of Gibsons, Keats Island and the ocean.
+Area: Gibsons
+https://happiestoutdoors.ca/things-to-do-on-the-sunshine-coast-bc/
+https://offtracktravel.ca/things-to-do-sunshine-coast-bc/</description>
+      <styleUrl>#sight</styleUrl>
+      <Point><coordinates>-123.496,49.4085,0</coordinates></Point>
+    </Placemark>
+    <Placemark>
+      <name>Davis Bay Beach</name>
+      <description>A beautiful long rocky beach, perfect for a swim or to sit with a book.
+Area: Sechelt
+https://happiestoutdoors.ca/things-to-do-on-the-sunshine-coast-bc/
+https://offtracktravel.ca/things-to-do-sunshine-coast-bc/</description>
+      <styleUrl>#sight</styleUrl>
+      <Point><coordinates>-123.708,49.444,0</coordinates></Point>
+    </Placemark>
+    <Placemark>
+      <name>Roberts Creek Pier &amp; Mandala</name>
+      <description>Laid-back creekside hamlet; a painted mandala by the pier and coffee with misty sea views.
+Area: Roberts Creek
+https://offtracktravel.ca/things-to-do-sunshine-coast-bc/
+https://notamushroomdiary.com/ArticleDetail_Sunshine_Coast.html
+https://www.sunshinecoastcanada.com/</description>
+      <styleUrl>#sight</styleUrl>
+      <Point><coordinates>-123.647,49.4155,0</coordinates></Point>
+    </Placemark>
+    <Placemark>
+      <name>Cliff Gilker Park</name>
+      <description>A network of easy, family-friendly trails through lush coastal rainforest.
+Area: Roberts Creek
+https://happiestoutdoors.ca/things-to-do-on-the-sunshine-coast-bc/
+https://offtracktravel.ca/things-to-do-sunshine-coast-bc/</description>
+      <styleUrl>#sight</styleUrl>
+      <Point><coordinates>-123.636,49.427,0</coordinates></Point>
+    </Placemark>
+    <Placemark>
+      <name>Smuggler Cove Marine Provincial Park</name>
+      <description>Easy ~4km coastal hike (1.5–2h) to a sheltered, scenic cove.
+Area: Halfmoon Bay
+https://happiestoutdoors.ca/things-to-do-on-the-sunshine-coast-bc/
+https://offtracktravel.ca/things-to-do-sunshine-coast-bc/</description>
+      <styleUrl>#sight</styleUrl>
+      <Point><coordinates>-123.938,49.513,0</coordinates></Point>
+    </Placemark>
+    <Placemark>
+      <name>Sechelt Waterfront (Friendship to Snickett Park)</name>
+      <description>A lovely oceanfront pathway out to the pier — one of the nicest spots in Sechelt.
+Area: Sechelt
+https://happiestoutdoors.ca/things-to-do-on-the-sunshine-coast-bc/
+https://www.sunshinecoastcanada.com/</description>
+      <styleUrl>#sight</styleUrl>
+      <Point><coordinates>-123.762,49.476,0</coordinates></Point>
+    </Placemark>
+    <Placemark>
+      <name>Skookumchuck Narrows</name>
+      <description>North America's largest tidal rapids and whirlpools — a signature Sunshine Coast spectacle.
+Area: Egmont
+https://happiestoutdoors.ca/things-to-do-on-the-sunshine-coast-bc/
+https://offtracktravel.ca/things-to-do-sunshine-coast-bc/
+https://godiscovertoday.com/canada-sunshine-coast/</description>
+      <styleUrl>#sight</styleUrl>
+      <Point><coordinates>-123.933,49.744,0</coordinates></Point>
+    </Placemark>
+    <Placemark>
+      <name>Gospel Rock</name>
+      <description>Quick roadside stop with sweeping ocean views, pairs well with a swim at nearby Secret or Franklin Beach.
+Area: Gibsons
+https://offtracktravel.ca/things-to-do-sunshine-coast-bc/</description>
+      <styleUrl>#sight</styleUrl>
+      <Point><coordinates>-123.515,49.387,0</coordinates></Point>
+    </Placemark>
+  </Document>
+</kml>
