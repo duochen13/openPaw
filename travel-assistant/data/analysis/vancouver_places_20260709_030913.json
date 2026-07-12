@@ -1,0 +1,816 @@
+{
+  "destination": "Vancouver, BC",
+  "generated_at": "2026-07-09T03:09:13Z",
+  "source_mode": "fallback",
+  "places": [
+    {
+      "name": "Capilano Suspension Bridge",
+      "type": "sight",
+      "area": "North Vancouver",
+      "why_loved": "Swaying 70 meters above the river, surrounded by lush rainforest.",
+      "source_urls": [
+        "https://www.isango.com/theguidebook/15-must-see-and-do-attractions-in-vancouver-bc-in-2026/",
+        "https://vancouverplanner.com/best-things-to-do-in-vancouver/",
+        "https://joyceinthebay.com/travel/good-food-in-vancouver-canada/"
+      ],
+      "mention_count": 3,
+      "sentiment": "positive",
+      "tags": [
+        "suspension-bridge",
+        "rainforest",
+        "outdoors"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=Capilano%20Suspension%20Bridge%20North%20Vancouver%20Vancouver%2C%20BC",
+      "rating": null,
+      "lat": 49.342704,
+      "lng": -123.1160482
+    },
+    {
+      "name": "Revolver",
+      "type": "cafe",
+      "area": "Gastown",
+      "why_loved": "the Vancouver cafe that serious coffee people take their coffee-industry friends to",
+      "source_urls": [
+        "https://vancityguide.ca/best-of/vancouver-2026/coffee",
+        "https://www.localspecialtycoffee.com/cities/good-coffee-shops-in-vancouver",
+        "https://wheatlesswanderlust.com/best-coffee-shops-vancouver/"
+      ],
+      "mention_count": 3,
+      "sentiment": "positive",
+      "tags": [
+        "coffee",
+        "specialty",
+        "pour-over"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=Revolver%20Gastown%20Vancouver%2C%20BC",
+      "rating": null,
+      "lat": 49.2831716,
+      "lng": -123.109459
+    },
+    {
+      "name": "Nemesis Coffee",
+      "type": "cafe",
+      "area": "Gastown",
+      "why_loved": "most technically consistent espresso in the downtown core",
+      "source_urls": [
+        "https://vancityguide.ca/best-of/vancouver-2026/coffee",
+        "https://www.localspecialtycoffee.com/cities/good-coffee-shops-in-vancouver",
+        "https://wheatlesswanderlust.com/best-coffee-shops-vancouver/"
+      ],
+      "mention_count": 3,
+      "sentiment": "positive",
+      "tags": [
+        "coffee",
+        "espresso",
+        "design"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=Nemesis%20Coffee%20Gastown%20Vancouver%2C%20BC",
+      "rating": null,
+      "lat": null,
+      "lng": null
+    },
+    {
+      "name": "Pallet Coffee Roasters",
+      "type": "cafe",
+      "area": "Mount Pleasant",
+      "why_loved": "broke into the Vancouver top-5 in about 3 years — hyper-detailed single-origin menu and a roastery you can watch",
+      "source_urls": [
+        "https://vancityguide.ca/best-of/vancouver-2026/coffee",
+        "https://www.localspecialtycoffee.com/cities/good-coffee-shops-in-vancouver",
+        "https://wheatlesswanderlust.com/best-coffee-shops-vancouver/"
+      ],
+      "mention_count": 3,
+      "sentiment": "positive",
+      "tags": [
+        "coffee",
+        "roastery",
+        "single-origin"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=Pallet%20Coffee%20Roasters%20Mount%20Pleasant%20Vancouver%2C%20BC",
+      "rating": null,
+      "lat": null,
+      "lng": null
+    },
+    {
+      "name": "Timbertrain Coffee Roasters",
+      "type": "cafe",
+      "area": "Gastown",
+      "why_loved": "in-house roasting and some of the best-trained barista staff in the city — the coffee version of a destination restaurant",
+      "source_urls": [
+        "https://vancityguide.ca/best-of/vancouver-2026/coffee",
+        "https://www.localspecialtycoffee.com/cities/good-coffee-shops-in-vancouver",
+        "https://wheatlesswanderlust.com/best-coffee-shops-vancouver/"
+      ],
+      "mention_count": 3,
+      "sentiment": "positive",
+      "tags": [
+        "coffee",
+        "roastery",
+        "barista"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=Timbertrain%20Coffee%20Roasters%20Gastown%20Vancouver%2C%20BC",
+      "rating": null,
+      "lat": 49.2839055,
+      "lng": -123.1094962
+    },
+    {
+      "name": "Published on Main",
+      "type": "restaurant",
+      "area": "Main Street",
+      "why_loved": "Chef Gus Stieffenhofer-Brandson's ever-changing menu turns B.C.'s best ingredients into playful, inventive dishes",
+      "source_urls": [
+        "https://www.timeout.com/vancouver/restaurants/best-restaurants-in-vancouver",
+        "https://nomsmagazine.com/canadas-100-best-2026-bc-restaurants/"
+      ],
+      "mention_count": 2,
+      "sentiment": "positive",
+      "tags": [
+        "tasting-menu",
+        "local-ingredients",
+        "fine-dining"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=Published%20on%20Main%20Main%20Street%20Vancouver%2C%20BC",
+      "rating": null,
+      "lat": 49.2528469,
+      "lng": -123.1011732
+    },
+    {
+      "name": "St. Lawrence",
+      "type": "restaurant",
+      "area": "Railtown",
+      "why_loved": "Chef J.C. Poirier celebrates Quebec's culinary traditions with rich tourtières, duck, foie gras",
+      "source_urls": [
+        "https://www.timeout.com/vancouver/restaurants/best-restaurants-in-vancouver",
+        "https://nomsmagazine.com/canadas-100-best-2026-bc-restaurants/"
+      ],
+      "mention_count": 2,
+      "sentiment": "positive",
+      "tags": [
+        "french",
+        "quebecois",
+        "fine-dining"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=St.%20Lawrence%20Railtown%20Vancouver%2C%20BC",
+      "rating": null,
+      "lat": null,
+      "lng": null
+    },
+    {
+      "name": "Kissa Tanto",
+      "type": "restaurant",
+      "area": "Chinatown",
+      "why_loved": "The signature charcoal udon is practically a Vancouver icon at this point",
+      "source_urls": [
+        "https://www.timeout.com/vancouver/restaurants/best-restaurants-in-vancouver",
+        "https://nomsmagazine.com/canadas-100-best-2026-bc-restaurants/"
+      ],
+      "mention_count": 2,
+      "sentiment": "positive",
+      "tags": [
+        "japanese-italian",
+        "udon",
+        "dinner"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=Kissa%20Tanto%20Chinatown%20Vancouver%2C%20BC",
+      "rating": null,
+      "lat": 49.2804783,
+      "lng": -123.0981769
+    },
+    {
+      "name": "Burdock & Co.",
+      "type": "restaurant",
+      "area": "",
+      "why_loved": "Chef Andrea Carlson's cooking is elegant, vegetable-forward and deeply connected to the seasons",
+      "source_urls": [
+        "https://www.timeout.com/vancouver/restaurants/best-restaurants-in-vancouver",
+        "https://nomsmagazine.com/canadas-100-best-2026-bc-restaurants/"
+      ],
+      "mention_count": 2,
+      "sentiment": "positive",
+      "tags": [
+        "vegetable-forward",
+        "seasonal",
+        "tasting-menu"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=Burdock%20%26%20Co.%20Vancouver%2C%20BC",
+      "rating": null,
+      "lat": 49.2609848,
+      "lng": -123.1007601
+    },
+    {
+      "name": "AnnaLena",
+      "type": "restaurant",
+      "area": "Kitsilano",
+      "why_loved": "Chef Michael Robbins delivers tasting menus packed with surprise and delight",
+      "source_urls": [
+        "https://www.timeout.com/vancouver/restaurants/best-restaurants-in-vancouver",
+        "https://nomsmagazine.com/canadas-100-best-2026-bc-restaurants/"
+      ],
+      "mention_count": 2,
+      "sentiment": "positive",
+      "tags": [
+        "tasting-menu",
+        "contemporary",
+        "fine-dining"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=AnnaLena%20Kitsilano%20Vancouver%2C%20BC",
+      "rating": null,
+      "lat": 49.2708255,
+      "lng": -123.1467646
+    },
+    {
+      "name": "Sumibiyaki Arashi",
+      "type": "restaurant",
+      "area": "",
+      "why_loved": "Specializes in Japanese charcoal grilling, coaxing incredible flavour from premium seafood, wagyu",
+      "source_urls": [
+        "https://www.timeout.com/vancouver/restaurants/best-restaurants-in-vancouver",
+        "https://nomsmagazine.com/canadas-100-best-2026-bc-restaurants/"
+      ],
+      "mention_count": 2,
+      "sentiment": "positive",
+      "tags": [
+        "japanese",
+        "charcoal-grill",
+        "wagyu"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=Sumibiyaki%20Arashi%20Vancouver%2C%20BC",
+      "rating": null,
+      "lat": null,
+      "lng": null
+    },
+    {
+      "name": "Elem",
+      "type": "restaurant",
+      "area": "",
+      "why_loved": "Tasting menu changes constantly but often highlights vegetables, fermentation and unexpected flavour",
+      "source_urls": [
+        "https://www.timeout.com/vancouver/restaurants/best-restaurants-in-vancouver",
+        "https://nomsmagazine.com/canadas-100-best-2026-bc-restaurants/"
+      ],
+      "mention_count": 2,
+      "sentiment": "positive",
+      "tags": [
+        "tasting-menu",
+        "fermentation",
+        "vegetable-forward"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=Elem%20Vancouver%2C%20BC",
+      "rating": null,
+      "lat": 49.266186,
+      "lng": -123.1005431
+    },
+    {
+      "name": "Stanley Park",
+      "type": "sight",
+      "area": "Downtown",
+      "why_loved": "This is the mother of all Vancouver parks.",
+      "source_urls": [
+        "https://vancouverplanner.com/best-things-to-do-in-vancouver/",
+        "https://www.isango.com/theguidebook/15-must-see-and-do-attractions-in-vancouver-bc-in-2026/"
+      ],
+      "mention_count": 2,
+      "sentiment": "positive",
+      "tags": [
+        "park",
+        "seawall",
+        "outdoors"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=Stanley%20Park%20Downtown%20Vancouver%2C%20BC",
+      "rating": null,
+      "lat": 49.2945696,
+      "lng": -123.136622
+    },
+    {
+      "name": "Granville Island",
+      "type": "sight",
+      "area": "False Creek",
+      "why_loved": "Home to local artists and their art galleries. It's also home to street performers",
+      "source_urls": [
+        "https://vancouverplanner.com/best-things-to-do-in-vancouver/",
+        "https://www.isango.com/theguidebook/15-must-see-and-do-attractions-in-vancouver-bc-in-2026/"
+      ],
+      "mention_count": 2,
+      "sentiment": "positive",
+      "tags": [
+        "market",
+        "arts",
+        "food"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=Granville%20Island%20False%20Creek%20Vancouver%2C%20BC",
+      "rating": null,
+      "lat": 49.2695368,
+      "lng": -123.136246
+    },
+    {
+      "name": "Grouse Mountain",
+      "type": "sight",
+      "area": "North Vancouver",
+      "why_loved": "From the epic Grouse Grind hike and zip lining in Vancouver in summer to skiing",
+      "source_urls": [
+        "https://vancouverplanner.com/best-things-to-do-in-vancouver/",
+        "https://www.isango.com/theguidebook/15-must-see-and-do-attractions-in-vancouver-bc-in-2026/"
+      ],
+      "mention_count": 2,
+      "sentiment": "positive",
+      "tags": [
+        "mountain",
+        "gondola",
+        "hiking"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=Grouse%20Mountain%20North%20Vancouver%20Vancouver%2C%20BC",
+      "rating": null,
+      "lat": 49.3794719,
+      "lng": -123.0767805
+    },
+    {
+      "name": "VanDusen Botanical Garden",
+      "type": "sight",
+      "area": "Shaughnessy",
+      "why_loved": "22-hectare public garden, maintained by over 1200 volunteers, displays plant",
+      "source_urls": [
+        "https://vancouverplanner.com/best-things-to-do-in-vancouver/",
+        "https://www.isango.com/theguidebook/15-must-see-and-do-attractions-in-vancouver-bc-in-2026/"
+      ],
+      "mention_count": 2,
+      "sentiment": "positive",
+      "tags": [
+        "garden",
+        "botanical",
+        "outdoors"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=VanDusen%20Botanical%20Garden%20Shaughnessy%20Vancouver%2C%20BC",
+      "rating": null,
+      "lat": 49.2396191,
+      "lng": -123.1325932
+    },
+    {
+      "name": "Queen Elizabeth Park",
+      "type": "sight",
+      "area": "Little Mountain",
+      "why_loved": "sweeping city and mountain views",
+      "source_urls": [
+        "https://www.isango.com/theguidebook/15-must-see-and-do-attractions-in-vancouver-bc-in-2026/",
+        "https://vancouverplanner.com/best-things-to-do-in-vancouver/"
+      ],
+      "mention_count": 2,
+      "sentiment": "positive",
+      "tags": [
+        "park",
+        "views",
+        "garden"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=Queen%20Elizabeth%20Park%20Little%20Mountain%20Vancouver%2C%20BC",
+      "rating": null,
+      "lat": null,
+      "lng": null
+    },
+    {
+      "name": "Vancouver Art Gallery",
+      "type": "sight",
+      "area": "Downtown",
+      "why_loved": "The largest art gallery in Western Canada hosts a permanent collection of about",
+      "source_urls": [
+        "https://vancouverplanner.com/best-things-to-do-in-vancouver/",
+        "https://www.isango.com/theguidebook/15-must-see-and-do-attractions-in-vancouver-bc-in-2026/"
+      ],
+      "mention_count": 2,
+      "sentiment": "positive",
+      "tags": [
+        "art",
+        "gallery",
+        "museum"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=Vancouver%20Art%20Gallery%20Downtown%20Vancouver%2C%20BC",
+      "rating": null,
+      "lat": 49.2828495,
+      "lng": -123.1206248
+    },
+    {
+      "name": "Kitsilano Beach",
+      "type": "sight",
+      "area": "Kitsilano",
+      "why_loved": "To hang with the beautiful people and check out Canada's longest swimming pool",
+      "source_urls": [
+        "https://vancouverplanner.com/best-things-to-do-in-vancouver/",
+        "https://www.isango.com/theguidebook/15-must-see-and-do-attractions-in-vancouver-bc-in-2026/"
+      ],
+      "mention_count": 2,
+      "sentiment": "positive",
+      "tags": [
+        "beach",
+        "pool",
+        "outdoors"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=Kitsilano%20Beach%20Kitsilano%20Vancouver%2C%20BC",
+      "rating": null,
+      "lat": 49.2756531,
+      "lng": -123.1537326
+    },
+    {
+      "name": "Science World",
+      "type": "sight",
+      "area": "False Creek",
+      "why_loved": "An iconic Vancouver building: a geodesic sphere at the edge of False Creek",
+      "source_urls": [
+        "https://vancouverplanner.com/best-things-to-do-in-vancouver/",
+        "https://www.isango.com/theguidebook/15-must-see-and-do-attractions-in-vancouver-bc-in-2026/"
+      ],
+      "mention_count": 2,
+      "sentiment": "positive",
+      "tags": [
+        "museum",
+        "science",
+        "family"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=Science%20World%20False%20Creek%20Vancouver%2C%20BC",
+      "rating": null,
+      "lat": 49.2720848,
+      "lng": -123.1043893
+    },
+    {
+      "name": "Gastown Steam Clock",
+      "type": "sight",
+      "area": "Gastown",
+      "why_loved": "One of the only functioning steam clocks in the world. It was built in 1977",
+      "source_urls": [
+        "https://vancouverplanner.com/best-things-to-do-in-vancouver/",
+        "https://www.isango.com/theguidebook/15-must-see-and-do-attractions-in-vancouver-bc-in-2026/"
+      ],
+      "mention_count": 2,
+      "sentiment": "positive",
+      "tags": [
+        "landmark",
+        "historic",
+        "gastown"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=Gastown%20Steam%20Clock%20Gastown%20Vancouver%2C%20BC",
+      "rating": null,
+      "lat": 49.2843841,
+      "lng": -123.10889
+    },
+    {
+      "name": "49th Parallel Cafe",
+      "type": "cafe",
+      "area": "Mount Pleasant",
+      "why_loved": "Vancouver's reference-standard specialty coffee — 49th Parallel roasts for half the serious cafes in the city",
+      "source_urls": [
+        "https://vancityguide.ca/best-of/vancouver-2026/coffee",
+        "https://www.localspecialtycoffee.com/cities/good-coffee-shops-in-vancouver"
+      ],
+      "mention_count": 2,
+      "sentiment": "positive",
+      "tags": [
+        "coffee",
+        "roastery",
+        "doughnuts"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=49th%20Parallel%20Cafe%20Mount%20Pleasant%20Vancouver%2C%20BC",
+      "rating": null,
+      "lat": 49.2591437,
+      "lng": -123.1007987
+    },
+    {
+      "name": "Modus Coffee",
+      "type": "cafe",
+      "area": "Mount Pleasant",
+      "why_loved": "no blends or dark roasts here",
+      "source_urls": [
+        "https://www.localspecialtycoffee.com/cities/good-coffee-shops-in-vancouver",
+        "https://wheatlesswanderlust.com/best-coffee-shops-vancouver/"
+      ],
+      "mention_count": 2,
+      "sentiment": "positive",
+      "tags": [
+        "coffee",
+        "micro-roasting",
+        "single-origin"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=Modus%20Coffee%20Mount%20Pleasant%20Vancouver%2C%20BC",
+      "rating": null,
+      "lat": null,
+      "lng": null
+    },
+    {
+      "name": "Oidé Coffee",
+      "type": "cafe",
+      "area": "Kitsilano",
+      "why_loved": "a multi roaster that brings in both Canadian roasters and other roasters from around the world",
+      "source_urls": [
+        "https://www.localspecialtycoffee.com/cities/good-coffee-shops-in-vancouver",
+        "https://wheatlesswanderlust.com/best-coffee-shops-vancouver/"
+      ],
+      "mention_count": 2,
+      "sentiment": "positive",
+      "tags": [
+        "coffee",
+        "multi-roaster",
+        "japanese-inspired"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=Oid%C3%A9%20Coffee%20Kitsilano%20Vancouver%2C%20BC",
+      "rating": null,
+      "lat": null,
+      "lng": null
+    },
+    {
+      "name": "L'Abattoir",
+      "type": "restaurant",
+      "area": "Gastown",
+      "why_loved": "Refined West Coast ingredients meet French technique in dishes layered with texture and flavour",
+      "source_urls": [
+        "https://www.timeout.com/vancouver/restaurants/best-restaurants-in-vancouver"
+      ],
+      "mention_count": 1,
+      "sentiment": "positive",
+      "tags": [
+        "french",
+        "west-coast",
+        "fine-dining"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=L%27Abattoir%20Gastown%20Vancouver%2C%20BC",
+      "rating": null,
+      "lat": 49.2831177,
+      "lng": -123.1044629
+    },
+    {
+      "name": "Masayoshi",
+      "type": "restaurant",
+      "area": "",
+      "why_loved": "Chef Masayoshi Baba serves pristine nigiri, sashimi and seasonal omakase courses with remarkable precision",
+      "source_urls": [
+        "https://www.timeout.com/vancouver/restaurants/best-restaurants-in-vancouver"
+      ],
+      "mention_count": 1,
+      "sentiment": "positive",
+      "tags": [
+        "sushi",
+        "omakase",
+        "japanese"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=Masayoshi%20Vancouver%2C%20BC",
+      "rating": null,
+      "lat": 49.2458146,
+      "lng": -123.0900087
+    },
+    {
+      "name": "Savio Volpe",
+      "type": "restaurant",
+      "area": "",
+      "why_loved": "Menu is packed with wood-fired meats, handmade pasta and vegetables treated with surprising care",
+      "source_urls": [
+        "https://www.timeout.com/vancouver/restaurants/best-restaurants-in-vancouver"
+      ],
+      "mention_count": 1,
+      "sentiment": "positive",
+      "tags": [
+        "italian",
+        "pasta",
+        "wood-fired"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=Savio%20Volpe%20Vancouver%2C%20BC",
+      "rating": null,
+      "lat": 49.2574553,
+      "lng": -123.0909467
+    },
+    {
+      "name": "Sushi Hill",
+      "type": "restaurant",
+      "area": "",
+      "why_loved": "Meticulous omakase experience with impeccably sourced seafood, beautifully seasoned rice",
+      "source_urls": [
+        "https://www.timeout.com/vancouver/restaurants/best-restaurants-in-vancouver"
+      ],
+      "mention_count": 1,
+      "sentiment": "positive",
+      "tags": [
+        "sushi",
+        "omakase",
+        "japanese"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=Sushi%20Hill%20Vancouver%2C%20BC",
+      "rating": null,
+      "lat": 49.2262041,
+      "lng": -123.090544
+    },
+    {
+      "name": "Magari by Oca",
+      "type": "restaurant",
+      "area": "Mount Pleasant",
+      "why_loved": "Specializes in fresh, house-made noodles tossed with seasonal ingredients, rich sauces",
+      "source_urls": [
+        "https://www.timeout.com/vancouver/restaurants/best-restaurants-in-vancouver"
+      ],
+      "mention_count": 1,
+      "sentiment": "positive",
+      "tags": [
+        "italian",
+        "pasta",
+        "house-made-noodles"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=Magari%20by%20Oca%20Mount%20Pleasant%20Vancouver%2C%20BC",
+      "rating": null,
+      "lat": null,
+      "lng": null
+    },
+    {
+      "name": "Barbara",
+      "type": "restaurant",
+      "area": "",
+      "why_loved": "Champions local ingredients, fermentation and open-fire cooking, transforming humble produce into deeply complex",
+      "source_urls": [
+        "https://www.timeout.com/vancouver/restaurants/best-restaurants-in-vancouver"
+      ],
+      "mention_count": 1,
+      "sentiment": "positive",
+      "tags": [
+        "open-fire",
+        "fermentation",
+        "tasting-menu"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=Barbara%20Vancouver%2C%20BC",
+      "rating": null,
+      "lat": 49.2804688,
+      "lng": -123.0969849
+    },
+    {
+      "name": "Mackenzie Room",
+      "type": "restaurant",
+      "area": "",
+      "why_loved": "The menu bounces effortlessly between global influences, combining bold spices, local ingredients",
+      "source_urls": [
+        "https://www.timeout.com/vancouver/restaurants/best-restaurants-in-vancouver"
+      ],
+      "mention_count": 1,
+      "sentiment": "positive",
+      "tags": [
+        "global",
+        "local-ingredients",
+        "dinner"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=Mackenzie%20Room%20Vancouver%2C%20BC",
+      "rating": null,
+      "lat": 49.2831953,
+      "lng": -123.0949154
+    },
+    {
+      "name": "Baan Lao",
+      "type": "restaurant",
+      "area": "Steveston",
+      "why_loved": "one of the highest-ranked Thai restaurants in the country",
+      "source_urls": [
+        "https://nomsmagazine.com/canadas-100-best-2026-bc-restaurants/"
+      ],
+      "mention_count": 1,
+      "sentiment": "positive",
+      "tags": [
+        "thai",
+        "fine-dining",
+        "waterfront"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=Baan%20Lao%20Steveston%20Vancouver%2C%20BC",
+      "rating": null,
+      "lat": 49.1230377,
+      "lng": -123.1785466
+    },
+    {
+      "name": "Beyond Hotpot 潮悅牛肉火鍋",
+      "type": "restaurant",
+      "area": "Richmond",
+      "why_loved": "鮮切牛肉跟平常吃到的冷凍牛肉相比，好像多了一點牛味",
+      "source_urls": [
+        "https://joyceinthebay.com/travel/good-food-in-vancouver-canada/"
+      ],
+      "mention_count": 1,
+      "sentiment": "positive",
+      "tags": [
+        "hotpot",
+        "beef",
+        "cantonese"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=Beyond%20Hotpot%20%E6%BD%AE%E6%82%85%E7%89%9B%E8%82%89%E7%81%AB%E9%8D%8B%20Richmond%20Vancouver%2C%20BC",
+      "rating": null,
+      "lat": null,
+      "lng": null
+    },
+    {
+      "name": "Continental Seafood Restaurant 幸運海鮮酒樓",
+      "type": "restaurant",
+      "area": "Richmond",
+      "why_loved": "據說是連溫哥華都少見的有推車的飲茶餐廳",
+      "source_urls": [
+        "https://joyceinthebay.com/travel/good-food-in-vancouver-canada/"
+      ],
+      "mention_count": 1,
+      "sentiment": "positive",
+      "tags": [
+        "dim-sum",
+        "cantonese",
+        "cart-service"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=Continental%20Seafood%20Restaurant%20%E5%B9%B8%E9%81%8B%E6%B5%B7%E9%AE%AE%E9%85%92%E6%A8%93%20Richmond%20Vancouver%2C%20BC",
+      "rating": null,
+      "lat": null,
+      "lng": null
+    },
+    {
+      "name": "OEB Breakfast Co.",
+      "type": "restaurant",
+      "area": "Yaletown",
+      "why_loved": "比利時鬆餅奶香奶香的，口感外酥內嫩",
+      "source_urls": [
+        "https://joyceinthebay.com/travel/good-food-in-vancouver-canada/"
+      ],
+      "mention_count": 1,
+      "sentiment": "positive",
+      "tags": [
+        "breakfast",
+        "brunch",
+        "waffles"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=OEB%20Breakfast%20Co.%20Yaletown%20Vancouver%2C%20BC",
+      "rating": null,
+      "lat": 49.2734675,
+      "lng": -123.119191
+    },
+    {
+      "name": "Excellent Tofu & Snacks 好好豆坊",
+      "type": "restaurant",
+      "area": "Richmond",
+      "why_loved": "無糖豆漿喝起來倒是確實比市售的各大品牌都新鮮",
+      "source_urls": [
+        "https://joyceinthebay.com/travel/good-food-in-vancouver-canada/"
+      ],
+      "mention_count": 1,
+      "sentiment": "positive",
+      "tags": [
+        "tofu",
+        "soy-milk",
+        "snacks"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=Excellent%20Tofu%20%26%20Snacks%20%E5%A5%BD%E5%A5%BD%E8%B1%86%E5%9D%8A%20Richmond%20Vancouver%2C%20BC",
+      "rating": null,
+      "lat": null,
+      "lng": null
+    },
+    {
+      "name": "The First Dessert 阿一糖水",
+      "type": "restaurant",
+      "area": "Vancouver",
+      "why_loved": "西米還是很軟Q",
+      "source_urls": [
+        "https://joyceinthebay.com/travel/good-food-in-vancouver-canada/"
+      ],
+      "mention_count": 1,
+      "sentiment": "positive",
+      "tags": [
+        "dessert",
+        "chinese",
+        "sago"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=The%20First%20Dessert%20%E9%98%BF%E4%B8%80%E7%B3%96%E6%B0%B4%20Vancouver%20Vancouver%2C%20BC",
+      "rating": null,
+      "lat": null,
+      "lng": null
+    },
+    {
+      "name": "Matchstick Coffee Roasters",
+      "type": "cafe",
+      "area": "Chinatown",
+      "why_loved": "serves unusually forgiving coffee — great entry-level specialty coffee that doesn't intimidate",
+      "source_urls": [
+        "https://vancityguide.ca/best-of/vancouver-2026/coffee"
+      ],
+      "mention_count": 1,
+      "sentiment": "positive",
+      "tags": [
+        "coffee",
+        "roastery",
+        "approachable"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=Matchstick%20Coffee%20Roasters%20Chinatown%20Vancouver%2C%20BC",
+      "rating": null,
+      "lat": null,
+      "lng": null
+    },
+    {
+      "name": "Small Victory",
+      "type": "cafe",
+      "area": "Kitsilano",
+      "why_loved": "Cafe-bakery hybrid that happens to be one of the best Kits cafes",
+      "source_urls": [
+        "https://vancityguide.ca/best-of/vancouver-2026/coffee"
+      ],
+      "mention_count": 1,
+      "sentiment": "positive",
+      "tags": [
+        "coffee",
+        "bakery",
+        "pastries"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=Small%20Victory%20Kitsilano%20Vancouver%2C%20BC",
+      "rating": null,
+      "lat": null,
+      "lng": null
+    }
+  ]
+}

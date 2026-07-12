@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Map — Vancouver, BC</title>
+<style>
+  html, body { height: 100%; margin: 0; font-family: -apple-system, system-ui, sans-serif; }
+  #map { height: calc(100% - 34px); width: 100%; }
+  #footer { height: 34px; line-height: 34px; padding: 0 12px; font-size: 13px;
+             color: #444; background: #f5f5f5; border-top: 1px solid #ddd;
+             box-sizing: border-box; overflow: hidden; white-space: nowrap; }
+  .iw-title { font-weight: 600; font-size: 15px; margin: 0 0 2px; }
+  .iw-meta { color: #666; font-size: 12px; margin: 0 0 6px; }
+  .iw-why { margin: 0 0 6px; max-width: 260px; }
+  .iw-link { font-size: 12px; }
+  #legend { position: absolute; bottom: 44px; left: 10px; z-index: 5; background: #fff;
+             border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,.3); padding: 8px 11px;
+             font-size: 12px; line-height: 1.7; }
+  #legend .lg-hd { font-weight: 600; margin-bottom: 3px; }
+  .lg-row { display: flex; align-items: center; white-space: nowrap;
+             cursor: pointer; user-select: none; padding: 1px 4px; margin: 0 -4px;
+             border-radius: 4px; }
+  .lg-row:hover { background: #f0f0f0; }
+  .lg-off { opacity: .4; }
+  .lg-off .lg-lbl { text-decoration: line-through; }
+  .lg-dot { width: 11px; height: 11px; border-radius: 50%; margin-right: 7px;
+             border: 1px solid rgba(0,0,0,.25); flex: 0 0 auto; }
+  #legend .lg-hint { font-size: 10px; color: #999; margin-top: 5px; }
+  #routebox { position: absolute; bottom: 44px; left: 50%; transform: translateX(-50%); z-index: 5;
+               display: none; background: #fff; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,.3);
+               padding: 6px 12px; font-size: 13px; max-width: 90%; }
+  #searchbox { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 6;
+                width: min(340px, 82%); }
+  #searchbox gmp-place-autocomplete { width: 100%; box-shadow: 0 1px 4px rgba(0,0,0,.3);
+                border-radius: 8px; background: #fff; }
+  .rb { cursor: pointer; user-select: none; }
+  .rb-note { color: #999; font-size: 11px; }
+  .route-label { position: absolute; transform: translate(-50%, -50%); background: #1a73e8; color: #fff;
+                  font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 10px;
+                  white-space: nowrap; box-shadow: 0 1px 2px rgba(0,0,0,.35); pointer-events: none; }
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div id="searchbox"></div>
+<div id="legend"></div>
+<div id="routebox"></div>
+<div id="footer">25 places shown  ·  14 skipped (no coordinates)  ·  ⚠️ add your Google Maps API key to render the map</div>
+<script>
+const PLACES = [{"name": "Capilano Suspension Bridge", "type": "sight", "area": "North Vancouver", "why_loved": "Swaying 70 meters above the river, surrounded by lush rainforest.", "source_urls": ["https://www.isango.com/theguidebook/15-must-see-and-do-attractions-in-vancouver-bc-in-2026/", "https://vancouverplanner.com/best-things-to-do-in-vancouver/", "https://joyceinthebay.com/travel/good-food-in-vancouver-canada/"], "mention_count": 3, "sentiment": "positive", "tags": ["suspension-bridge", "rainforest", "outdoors"], "map_link": "https://www.google.com/maps/search/?api=1&query=Capilano%20Suspension%20Bridge%20North%20Vancouver%20Vancouver%2C%20BC", "rating": null, "lat": 49.342704, "lng": -123.1160482}, {"name": "Revolver", "type": "cafe", "area": "Gastown", "why_loved": "the Vancouver cafe that serious coffee people take their coffee-industry friends to", "source_urls": ["https://vancityguide.ca/best-of/vancouver-2026/coffee", "https://www.localspecialtycoffee.com/cities/good-coffee-shops-in-vancouver", "https://wheatlesswanderlust.com/best-coffee-shops-vancouver/"], "mention_count": 3, "sentiment": "positive", "tags": ["coffee", "specialty", "pour-over"], "map_link": "https://www.google.com/maps/search/?api=1&query=Revolver%20Gastown%20Vancouver%2C%20BC", "rating": null, "lat": 49.2831716, "lng": -123.109459}, {"name": "Timbertrain Coffee Roasters", "type": "cafe", "area": "Gastown", "why_loved": "in-house roasting and some of the best-trained barista staff in the city — the coffee version of a destination restaurant", "source_urls": ["https://vancityguide.ca/best-of/vancouver-2026/coffee", "https://www.localspecialtycoffee.com/cities/good-coffee-shops-in-vancouver", "https://wheatlesswanderlust.com/best-coffee-shops-vancouver/"], "mention_count": 3, "sentiment": "positive", "tags": ["coffee", "roastery", "barista"], "map_link": "https://www.google.com/maps/search/?api=1&query=Timbertrain%20Coffee%20Roasters%20Gastown%20Vancouver%2C%20BC", "rating": null, "lat": 49.2839055, "lng": -123.1094962}, {"name": "Published on Main", "type": "restaurant", "area": "Main Street", "why_loved": "Chef Gus Stieffenhofer-Brandson's ever-changing menu turns B.C.'s best ingredients into playful, inventive dishes", "source_urls": ["https://www.timeout.com/vancouver/restaurants/best-restaurants-in-vancouver", "https://nomsmagazine.com/canadas-100-best-2026-bc-restaurants/"], "mention_count": 2, "sentiment": "positive", "tags": ["tasting-menu", "local-ingredients", "fine-dining"], "map_link": "https://www.google.com/maps/search/?api=1&query=Published%20on%20Main%20Main%20Street%20Vancouver%2C%20BC", "rating": null, "lat": 49.2528469, "lng": -123.1011732}, {"name": "Kissa Tanto", "type": "restaurant", "area": "Chinatown", "why_loved": "The signature charcoal udon is practically a Vancouver icon at this point", "source_urls": ["https://www.timeout.com/vancouver/restaurants/best-restaurants-in-vancouver", "https://nomsmagazine.com/canadas-100-best-2026-bc-restaurants/"], "mention_count": 2, "sentiment": "positive", "tags": ["japanese-italian", "udon", "dinner"], "map_link": "https://www.google.com/maps/search/?api=1&query=Kissa%20Tanto%20Chinatown%20Vancouver%2C%20BC", "rating": null, "lat": 49.2804783, "lng": -123.0981769}, {"name": "Burdock & Co.", "type": "restaurant", "area": "", "why_loved": "Chef Andrea Carlson's cooking is elegant, vegetable-forward and deeply connected to the seasons", "source_urls": ["https://www.timeout.com/vancouver/restaurants/best-restaurants-in-vancouver", "https://nomsmagazine.com/canadas-100-best-2026-bc-restaurants/"], "mention_count": 2, "sentiment": "positive", "tags": ["vegetable-forward", "seasonal", "tasting-menu"], "map_link": "https://www.google.com/maps/search/?api=1&query=Burdock%20%26%20Co.%20Vancouver%2C%20BC", "rating": null, "lat": 49.2609848, "lng": -123.1007601}, {"name": "AnnaLena", "type": "restaurant", "area": "Kitsilano", "why_loved": "Chef Michael Robbins delivers tasting menus packed with surprise and delight", "source_urls": ["https://www.timeout.com/vancouver/restaurants/best-restaurants-in-vancouver", "https://nomsmagazine.com/canadas-100-best-2026-bc-restaurants/"], "mention_count": 2, "sentiment": "positive", "tags": ["tasting-menu", "contemporary", "fine-dining"], "map_link": "https://www.google.com/maps/search/?api=1&query=AnnaLena%20Kitsilano%20Vancouver%2C%20BC", "rating": null, "lat": 49.2708255, "lng": -123.1467646}, {"name": "Elem", "type": "restaurant", "area": "", "why_loved": "Tasting menu changes constantly but often highlights vegetables, fermentation and unexpected flavour", "source_urls": ["https://www.timeout.com/vancouver/restaurants/best-restaurants-in-vancouver", "https://nomsmagazine.com/canadas-100-best-2026-bc-restaurants/"], "mention_count": 2, "sentiment": "positive", "tags": ["tasting-menu", "fermentation", "vegetable-forward"], "map_link": "https://www.google.com/maps/search/?api=1&query=Elem%20Vancouver%2C%20BC", "rating": null, "lat": 49.266186, "lng": -123.1005431}, {"name": "Stanley Park", "type": "sight", "area": "Downtown", "why_loved": "This is the mother of all Vancouver parks.", "source_urls": ["https://vancouverplanner.com/best-things-to-do-in-vancouver/", "https://www.isango.com/theguidebook/15-must-see-and-do-attractions-in-vancouver-bc-in-2026/"], "mention_count": 2, "sentiment": "positive", "tags": ["park", "seawall", "outdoors"], "map_link": "https://www.google.com/maps/search/?api=1&query=Stanley%20Park%20Downtown%20Vancouver%2C%20BC", "rating": null, "lat": 49.2945696, "lng": -123.136622}, {"name": "Granville Island", "type": "sight", "area": "False Creek", "why_loved": "Home to local artists and their art galleries. It's also home to street performers", "source_urls": ["https://vancouverplanner.com/best-things-to-do-in-vancouver/", "https://www.isango.com/theguidebook/15-must-see-and-do-attractions-in-vancouver-bc-in-2026/"], "mention_count": 2, "sentiment": "positive", "tags": ["market", "arts", "food"], "map_link": "https://www.google.com/maps/search/?api=1&query=Granville%20Island%20False%20Creek%20Vancouver%2C%20BC", "rating": null, "lat": 49.2695368, "lng": -123.136246}, {"name": "Grouse Mountain", "type": "sight", "area": "North Vancouver", "why_loved": "From the epic Grouse Grind hike and zip lining in Vancouver in summer to skiing", "source_urls": ["https://vancouverplanner.com/best-things-to-do-in-vancouver/", "https://www.isango.com/theguidebook/15-must-see-and-do-attractions-in-vancouver-bc-in-2026/"], "mention_count": 2, "sentiment": "positive", "tags": ["mountain", "gondola", "hiking"], "map_link": "https://www.google.com/maps/search/?api=1&query=Grouse%20Mountain%20North%20Vancouver%20Vancouver%2C%20BC", "rating": null, "lat": 49.3794719, "lng": -123.0767805}, {"name": "VanDusen Botanical Garden", "type": "sight", "area": "Shaughnessy", "why_loved": "22-hectare public garden, maintained by over 1200 volunteers, displays plant", "source_urls": ["https://vancouverplanner.com/best-things-to-do-in-vancouver/", "https://www.isango.com/theguidebook/15-must-see-and-do-attractions-in-vancouver-bc-in-2026/"], "mention_count": 2, "sentiment": "positive", "tags": ["garden", "botanical", "outdoors"], "map_link": "https://www.google.com/maps/search/?api=1&query=VanDusen%20Botanical%20Garden%20Shaughnessy%20Vancouver%2C%20BC", "rating": null, "lat": 49.2396191, "lng": -123.1325932}, {"name": "Vancouver Art Gallery", "type": "sight", "area": "Downtown", "why_loved": "The largest art gallery in Western Canada hosts a permanent collection of about", "source_urls": ["https://vancouverplanner.com/best-things-to-do-in-vancouver/", "https://www.isango.com/theguidebook/15-must-see-and-do-attractions-in-vancouver-bc-in-2026/"], "mention_count": 2, "sentiment": "positive", "tags": ["art", "gallery", "museum"], "map_link": "https://www.google.com/maps/search/?api=1&query=Vancouver%20Art%20Gallery%20Downtown%20Vancouver%2C%20BC", "rating": null, "lat": 49.2828495, "lng": -123.1206248}, {"name": "Kitsilano Beach", "type": "sight", "area": "Kitsilano", "why_loved": "To hang with the beautiful people and check out Canada's longest swimming pool", "source_urls": ["https://vancouverplanner.com/best-things-to-do-in-vancouver/", "https://www.isango.com/theguidebook/15-must-see-and-do-attractions-in-vancouver-bc-in-2026/"], "mention_count": 2, "sentiment": "positive", "tags": ["beach", "pool", "outdoors"], "map_link": "https://www.google.com/maps/search/?api=1&query=Kitsilano%20Beach%20Kitsilano%20Vancouver%2C%20BC", "rating": null, "lat": 49.2756531, "lng": -123.1537326}, {"name": "Science World", "type": "sight", "area": "False Creek", "why_loved": "An iconic Vancouver building: a geodesic sphere at the edge of False Creek", "source_urls": ["https://vancouverplanner.com/best-things-to-do-in-vancouver/", "https://www.isango.com/theguidebook/15-must-see-and-do-attractions-in-vancouver-bc-in-2026/"], "mention_count": 2, "sentiment": "positive", "tags": ["museum", "science", "family"], "map_link": "https://www.google.com/maps/search/?api=1&query=Science%20World%20False%20Creek%20Vancouver%2C%20BC", "rating": null, "lat": 49.2720848, "lng": -123.1043893}, {"name": "Gastown Steam Clock", "type": "sight", "area": "Gastown", "why_loved": "One of the only functioning steam clocks in the world. It was built in 1977", "source_urls": ["https://vancouverplanner.com/best-things-to-do-in-vancouver/", "https://www.isango.com/theguidebook/15-must-see-and-do-attractions-in-vancouver-bc-in-2026/"], "mention_count": 2, "sentiment": "positive", "tags": ["landmark", "historic", "gastown"], "map_link": "https://www.google.com/maps/search/?api=1&query=Gastown%20Steam%20Clock%20Gastown%20Vancouver%2C%20BC", "rating": null, "lat": 49.2843841, "lng": -123.10889}, {"name": "49th Parallel Cafe", "type": "cafe", "area": "Mount Pleasant", "why_loved": "Vancouver's reference-standard specialty coffee — 49th Parallel roasts for half the serious cafes in the city", "source_urls": ["https://vancityguide.ca/best-of/vancouver-2026/coffee", "https://www.localspecialtycoffee.com/cities/good-coffee-shops-in-vancouver"], "mention_count": 2, "sentiment": "positive", "tags": ["coffee", "roastery", "doughnuts"], "map_link": "https://www.google.com/maps/search/?api=1&query=49th%20Parallel%20Cafe%20Mount%20Pleasant%20Vancouver%2C%20BC", "rating": null, "lat": 49.2591437, "lng": -123.1007987}, {"name": "L'Abattoir", "type": "restaurant", "area": "Gastown", "why_loved": "Refined West Coast ingredients meet French technique in dishes layered with texture and flavour", "source_urls": ["https://www.timeout.com/vancouver/restaurants/best-restaurants-in-vancouver"], "mention_count": 1, "sentiment": "positive", "tags": ["french", "west-coast", "fine-dining"], "map_link": "https://www.google.com/maps/search/?api=1&query=L%27Abattoir%20Gastown%20Vancouver%2C%20BC", "rating": null, "lat": 49.2831177, "lng": -123.1044629}, {"name": "Masayoshi", "type": "restaurant", "area": "", "why_loved": "Chef Masayoshi Baba serves pristine nigiri, sashimi and seasonal omakase courses with remarkable precision", "source_urls": ["https://www.timeout.com/vancouver/restaurants/best-restaurants-in-vancouver"], "mention_count": 1, "sentiment": "positive", "tags": ["sushi", "omakase", "japanese"], "map_link": "https://www.google.com/maps/search/?api=1&query=Masayoshi%20Vancouver%2C%20BC", "rating": null, "lat": 49.2458146, "lng": -123.0900087}, {"name": "Savio Volpe", "type": "restaurant", "area": "", "why_loved": "Menu is packed with wood-fired meats, handmade pasta and vegetables treated with surprising care", "source_urls": ["https://www.timeout.com/vancouver/restaurants/best-restaurants-in-vancouver"], "mention_count": 1, "sentiment": "positive", "tags": ["italian", "pasta", "wood-fired"], "map_link": "https://www.google.com/maps/search/?api=1&query=Savio%20Volpe%20Vancouver%2C%20BC", "rating": null, "lat": 49.2574553, "lng": -123.0909467}, {"name": "Sushi Hill", "type": "restaurant", "area": "", "why_loved": "Meticulous omakase experience with impeccably sourced seafood, beautifully seasoned rice", "source_urls": ["https://www.timeout.com/vancouver/restaurants/best-restaurants-in-vancouver"], "mention_count": 1, "sentiment": "positive", "tags": ["sushi", "omakase", "japanese"], "map_link": "https://www.google.com/maps/search/?api=1&query=Sushi%20Hill%20Vancouver%2C%20BC", "rating": null, "lat": 49.2262041, "lng": -123.090544}, {"name": "Barbara", "type": "restaurant", "area": "", "why_loved": "Champions local ingredients, fermentation and open-fire cooking, transforming humble produce into deeply complex", "source_urls": ["https://www.timeout.com/vancouver/restaurants/best-restaurants-in-vancouver"], "mention_count": 1, "sentiment": "positive", "tags": ["open-fire", "fermentation", "tasting-menu"], "map_link": "https://www.google.com/maps/search/?api=1&query=Barbara%20Vancouver%2C%20BC", "rating": null, "lat": 49.2804688, "lng": -123.0969849}, {"name": "Mackenzie Room", "type": "restaurant", "area": "", "why_loved": "The menu bounces effortlessly between global influences, combining bold spices, local ingredients", "source_urls": ["https://www.timeout.com/vancouver/restaurants/best-restaurants-in-vancouver"], "mention_count": 1, "sentiment": "positive", "tags": ["global", "local-ingredients", "dinner"], "map_link": "https://www.google.com/maps/search/?api=1&query=Mackenzie%20Room%20Vancouver%2C%20BC", "rating": null, "lat": 49.2831953, "lng": -123.0949154}, {"name": "Baan Lao", "type": "restaurant", "area": "Steveston", "why_loved": "one of the highest-ranked Thai restaurants in the country", "source_urls": ["https://nomsmagazine.com/canadas-100-best-2026-bc-restaurants/"], "mention_count": 1, "sentiment": "positive", "tags": ["thai", "fine-dining", "waterfront"], "map_link": "https://www.google.com/maps/search/?api=1&query=Baan%20Lao%20Steveston%20Vancouver%2C%20BC", "rating": null, "lat": 49.1230377, "lng": -123.1785466}, {"name": "OEB Breakfast Co.", "type": "restaurant", "area": "Yaletown", "why_loved": "比利時鬆餅奶香奶香的，口感外酥內嫩", "source_urls": ["https://joyceinthebay.com/travel/good-food-in-vancouver-canada/"], "mention_count": 1, "sentiment": "positive", "tags": ["breakfast", "brunch", "waffles"], "map_link": "https://www.google.com/maps/search/?api=1&query=OEB%20Breakfast%20Co.%20Yaletown%20Vancouver%2C%20BC", "rating": null, "lat": 49.2734675, "lng": -123.119191}];
+let MAP = null;
+let INFO = null;
+
+// Category -> pin color + legend label. Unknown types fall back to "other".
+const CATS = {
+  restaurant: { color: "#E8453C", label: "Food" },
+  cafe:       { color: "#F5A623", label: "Caf\u00e9 / bakery" },
+  bar:        { color: "#8E44AD", label: "Bar / brewery" },
+  sight:      { color: "#2E9E4F", label: "Outdoors / sights" },
+  shop:       { color: "#2D7DD2", label: "Shop / market" },
+  other:      { color: "#7F8C8D", label: "Other" },
+  added:      { color: "#D81B8C", label: "Added by you" }
+};
+function catFor(t) { return CATS[t] ? t : "other"; }
+
+// Filter state: markers grouped by category, which categories are shown, and which exist.
+const MARKERS_BY_CAT = {};
+const SELECTED = {};
+let PRESENT = new Set();
+
+// A Material "place" teardrop, tip anchored at the location.
+const PIN_PATH = "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z";
+function pinIcon(color) {
+  return { path: PIN_PATH, fillColor: color, fillOpacity: 1,
+            strokeColor: "#ffffff", strokeWeight: 1.2, scale: 1.7,
+            anchor: new google.maps.Point(12, 22) };
+}
+
+function buildLegend(present) {
+  const el = document.getElementById("legend");
+  const rows = ['<div class="lg-hd">Categories</div>'];
+  Object.keys(CATS).forEach(function (k) {
+    if (!present.has(k)) return;
+    const off = SELECTED[k] ? "" : " lg-off";
+    rows.push('<div class="lg-row' + off + '" data-cat="' + k + '">' +
+      '<span class="lg-dot" style="background:' + CATS[k].color + '"></span>' +
+      '<span class="lg-lbl">' + CATS[k].label + '</span></div>');
+  });
+  rows.push('<div class="lg-hint">click to filter</div>');
+  el.innerHTML = rows.join("");
+  el.querySelectorAll(".lg-row").forEach(function (row) {
+    row.addEventListener("click", function () { toggleCat(row.getAttribute("data-cat")); });
+  });
+}
+
+function toggleCat(cat) {
+  SELECTED[cat] = !SELECTED[cat];
+  (MARKERS_BY_CAT[cat] || []).forEach(function (m) { m.setVisible(SELECTED[cat]); });
+  buildLegend(PRESENT);
+  rebuildRoute();  // route follows the filter: legs to hidden pins disappear
+}
+
+function escapeHtml(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+function infoContent(p) {
+  const meta = [p.type, p.area].filter(Boolean).map(escapeHtml).join(" \u00b7 ");
+  const rating = (typeof p.rating === "number") ? ' \u2b50 ' + p.rating : '';
+  const url = (p.source_urls && p.source_urls.length) ? p.source_urls[0] : (p.map_link || null);
+  const link = url ? '<div class="iw-link"><a href="' + encodeURI(url) +
+      '" target="_blank" rel="noopener">source</a></div>' : '';
+  const rm = '<div class="iw-link"><a href="#" class="iw-remove" data-id="' +
+      escapeHtml(p.id) + '">remove</a></div>';
+  return '<div class="iw-title">' + escapeHtml(p.name) + '</div>' +
+         '<div class="iw-meta">' + meta + rating + '</div>' +
+         (p.why_loved ? '<div class="iw-why">' + escapeHtml(p.why_loved) + '</div>' : '') +
+         link + rm;
+}
+
+function initMap() {
+  const map = new google.maps.Map(document.getElementById("map"), {
+    mapTypeControl: true, streetViewControl: false
+  });
+  MAP = map;
+  INFO = new google.maps.InfoWindow();
+  const bounds = new google.maps.LatLngBounds();
+  PLACES.forEach(function (p, i) {
+    p.id = p.id || ("p" + i);
+    const cat = catFor(p.type);
+    PRESENT.add(cat);
+    if (SELECTED[cat] === undefined) SELECTED[cat] = true;
+    addMarker(p);
+    bounds.extend({ lat: p.lat, lng: p.lng });
+  });
+  buildLegend(PRESENT);
+  if (PLACES.length === 1) { map.setCenter(PLACES[0]); map.setZoom(14); }
+  else if (PLACES.length > 1) { map.fitBounds(bounds); }
+  else { map.setCenter({ lat: 20, lng: 0 }); map.setZoom(2); }
+  rebuildRoute();
+  initSearch();
+}
+
+// --- Driving route via the Google Routes API. Follows the category filter and is
+//     recomputed whenever the visible set changes. Legs under MIN_LEG_MIN are not drawn.
+var ROUTE = {polylines: [], labels: [], visible: true, mode: null, hours: "0", gen: 0, legCache: {}};
+var RouteLabel = null;
+var EST_SPEED_KMH = 55;   // fallback road speed if the Routes API is unavailable
+var MIN_LEG_MIN = 10;     // do not draw a connector for legs shorter than this many minutes
+
+function _fmtDur(h) {
+  var m = h * 60;
+  if (m < 60) return "~" + Math.round(m) + " min";
+  return "~" + h.toFixed(1) + " h";
+}
+
+function _haversine(a, b) {
+  var R = 6371, toRad = Math.PI / 180;
+  var dLat = (b.lat - a.lat) * toRad, dLng = (b.lng - a.lng) * toRad;
+  var la1 = a.lat * toRad, la2 = b.lat * toRad;
+  var x = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+          Math.cos(la1) * Math.cos(la2) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  return 2 * R * Math.asin(Math.sqrt(x));
+}
+
+// Greedy nearest-neighbour chain, starting from the south-easternmost pin.
+function orderPins(pins) {
+  if (pins.length <= 2) return pins.slice();
+  var rest = pins.slice(), start = 0;
+  for (var i = 1; i < rest.length; i++) { if (rest[i].lng > rest[start].lng) start = i; }
+  var ordered = [rest.splice(start, 1)[0]];
+  while (rest.length) {
+    var last = ordered[ordered.length - 1], best = 0, bd = Infinity;
+    for (var j = 0; j < rest.length; j++) {
+      var d = _haversine(last, rest[j]);
+      if (d < bd) { bd = d; best = j; }
+    }
+    ordered.push(rest.splice(best, 1)[0]);
+  }
+  return ordered;
+}
+
+function defineRouteLabel() {
+  if (RouteLabel) return;
+  RouteLabel = function (pos, text) { this.pos = pos; this.text = text; this.div = null; };
+  RouteLabel.prototype = Object.create(google.maps.OverlayView.prototype);
+  RouteLabel.prototype.onAdd = function () {
+    var d = document.createElement("div");
+    d.className = "route-label"; d.textContent = this.text;
+    this.div = d; this.getPanes().floatPane.appendChild(d);
+  };
+  RouteLabel.prototype.draw = function () {
+    if (!this.div) return;
+    var p = this.getProjection().fromLatLngToDivPixel(this.pos);
+    this.div.style.left = p.x + "px"; this.div.style.top = p.y + "px";
+  };
+  RouteLabel.prototype.onRemove = function () {
+    if (this.div && this.div.parentNode) this.div.parentNode.removeChild(this.div);
+    this.div = null;
+  };
+}
+
+function _toLL(p) { return {lat: p.lat, lng: p.lng}; }
+function _mid(path) {
+  var p = path[Math.floor(path.length / 2)];
+  return new google.maps.LatLng(p.lat, p.lng);
+}
+
+// Pins that are geocoded AND belong to a currently-selected category.
+function visiblePlaced() {
+  return PLACES.filter(function (p) {
+    return typeof p.lat === "number" && typeof p.lng === "number" &&
+           SELECTED[catFor(p.type)] !== false;
+  });
+}
+
+function clearRouteGraphics() {
+  ROUTE.polylines.forEach(function (pl) { pl.setMap(null); });
+  ROUTE.labels.forEach(function (l) { l.setMap(null); });
+  ROUTE.polylines = []; ROUTE.labels = [];
+}
+
+// One real road leg via the Routes API (cached by coordinate pair). Throws if the
+// Routes API is disabled/unavailable so the caller can fall back to estimates.
+async function realLeg(o, d) {
+  var key = o.lat.toFixed(4) + "," + o.lng.toFixed(4) + ">" + d.lat.toFixed(4) + "," + d.lng.toFixed(4);
+  if (key in ROUTE.legCache) return ROUTE.legCache[key];
+  var lib = await google.maps.importLibrary("routes");
+  var res = await lib.Route.computeRoutes({
+    origin: {lat: o.lat, lng: o.lng},
+    destination: {lat: d.lat, lng: d.lng},
+    travelMode: "DRIVING",
+    fields: ["durationMillis", "path"]
+  });
+  var r = res && res.routes && res.routes[0];
+  var leg = r ? {sec: (r.durationMillis || 0) / 1000, path: (r.path || []).map(_toLL)} : null;
+  ROUTE.legCache[key] = leg;
+  return leg;
+}
+
+// Recompute the whole route over the currently-visible pins. A generation counter
+// discards a run that a newer filter change has superseded.
+async function rebuildRoute() {
+  var gen = ++ROUTE.gen;
+  clearRouteGraphics();
+  ROUTE.hours = "0";
+  var pins = visiblePlaced();
+  if (pins.length < 2) { updateRouteBox(); return; }
+  defineRouteLabel();
+  var order = orderPins(pins);
+  var totalSec = 0, useEst = false;
+  for (var i = 0; i < order.length - 1; i++) {
+    if (gen !== ROUTE.gen) return;
+    var o = order[i], d = order[i + 1], leg = null;
+    if (!useEst) {
+      try { leg = await realLeg(o, d); }
+      catch (e) { useEst = true; }   // Routes API disabled -> estimate the rest
+    }
+    if (gen !== ROUTE.gen) return;
+    if (!leg) {
+      var h = _haversine(o, d) / EST_SPEED_KMH;
+      leg = {sec: h * 3600, path: [_toLL(o), _toLL(d)], est: true};
+    }
+    totalSec += leg.sec;
+    if (leg.sec / 60 >= MIN_LEG_MIN && leg.path.length >= 2) {
+      var est = !!leg.est;
+      ROUTE.polylines.push(new google.maps.Polyline({
+        path: leg.path, map: ROUTE.visible ? MAP : null,
+        strokeColor: "#1a73e8", strokeWeight: 4, strokeOpacity: est ? 0 : 0.7,
+        icons: est ? [{icon: {path: "M 0,-1 0,1", strokeOpacity: 0.7, strokeWeight: 3, scale: 3},
+                       offset: "0", repeat: "12px"}] : null
+      }));
+      var lbl = new RouteLabel(_mid(leg.path), _fmtDur(leg.sec / 3600));
+      lbl.setMap(ROUTE.visible ? MAP : null);
+      ROUTE.labels.push(lbl);
+    }
+  }
+  if (gen !== ROUTE.gen) return;
+  ROUTE.mode = useEst ? "est" : "real";
+  ROUTE.hours = (totalSec / 3600).toFixed(1);
+  updateRouteBox();
+}
+
+function updateRouteBox() {
+  var box = document.getElementById("routebox");
+  if (visiblePlaced().length < 2 || ROUTE.hours === "0" || ROUTE.hours === "0.0") {
+    box.style.display = "none"; return;
+  }
+  var note = ROUTE.mode === "est"
+    ? ' <span class="rb-note">(estimated — enable the Routes API for real road times)</span>'
+    : ' <span class="rb-note">(legs under ' + MIN_LEG_MIN + ' min hidden)</span>';
+  box.innerHTML = '<label class="rb"><input type="checkbox" id="rbchk"' +
+    (ROUTE.visible ? " checked" : "") + "> 🚗 Driving route · ~" + ROUTE.hours +
+    " h total" + note + "</label>";
+  box.style.display = "block";
+  document.getElementById("rbchk").addEventListener("change", function (e) {
+    toggleRoute(e.target.checked);
+  });
+}
+
+function toggleRoute(on) {
+  ROUTE.visible = on;
+  ROUTE.polylines.forEach(function (pl) { pl.setMap(on ? MAP : null); });
+  ROUTE.labels.forEach(function (l) { l.setMap(on ? MAP : null); });
+}
+
+
+var ADDED_SEQ = 0;
+
+// Delegated handler for the "remove" link inside any pin's popup.
+document.addEventListener("click", function (e) {
+  var a = e.target.closest ? e.target.closest(".iw-remove") : null;
+  if (a) { e.preventDefault(); removePlace(a.getAttribute("data-id")); }
+});
+
+// Shared marker factory (used for both collected and user-added pins).
+function addMarker(p) {
+  var cat = catFor(p.type);
+  if (!MARKERS_BY_CAT[cat]) MARKERS_BY_CAT[cat] = [];
+  var marker = new google.maps.Marker({
+    position: {lat: p.lat, lng: p.lng}, title: p.name,
+    map: (SELECTED[cat] !== false) ? MAP : null,
+    icon: pinIcon(CATS[cat].color)
+  });
+  p.__marker = marker;
+  MARKERS_BY_CAT[cat].push(marker);
+  marker.addListener("click", function () { INFO.setContent(infoContent(p)); INFO.open(MAP, marker); });
+  return marker;
+}
+
+// Google Places Autocomplete search box (Places API New). Degrades to hidden if unavailable.
+async function initSearch() {
+  try {
+    var places = await google.maps.importLibrary("places");
+    var pac = new places.PlaceAutocompleteElement();
+    document.getElementById("searchbox").appendChild(pac);
+    pac.addEventListener("gmp-select", async function (e) {
+      try {
+        var place = e.placePrediction.toPlace();
+        await place.fetchFields({fields: ["displayName", "location", "formattedAddress"]});
+        addPlace(place.displayName || "Added place",
+                 place.formattedAddress || "", place.location.lat(), place.location.lng());
+      } catch (err) { /* ignore a single failed selection */ }
+    });
+  } catch (e) {
+    var sb = document.getElementById("searchbox");
+    if (sb) sb.style.display = "none";  // Places API not enabled -> no search box
+  }
+}
+
+// Add a user-chosen pin; it behaves like any collected pin (filterable + routed).
+function addPlace(name, area, lat, lng) {
+  var id = "added-" + (++ADDED_SEQ);
+  var p = {name: name, type: "added", area: area || "", why_loved: "Added by you",
+           source_urls: [], map_link: null, rating: null, lat: lat, lng: lng, added: true, id: id};
+  PLACES.push(p);
+  if (SELECTED["added"] === undefined) SELECTED["added"] = true;
+  PRESENT.add("added");
+  var marker = addMarker(p);
+  MAP.panTo({lat: lat, lng: lng});
+  if (MAP.getZoom() < 12) MAP.setZoom(13);
+  INFO.setContent(infoContent(p));
+  INFO.open(MAP, marker);
+  buildLegend(PRESENT);
+  rebuildRoute();
+}
+
+// Remove any pin (collected or user-added) via its popup's "remove" link.
+function removePlace(id) {
+  var cat = null;
+  for (var i = 0; i < PLACES.length; i++) {
+    if (PLACES[i].id === id) {
+      var p = PLACES[i];
+      cat = catFor(p.type);
+      if (p.__marker) p.__marker.setMap(null);
+      var arr = MARKERS_BY_CAT[cat] || [];
+      var mi = arr.indexOf(p.__marker);
+      if (mi >= 0) arr.splice(mi, 1);
+      PLACES.splice(i, 1);
+      break;
+    }
+  }
+  if (cat && !(MARKERS_BY_CAT[cat] || []).length) PRESENT.delete(cat);
+  INFO.close();
+  buildLegend(PRESENT);
+  rebuildRoute();
+}
+
+</script>
+<script async
+  src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&libraries=routes,places&callback=initMap">
+</script>
+</body>
+</html>

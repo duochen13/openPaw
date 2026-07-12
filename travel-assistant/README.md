@@ -18,7 +18,8 @@ as pins on a Google Map.
 ## How it works
 scope → collect (rednote via headless browser) → fallback (WebSearch + Maps) →
 analyze (subagent dedup/rank with cited quotes) → validate → geocode →
-build map (KML for Google My Maps) → publish (Notion).
+build map (KML for Google My Maps) → build interactive Google Map HTML →
+publish (Notion database + a map page with the HTML/KML attached).
 
 The map is delivered as a `.kml` you import into Google My Maps (Create map →
 Import), producing one map with a colored pin per place — visible in the Google
@@ -30,4 +31,6 @@ Booking and multi-day route *sequencing* are planned future phases.
 - `scripts/collect_rednote.py` — rednote collector (drives the browse browser).
 - `scripts/validate_places.py` — validates analyzer output before publishing.
 - `scripts/build_map.py` — geocodes places and emits the Google My Maps KML.
+- `scripts/build_gmap_html.py` — renders places as a self-contained interactive Google Maps HTML viewer (pins + popups).
+- `scripts/upload_to_notion.py` — uploads the map HTML/KML to Notion (File Upload API) and creates the destination's "Map" page. Needs `NOTION_TOKEN`.
 - `python3 scripts/test_*.py` — run the unit tests for the pure helpers.

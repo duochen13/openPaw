@@ -92,6 +92,16 @@ def enrich_and_build(path):
     out = os.path.join(maps_dir, f"{slug}.kml")
     open(out, "w", encoding="utf-8").write(kml)
     print(f"[{slug}] {n} pins -> {out}")
+
+    # Also emit the interactive Google Maps HTML viewer from the same geocoded data.
+    try:
+        import build_gmap_html
+        html_out, kept, skipped = build_gmap_html.write_map_html(obj, out_dir=maps_dir)
+        print(f"[{slug}] map view -> {html_out} ({kept} places, {skipped} skipped)")
+        print(f"          open it:  open {html_out}")
+    except Exception as e:
+        print(f"[{slug}] WARN: could not build map HTML ({e}); KML is still available.")
+
     return out
 
 if __name__ == "__main__":
