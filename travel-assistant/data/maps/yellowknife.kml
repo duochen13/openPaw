@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <name>Travel — Yellowknife</name>
+    <Style id="restaurant"><IconStyle><color>ff0000ff</color></IconStyle></Style>
+    <Style id="cafe"><IconStyle><color>ff00a5ff</color></IconStyle></Style>
+    <Style id="bar"><IconStyle><color>ff800080</color></IconStyle></Style>
+    <Style id="sight"><IconStyle><color>ff00ff00</color></IconStyle></Style>
+    <Style id="shop"><IconStyle><color>ffff0000</color></IconStyle></Style>
+    <Style id="other"><IconStyle><color>ff808080</color></IconStyle></Style>
+    <Placemark>
+      <name>Bullock's Bistro</name>
+      <description>Stop for delicious fish meal straight from Great Slave Lake, at Bullock's Bistro.
+Area: Old Town
+https://packedforlife.com/things-to-do-yellowknife/
+https://patricklam.ca/post/20220507-yellowknife/
+https://epicureandculture.com/a-trip-back-in-time-in-yellowknifes-old-town/
+https://www.tripadvisor.com/Restaurant_Review-g154966-d702633-Reviews-Bullock_s_Bistro-Yellowknife_Northwest_Territories.html</description>
+      <styleUrl>#restaurant</styleUrl>
+      <Point><coordinates>-114.3501031,62.4647539,0</coordinates></Point>
+    </Placemark>
+    <Placemark>
+      <name>Aurora Village</name>
+      <description>Aurora Village is one of the region's most iconic experiences: viewing the auroras in a small out-of-town space populated by teepees.
+Area: Ingraham Trail teepee site — pin is the downtown office/check-in (4802 49 St)
+https://vancouverscape.com/yellowknife-nwt-auroras-two-ways/
+https://www.tripadvisor.com/Attraction_Review-g154966-d25336758-Reviews-Aurora_Village-Yellowknife_Northwest_Territories.html
+https://www.tripadvisor.com/ShowUserReviews-g154966-d586758-r750156544-Aurora_Village-Yellowknife_Northwest_Territories.html</description>
+      <styleUrl>#sight</styleUrl>
+      <Point><coordinates>-114.3688769,62.4552024,0</coordinates></Point>
+    </Placemark>
+    <Placemark>
+      <name>The Woodyard Brewhouse &amp; Eatery (NWT Brewing Co.)</name>
+      <description>Sip local, award winning craft beer from the NWT Brewing Company, at the Woodyard
+Area: Old Town
+https://packedforlife.com/things-to-do-yellowknife/
+https://wanderlog.com/list/geoCategory/372256/best-restaurants-to-have-dinner-in-yellowknife</description>
+      <styleUrl>#bar</styleUrl>
+      <Point><coordinates>-114.3535192,62.461679,0</coordinates></Point>
+    </Placemark>
+    <Placemark>
+      <name>Bush Pilot's Monument</name>
+      <description>The Bush Pilots Monument gives a good view of downtown Yellowknife from on the water.
+Area: Old Town (Pilot's Rock)
+https://patricklam.ca/post/20220507-yellowknife/
+https://epicureandculture.com/a-trip-back-in-time-in-yellowknifes-old-town/</description>
+      <styleUrl>#sight</styleUrl>
+      <Point><coordinates>-114.3481955,62.4655991,0</coordinates></Point>
+    </Placemark>
+    <Placemark>
+      <name>Wildcat Cafe</name>
+      <description>First opened in 1937, it is the oldest restaurant in Yellowknife.
+Area: Old Town
+https://en.wikipedia.org/wiki/The_Wildcat_Cafe
+https://packedforlife.com/things-to-do-yellowknife/
+https://wildcatcafeyk.wixsite.com/wildcat-cafe-yk</description>
+      <styleUrl>#restaurant</styleUrl>
+      <Point><coordinates>-114.3488741,62.4665936,0</coordinates></Point>
+    </Placemark>
+    <Placemark>
+      <name>Cameron Falls Trail</name>
+      <description>The 1.2 kilometre, there and back, hiking trail is a moderate adventure with some elevation hiking over rocks before arriving at a lookout overlooking a 17 metre waterfall, river and canyon.
+Area: Hidden Lake Territorial Park, Ingraham Trail (47 km east)
+https://packedforlife.com/yellowknife-hiking-cameron-falls/
+https://www.nwtparks.ca/plan-your-trip/road-trips/ingraham-trail</description>
+      <styleUrl>#sight</styleUrl>
+      <Point><coordinates>-113.6872484,62.5208735,0</coordinates></Point>
+    </Placemark>
+    <Placemark>
+      <name>Prince of Wales Northern Heritage Centre</name>
+      <description>The Prince of Wales Northern Heritage Centre is well worth a visit, with informative displays.
+Area: Frame Lake, Downtown
+https://patricklam.ca/post/20220507-yellowknife/
+https://packedforlife.com/things-to-do-yellowknife/</description>
+      <styleUrl>#sight</styleUrl>
+      <Point><coordinates>-114.380029,62.4562467,0</coordinates></Point>
+    </Placemark>
+    <Placemark>
+      <name>Old Town Glassworks</name>
+      <description>Old Town Glassworks is a workers cooperative creating beautiful glassware, out of recycled materialsm rescued from the shores of Great Slave Lake.
+Area: 3510 MacDonald Drive, Old Town
+https://packedforlife.com/things-to-do-yellowknife/</description>
+      <styleUrl>#shop</styleUrl>
+      <Point><coordinates>-114.3465634,62.4661239,0</coordinates></Point>
+    </Placemark>
+    <Placemark>
+      <name>Birchwood Coffee Kǫ̀</name>
+      <description>Birchwood is a great place to grab a muffin or breakfast sandwich with your coffee, to sit awhile.
+Area: Downtown
+https://packedforlife.com/things-to-do-yellowknife/</description>
+      <styleUrl>#cafe</styleUrl>
+      <Point><coordinates>-114.3680237,62.4536426,0</coordinates></Point>
+    </Placemark>
+    <Placemark>
+      <name>Copperhouse Eatery &amp; Lounge</name>
+      <description>Head out for the best pizza in town at the Copperhouse Eatery &amp; Lounge
+Area: Range Lake Road
+https://packedforlife.com/things-to-do-yellowknife/
+https://wanderlog.com/list/geoCategory/372256/best-restaurants-to-have-dinner-in-yellowknife</description>
+      <styleUrl>#restaurant</styleUrl>
+      <Point><coordinates>-114.4119848,62.4454978,0</coordinates></Point>
+    </Placemark>
+    <Placemark>
+      <name>Zehabesha Traditional Ethiopian Food</name>
+      <description>Let your tastebuds dance with the most delicious traditional Ethiopian food at Zehabesha
+Area: Downtown
+https://packedforlife.com/things-to-do-yellowknife/
+https://wanderlog.com/list/geoCategory/372256/best-restaurants-to-have-dinner-in-yellowknife</description>
+      <styleUrl>#restaurant</styleUrl>
+      <Point><coordinates>-114.3694607,62.4527619,0</coordinates></Point>
+    </Placemark>
+    <Placemark>
+      <name>Northwest Territories Legislative Assembly</name>
+      <description>Designed to reflect the natural surroundings and highlight the openess of consensus government, this architectural beauty sits along the shore of Frame Lake.
+Area: Frame Lake, Downtown
+https://packedforlife.com/things-to-do-yellowknife/</description>
+      <styleUrl>#sight</styleUrl>
+      <Point><coordinates>-114.3820579,62.4595222,0</coordinates></Point>
+    </Placemark>
+    <Placemark>
+      <name>Gallery of the Midnight Sun</name>
+      <description>Works of Inuit art and contemporary paintings hung side by side to display the best Yellowknife had to offer
+Area: Old Town
+https://epicureandculture.com/a-trip-back-in-time-in-yellowknifes-old-town/</description>
+      <styleUrl>#shop</styleUrl>
+      <Point><coordinates>-114.3528226,62.4621208,0</coordinates></Point>
+    </Placemark>
+    <Placemark>
+      <name>Weaver &amp; Devore Trading</name>
+      <description>Trading posts like Weaver &amp; Devore thrived and cafes, bars and bistros popped up along the shores of the Great Slave Lake
+Area: Old Town
+https://epicureandculture.com/a-trip-back-in-time-in-yellowknifes-old-town/</description>
+      <styleUrl>#shop</styleUrl>
+      <Point><coordinates>-114.350561,62.4645006,0</coordinates></Point>
+    </Placemark>
+    <Placemark>
+      <name>Buffalo Airways</name>
+      <description>Buffalo Airways, a long-time northern business has been operating WWII aircraft since 1970.
+Area: 108 Berry Street (airport)
+https://packedforlife.com/things-to-do-yellowknife/</description>
+      <styleUrl>#sight</styleUrl>
+      <Point><coordinates>-114.4262991,62.4679381,0</coordinates></Point>
+    </Placemark>
+    <Placemark>
+      <name>NWT Diamond Centre</name>
+      <description>At the NWT Diamond Centre enjoy an exhibition and short video on diamond exploration, mining and manufacturing in the north.
+Area: 5105 49 St, Downtown
+https://packedforlife.com/things-to-do-yellowknife/</description>
+      <styleUrl>#shop</styleUrl>
+      <Point><coordinates>-114.367127,62.4533785,0</coordinates></Point>
+    </Placemark>
+  </Document>
+</kml>
