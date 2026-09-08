@@ -104,9 +104,16 @@ class Store:
         return cls(conn, path)
 
     def _readonly_conn(self) -> sqlite3.Connection:
-        """A second connection that SQLite itself refuses to write through."""
+        """A connection SQLite itself refuses to write through.
+
+        `mode=ro` is an open flag, not a setting: unlike `PRAGMA query_only`,
+        a caller holding this connection cannot turn it back off. The pragma
+        is applied as well, so the refusal survives even if the URI form is
+        ever changed. `Path.as_uri()` handles percent-encoding, so paths
+        containing brackets or colons are safe.
+        """
         if self._ro_conn is None:
-            ro = sqlite3.connect(self._path)
+            ro = sqlite3.connect(f"{self._path.resolve().as_uri()}?mode=ro", uri=True)
             ro.row_factory = sqlite3.Row
             ro.execute("PRAGMA query_only = ON")
             self._ro_conn = ro

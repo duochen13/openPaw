@@ -126,3 +126,15 @@ def test_writes_after_a_view_was_taken_are_visible_to_a_later_view(store):
     assert view_before.price_bars("NVDA") == []
     _bar(store, "2026-09-01", "2026-09-01T20:20:00.000000+00:00")
     assert len(store.as_of(T).price_bars("NVDA")) == 1
+
+
+@pytest.mark.unit
+def test_read_only_survives_turning_the_pragma_back_off(store):
+    """`mode=ro` is an open flag, not a setting. A caller holding _conn must
+    not be able to re-enable writes by toggling PRAGMA query_only."""
+    _bar(store, "2026-09-01", "2026-09-01T20:20:00.000000+00:00")
+    view = store.as_of(T)
+    view._conn.execute("PRAGMA query_only = OFF")
+    with pytest.raises(sqlite3.OperationalError, match="readonly"):
+        view._conn.execute("DELETE FROM price_bar")
+    assert len(store.as_of(T).price_bars("NVDA")) == 1
