@@ -1,0 +1,704 @@
+{
+  "meta": {
+    "source": "reddit",
+    "analyzed_by": "primary agent (subagent run terminated on a billing error before writing output)",
+    "discussions": 68,
+    "comments_analyzed": 1182,
+    "subreddit_breakdown": {
+      "QuantumComputing": 20,
+      "IonQ": 11,
+      "IonQStock": 7,
+      "QBTSstock": 4,
+      "technology": 2,
+      "Physics": 2,
+      "TheRaceTo10Million": 1,
+      "rigetti": 1,
+      "QuantumComputingStock": 1,
+      "wallstreetbets": 1,
+      "singularity": 1,
+      "INFQ": 1,
+      "chicago": 1,
+      "science": 1,
+      "CryptoCurrency": 1,
+      "CryptoMarkets": 1,
+      "cscareerquestions": 1,
+      "programming": 1,
+      "Julia": 1,
+      "Damnthatsinteresting": 1,
+      "technews": 1,
+      "Aktien": 1,
+      "NeoCivilization": 1,
+      "STEW_ScTecEngWorld": 1,
+      "AskComputerScience": 1,
+      "SoftwareEngineerJobs": 1,
+      "FromSeries": 1,
+      "bonehurtingjuice": 1
+    },
+    "population_split": {
+      "investor_discussions": 27,
+      "practitioner_discussions": 26,
+      "general_public_discussions": 15
+    },
+    "coverage_gaps": [
+      "Rigetti: only 3 threads, r/rigetti is nearly dead (top post = 15 pts, 1 comment). No practitioner discussion of Rigetti at all.",
+      "QuEra / Atom Computing: no dedicated threads; neutral atoms appear only via a China dual-core story and one transport-physics post.",
+      "Infleqtion: appears only tangentially (r/INFQ boosterism inside a Quantinuum thread).",
+      "IBM: no substantive practitioner threads surfaced - all four IBM hits are general-public/meme subs about the cryostat 'chandelier'.",
+      "No pricing or QPU-hour cost data anywhere in the corpus.",
+      "r/QuantumComputing top-of-year is dominated by a Q-Day/PQC post and off-topic culture threads (Berkeley photo, Epstein files, Nobel), reducing usable technical density."
+    ],
+    "bias_notes": [
+      "r/IonQ, r/IonQStock, r/QBTSstock, r/INFQ are single-ticker holder communities - bullish by construction and not a market survey.",
+      "Two accounts (Lightning452020, MannieOKelly) supply a large share of the technically substantive IonQ commentary; treat apparent consensus in r/IonQ with caution.",
+      "r/wallstreetbets Quantinuum thread (670 pts) is almost entirely jokes about the company name and carries no informational signal despite its score."
+    ]
+  },
+  "pain_points": [
+    {
+      "category": "no-practical-applications",
+      "title": "Practitioners say there is still no useful quantum workload, and say it in the vendors' own subs",
+      "priority": "critical",
+      "frequency": 38,
+      "population": "practitioner",
+      "description": "The most-upvoted answers in every 'is this real' thread on r/QuantumComputing and r/Physics come from people who work in the field and say the useful application does not exist yet. Notably this is not outsider skepticism - it is superconducting-qubit researchers and quantum-information PhDs.",
+      "quotes": [
+        {
+          "text": "As someone who works in the field, don't listen to what a company has to say about what the future holds for science.",
+          "score": 140,
+          "subreddit": "QuantumComputing",
+          "source_url": "https://www.reddit.com/r/QuantumComputing/comments/1tldqwx/computer_scientists_what_is_your_honest_opinion/",
+          "discussion_title": "Computer scientists: what is your honest opinion on quantum computing today?"
+        },
+        {
+          "text": "Not an expert here, but I work in the superconducting qubit research field (the platform IBM, Google are banking on). Many of my colleagues (many of which have phds in the field, ex-professors) think quantum computing is never going to do anything useful in their lifetimes.",
+          "score": 14,
+          "subreddit": "QuantumComputing",
+          "source_url": "https://www.reddit.com/r/QuantumComputing/comments/1s6z9md/went_to_rsac2026_expecting_ai_hype_left_actually/",
+          "discussion_title": "Went to RSAC2026 expecting AI hype. Left actually scared about Q-Day"
+        },
+        {
+          "text": "Practical quantum computing is in a superposition of \"promising\", \"overhyped\", and \"please stop my CEO talking to clients about it in the same sentence as Blockchain\".",
+          "score": 97,
+          "subreddit": "QuantumComputing",
+          "source_url": "https://www.reddit.com/r/QuantumComputing/comments/1tldqwx/computer_scientists_what_is_your_honest_opinion/",
+          "discussion_title": "Computer scientists: what is your honest opinion on quantum computing today?"
+        }
+      ]
+    },
+    {
+      "category": "qubit-count-inflation",
+      "title": "Qubit-count headlines are actively debunked in-thread by physicists",
+      "priority": "critical",
+      "frequency": 29,
+      "population": "practitioner",
+      "description": "Any '100+ qubit' announcement draws a top comment explaining why the number is not comparable. The diamond-NV thread is the clearest case: the top reply explains the qubits are 13C nuclear spins addressed by an NV center, and a follow-up gives the reductio.",
+      "quotes": [
+        {
+          "text": "You have to be careful about the number of qubits here, it is very deceptive. Each qubit here is a magnetic spin, usually a 13C nucleus.",
+          "score": 72,
+          "subreddit": "QuantumComputing",
+          "source_url": "https://www.reddit.com/r/QuantumComputing/comments/1v2yflz/german_firm_debuts_first_100_qubit_diamondbased/",
+          "discussion_title": "German firm debuts first 100+ qubit diamond-based quantum processors"
+        },
+        {
+          "text": "If I was being cynical, its a bit like me taking a regular diamond engagement ring and claiming I have a billion qubit quantum computer. Sure, I have a billion qubits, but it doesn't mean much if I can't connect them together somehow.",
+          "score": 26,
+          "subreddit": "QuantumComputing",
+          "source_url": "https://www.reddit.com/r/QuantumComputing/comments/1v2yflz/german_firm_debuts_first_100_qubit_diamondbased/",
+          "discussion_title": "German firm debuts first 100+ qubit diamond-based quantum processors"
+        },
+        {
+          "text": "Quite literally some lady at a quantum summit stood up and did this a couple years ago. Picked up a chip and said it had thousands of qubits...like lady...most of the room have physics backgrounds and know its doesn't matter how many qubits you're holding if you can't coherently control them.",
+          "score": 12,
+          "subreddit": "QuantumComputing",
+          "source_url": "https://www.reddit.com/r/QuantumComputing/comments/1v2yflz/german_firm_debuts_first_100_qubit_diamondbased/",
+          "discussion_title": "German firm debuts first 100+ qubit diamond-based quantum processors"
+        }
+      ]
+    },
+    {
+      "category": "research-integrity",
+      "title": "The literature itself is under suspicion, not just the marketing",
+      "priority": "critical",
+      "frequency": 18,
+      "population": "practitioner",
+      "description": "A user documented fabricated-looking results in a ~1,000-citation Nature Computational Science QML paper and the thread's reaction was that this is systemic rather than exceptional. This is a materially harsher failure mode than 'vendors overclaim'.",
+      "quotes": [
+        {
+          "text": "Keep pulling on this thread and you’ll find virtually all QC papers based on benchmarking NISQ algorithms are completely full of shit. Thank you for documenting this, many more people need to be called out.",
+          "score": 41,
+          "subreddit": "QuantumComputing",
+          "source_url": "https://www.reddit.com/r/QuantumComputing/comments/1t193zt/i_found_fabricated_results_in_a_1kcitation_nature/",
+          "discussion_title": "I found fabricated results in a 1k-citation Nature quantum machine learning paper"
+        },
+        {
+          "text": "There is no science except for the hard-nosed economics of \"how can I make money on the Internet\" that indicates there's a quantum advantage for machine learning workloads.",
+          "score": 26,
+          "subreddit": "QuantumComputing",
+          "source_url": "https://www.reddit.com/r/QuantumComputing/comments/1t193zt/i_found_fabricated_results_in_a_1kcitation_nature/",
+          "discussion_title": "I found fabricated results in a 1k-citation Nature quantum machine learning paper"
+        }
+      ]
+    },
+    {
+      "category": "quantum-ml-and-optimization-are-the-fake-parts",
+      "title": "Insiders name specific sub-fields as hype: QML and optimization",
+      "priority": "high",
+      "frequency": 21,
+      "population": "practitioner",
+      "description": "Rather than blanket skepticism, practitioners partition the field: Hamiltonian/quantum simulation is conceded as real; optimization and machine learning are named as the hype vectors. Banks are reported to be shutting QC groups on cost/benefit grounds.",
+      "quotes": [
+        {
+          "text": "certain parts of the industry are complete hype (e.x. optimization, ML). other parts spin genuine algorithms (hamiltonian simulation ) into world-challenge applications like solving global warming or world hunger. some companies are much worse than others at peddling bullshit",
+          "score": 32,
+          "subreddit": "QuantumComputing",
+          "source_url": "https://www.reddit.com/r/QuantumComputing/comments/1rhvtr7/does_quantum_computing_actually_have_a_future/",
+          "discussion_title": "Does quantum computing actually have a future?"
+        },
+        {
+          "text": "Nope. Not useful in quant (search for QC in quant finance subs or look at banks QC departments). Lots of banks and giving up their QC research departments now because, like many other are realising, the cost/time vs reward balance is extremely low on the financial side currently.",
+          "score": 38,
+          "subreddit": "Physics",
+          "source_url": "https://www.reddit.com/r/Physics/comments/1r00liq/is_quantum_computing_more_than_a_hype/",
+          "discussion_title": "Is quantum computing more than a hype?"
+        }
+      ]
+    },
+    {
+      "category": "researchers-avoid-the-field",
+      "title": "Quantum-information researchers are steering their own careers and money away from QC",
+      "priority": "high",
+      "frequency": 16,
+      "population": "practitioner",
+      "description": "In r/Physics the top answer to a PhD-selection question comes from an active quantum-information researcher who refuses both QC investments and QC grants. The recurring career advice is to pick quantum sensing or implementation-side work over QC proper.",
+      "quotes": [
+        {
+          "text": "I currently research quantum information and before doing my Phd I worked in software/ cryptography. And I stay away from QC investments and even research grants despite the money it would offer.",
+          "score": 211,
+          "subreddit": "Physics",
+          "source_url": "https://www.reddit.com/r/Physics/comments/1r00liq/is_quantum_computing_more_than_a_hype/",
+          "discussion_title": "Is quantum computing more than a hype?"
+        },
+        {
+          "text": "Quantum systems (not just qubits) are much more promising as sensors than computers considering how sensitive they are. I think quantum sensing will be a much more impactful field than quantum computing for quite a long while.",
+          "score": 13,
+          "subreddit": "QuantumComputing",
+          "source_url": "https://www.reddit.com/r/QuantumComputing/comments/1tldqwx/computer_scientists_what_is_your_honest_opinion/",
+          "discussion_title": "Computer scientists: what is your honest opinion on quantum computing today?"
+        }
+      ]
+    },
+    {
+      "category": "roadmap-credibility",
+      "title": "Roadmap targets are treated as marketing until hardware ships - including by holders",
+      "priority": "high",
+      "frequency": 24,
+      "population": "both",
+      "description": "IonQ's 256-qubit/2026 and 800-logical-qubit/2027 targets draw scepticism inside r/IonQ itself, and knowledgeable holders flag that demonstrations were done on two calcium ions while the production system will use barium chains.",
+      "quotes": [
+        {
+          "text": "It all looks great on paper, but talk is cheap.",
+          "score": 8,
+          "subreddit": "IonQ",
+          "source_url": "https://www.reddit.com/r/IonQ/comments/1uawjnh/ionq_vs_quantinuum/",
+          "discussion_title": "IonQ vs. Quantinuum"
+        },
+        {
+          "text": "Remarkable!  But this was announced on Analyst day already.  Also caveat -  This is achieved on two calcium ions. 256 system will use multi-chains of barium ions.",
+          "score": 5,
+          "subreddit": "IonQ",
+          "source_url": "https://www.reddit.com/r/IonQ/comments/1oc79h9/ionq_achieves_landmark_result_setting_new_world/",
+          "discussion_title": "IonQ Achieves Landmark Result, Setting New World Record"
+        },
+        {
+          "text": "Say after me it's a research company not a real growth company",
+          "score": 3,
+          "subreddit": "IonQ",
+          "source_url": "https://www.reddit.com/r/IonQ/comments/1oc79h9/ionq_achieves_landmark_result_setting_new_world/",
+          "discussion_title": "IonQ Achieves Landmark Result, Setting New World Record"
+        }
+      ]
+    },
+    {
+      "category": "logical-qubit-definition-abuse",
+      "title": "'Logical qubit' is becoming the next inflated metric",
+      "priority": "high",
+      "frequency": 12,
+      "population": "practitioner",
+      "description": "As vendors pivot messaging from physical to logical qubits, practitioners immediately began contesting the new term - asking for logical error per gate rather than a logical qubit count. The same debunking reflex that killed qubit-count credibility is now aimed at logical-qubit claims.",
+      "quotes": [
+        {
+          "text": "can someone explain in what sense it is fair to call these logical qubits? They aren’t publishing a logical error per gate (as far as I can tell) and their roadmap has 1E-8 infidelity for 2029",
+          "score": 1,
+          "subreddit": "QuantumComputing",
+          "source_url": "https://www.reddit.com/r/QuantumComputing/comments/1pbrsfg/quantinuum_helios_is_a_new_98qubit_commercial/",
+          "discussion_title": "Quantinuum Helios is a new 98-qubit commercial quantum computer"
+        },
+        {
+          "text": "These are physical, not logical qubits .",
+          "score": 2,
+          "subreddit": "QuantumComputing",
+          "source_url": "https://www.reddit.com/r/QuantumComputing/comments/1v2yflz/german_firm_debuts_first_100_qubit_diamondbased/",
+          "discussion_title": "German firm debuts first 100+ qubit diamond-based quantum processors"
+        }
+      ]
+    },
+    {
+      "category": "verifiability",
+      "title": "'Verifiable quantum advantage' was not, in fact, verified",
+      "priority": "high",
+      "frequency": 20,
+      "population": "both",
+      "description": "Google's Willow 'verifiable quantum advantage' claim was undercut by the top comments in r/science quoting the paper's own caveat. The reaction pattern is identical to the 2019 supremacy cycle.",
+      "quotes": [
+        {
+          "text": "“The result of the calculation, reported October 22 in Nature, could be verified by another quantum computer — although it hasn’t been yet.”",
+          "score": 378,
+          "subreddit": "science",
+          "source_url": "https://www.reddit.com/r/science/comments/1odckup/googles_willow_quantum_chip_has_achieved/",
+          "discussion_title": "Google's Willow quantum chip has achieved verifiable quantum advantage"
+        },
+        {
+          "text": "eh, it has not been verified that this is verifiable….",
+          "score": 183,
+          "subreddit": "science",
+          "source_url": "https://www.reddit.com/r/science/comments/1odckup/googles_willow_quantum_chip_has_achieved/",
+          "discussion_title": "Google's Willow quantum chip has achieved verifiable quantum advantage"
+        },
+        {
+          "text": "Paper title is  Observation of constructive interference at the edge of quantum ergodicity  $3 billion and they got nothing yet.",
+          "score": 64,
+          "subreddit": "science",
+          "source_url": "https://www.reddit.com/r/science/comments/1odckup/googles_willow_quantum_chip_has_achieved/",
+          "discussion_title": "Google's Willow quantum chip has achieved verifiable quantum advantage"
+        }
+      ]
+    },
+    {
+      "category": "pqc-is-the-only-real-budget",
+      "title": "Post-quantum crypto is the only place with described purchasing behaviour",
+      "priority": "high",
+      "frequency": 26,
+      "population": "both",
+      "description": "The single highest-scoring practitioner thread of the year is a Q-Day/PQC post, and the substantive replies describe live migration programmes. Crucially, the buyers say the driver is store-now-decrypt-later and equipment lifetime, not a belief that a cryptographically relevant machine is near.",
+      "quotes": [
+        {
+          "text": "security teams are doing it. You probably aren't hearing a lot of noise because \"Q-day \" has \"been around the corner\" for years. Even in my little section of the industry, teams are already implementing post-quantum algorithms already.",
+          "score": 222,
+          "subreddit": "QuantumComputing",
+          "source_url": "https://www.reddit.com/r/QuantumComputing/comments/1s6z9md/went_to_rsac2026_expecting_ai_hype_left_actually/",
+          "discussion_title": "Went to RSAC2026 expecting AI hype"
+        },
+        {
+          "text": "Depends on your organization but mine is well down the road to PQC readiness. I would encourage security folks to also begin those discussions as simply “cutting over” to quantum resistant algos is no small feat.",
+          "score": 25,
+          "subreddit": "QuantumComputing",
+          "source_url": "https://www.reddit.com/r/QuantumComputing/comments/1s6z9md/went_to_rsac2026_expecting_ai_hype_left_actually/",
+          "discussion_title": "Went to RSAC2026 expecting AI hype"
+        },
+        {
+          "text": "Google's own internal deadline to upgrade every system to PQC  just moved to 2029 while US Gov still has a 2035 general target.",
+          "score": 15,
+          "subreddit": "CryptoMarkets",
+          "source_url": "https://www.reddit.com/r/CryptoMarkets/comments/1sb2byq/google_says_quantum_computers_could_crack_bitcoin/",
+          "discussion_title": "Google says quantum computers could crack Bitcoin in 9 minutes"
+        }
+      ]
+    },
+    {
+      "category": "learning-ramp",
+      "title": "The software-engineer on-ramp is missing its middle",
+      "priority": "medium",
+      "frequency": 14,
+      "population": "practitioner",
+      "description": "A free book aimed at software engineers drew consistent feedback that the groundwork section cannot bridge the gap, echoing the same complaint found on HN. Community-built tools (browser circuit debuggers, a visual-programming game) are filling the gap instead of vendors.",
+      "quotes": [
+        {
+          "text": "my main grief is that the groundwork section is way too short. Even a very, very smart software engineer won't be able to connect the dots, because there are a lot of information missing.",
+          "score": 5,
+          "subreddit": "QuantumComputing",
+          "source_url": "https://www.reddit.com/r/QuantumComputing/comments/1piy8cc/i_wrote_a_book_quantum_computing_for_software/",
+          "discussion_title": "I wrote a book \"Quantum Computing for Software Engineers\""
+        },
+        {
+          "text": "I can't see how someone could interpret a quantum algorithm without solid foundations in quantum mechanics.",
+          "score": 4,
+          "subreddit": "QuantumComputing",
+          "source_url": "https://www.reddit.com/r/QuantumComputing/comments/1piy8cc/i_wrote_a_book_quantum_computing_for_software/",
+          "discussion_title": "I wrote a book \"Quantum Computing for Software Engineers\""
+        }
+      ]
+    },
+    {
+      "category": "photonics-gate-gap",
+      "title": "Photonic vendors still cannot run the gates algorithm teams need",
+      "priority": "medium",
+      "frequency": 9,
+      "population": "practitioner",
+      "description": "PsiQuantum draws respect for talent and for refusing NISQ marketing, but the concrete complaints are secrecy, benchmarks that do not match the capital raised, and an inability to implement required gates.",
+      "quotes": [
+        {
+          "text": "Im on the algo side and we work with some hardware providers, optical quantum providers  are still unable to implement the gates we need.",
+          "score": 8,
+          "subreddit": "QuantumComputing",
+          "source_url": "https://www.reddit.com/r/QuantumComputing/comments/1ux70os/psiquantum_has_a_plan_to_make_a_massive_quantum/",
+          "discussion_title": "PsiQuantum has a plan to make a massive quantum computer out of light"
+        },
+        {
+          "text": "They published a few benchmarks and those are good without being mind-blowing. Certainly, the results are not what you'd expect from a billion dollars of investment. Maybe they have more results? Maybe they are bullshitting? It's anyone's guess",
+          "score": 20,
+          "subreddit": "QuantumComputing",
+          "source_url": "https://www.reddit.com/r/QuantumComputing/comments/1oqa8ba/is_psiquantum_a_reliable_company/",
+          "discussion_title": "Is PsiQuantum a reliable company?"
+        }
+      ]
+    },
+    {
+      "category": "investor-timeline-compression",
+      "title": "Retail investors are re-basing from 'next year' to 2030+ and saying so",
+      "priority": "medium",
+      "frequency": 15,
+      "population": "investor",
+      "description": "Even inside the holder subs the modal answer to 'when' has moved out to 5-10+ years, with several long-term holders explicitly noting that multiple hype cycles have already priced in future success.",
+      "quotes": [
+        {
+          "text": "There have already been several hype cycles and a lot of the future success is already priced in.",
+          "score": 7,
+          "subreddit": "IonQStock",
+          "source_url": "https://www.reddit.com/r/IonQStock/comments/1vbimzn/is_ionq_a_long_term_hold_when/",
+          "discussion_title": "Is IONQ a Long term hold When?"
+        },
+        {
+          "text": "Here you need to get used to such swings and have a long 5-10y horizon.",
+          "score": 12,
+          "subreddit": "IonQStock",
+          "source_url": "https://www.reddit.com/r/IonQStock/comments/1v9au6u/ionq_received_final_regulatory_approval_today/",
+          "discussion_title": "IonQ received final regulatory approval"
+        },
+        {
+          "text": "give it 10-20 years. Maybe it'll solidify. Or maybe it won't.",
+          "score": 315,
+          "subreddit": "cscareerquestions",
+          "source_url": "https://www.reddit.com/r/cscareerquestions/comments/1twu4r2/what_happened_to_quantum_computing/",
+          "discussion_title": "What happened to quantum computing?"
+        }
+      ]
+    },
+    {
+      "category": "attention-displaced-by-ai",
+      "title": "Quantum lost the attention war to LLMs",
+      "priority": "medium",
+      "frequency": 11,
+      "population": "both",
+      "description": "In career and general-tech subs the explanation for quantum's disappearance from discourse is simply that money and interest went to AI. One PsiQuantum alumnus in the corpus left quantum for OpenAI's hardware team.",
+      "quotes": [
+        {
+          "text": "Doesn't move fast enough to be interesting plus everyone is busy putting money into LLMs.  It will inevitably be a world changing technology, but for now it's niche and has little if any real world application.",
+          "score": 190,
+          "subreddit": "cscareerquestions",
+          "source_url": "https://www.reddit.com/r/cscareerquestions/comments/1twu4r2/what_happened_to_quantum_computing/",
+          "discussion_title": "What happened to quantum computing?"
+        },
+        {
+          "text": "I joined OpenAI  two years ago through their residency program, which is aimed at recruiting scientists in non-ML fields, and I work on their hardware team now",
+          "score": 16,
+          "subreddit": "QuantumComputing",
+          "source_url": "https://www.reddit.com/r/QuantumComputing/comments/1oqa8ba/is_psiquantum_a_reliable_company/",
+          "discussion_title": "Is PsiQuantum a reliable company?"
+        }
+      ]
+    }
+  ],
+  "sentiment": {
+    "overall": "Bimodal and cleanly split by population. Investor subs are bullish-but-bruised; practitioner subs are skeptical-but-not-dismissive. Both populations agree the technology is real physics and disagree almost entirely about the timeline.",
+    "by_population": {
+      "investor": "Long-term conviction with near-term defensiveness. Narrative has shifted from momentum ('the new Nvidia') to fundamentals (SkyWater fab ownership, revenue ramp, sensing/PQC optionality). Dissent inside holder subs is aimed at promotional behaviour and execution credibility, not at the technology.",
+      "practitioner": "Consistently skeptical and specific. The field is partitioned: quantum simulation and sensing are conceded as real; optimization and QML are named as hype. Multiple working researchers say they avoid QC investments and grants."
+    },
+    "distribution": {
+      "bullish": 22,
+      "skeptical": 31,
+      "neutral": 15
+    },
+    "notable_disagreements": [
+      {
+        "topic": "Whether IonQ leads Quantinuum",
+        "side_a": {
+          "claim": "IonQ is years ahead via optical interconnect and will be vertically integrated with its own foundry",
+          "quote": "IonQ is years ahead via OI, already has a 256 qubit chip prototype set to be released this year, and will soon be be vertically integrated with its own foundry",
+          "source_url": "https://www.reddit.com/r/IonQ/comments/1uawjnh/ionq_vs_quantinuum/"
+        },
+        "side_b": {
+          "claim": "Quantinuum has already shipped what IonQ is still promising",
+          "quote": "they really need to demonstrate that they can produce logical qubits, with the plan being to demonstrate 12 error corrected logical qubits sometime this fiscal year. Meanwhile, Quantinuum has already published a paper of 48 error corrected logical qubits from a 98 qubit machine",
+          "source_url": "https://www.reddit.com/r/IonQ/comments/1uawjnh/ionq_vs_quantinuum/"
+        }
+      },
+      {
+        "topic": "Whether Q-Day is a live threat",
+        "side_a": {
+          "claim": "Enterprises are already migrating and the store-now-decrypt-later risk is real today",
+          "quote": "security teams are doing it... teams are already implementing post-quantum algorithms already",
+          "source_url": "https://www.reddit.com/r/QuantumComputing/comments/1s6z9md/went_to_rsac2026_expecting_ai_hype_left_actually/"
+        },
+        "side_b": {
+          "claim": "The hardware on display cannot decrypt anything and PQC already exists",
+          "quote": "That thing in the photo can't decrypt anything. You'd need an entire building full of those",
+          "source_url": "https://www.reddit.com/r/QuantumComputing/comments/1s6z9md/went_to_rsac2026_expecting_ai_hype_left_actually/"
+        }
+      },
+      {
+        "topic": "Whether D-Wave annealing counts",
+        "side_a": {
+          "claim": "Annealers are used commercially for optimization today",
+          "quote": "Quantenannealer (D-Wave) werden heute kommerziell für Optimierungspro",
+          "source_url": "https://www.reddit.com/r/Aktien/comments/1oe1ojn/zu_d_wave_rigetti_und_co/"
+        },
+        "side_b": {
+          "claim": "Every D-Wave advantage claim has been rebutted within months",
+          "quote": "Diese claims gabs schon öfter und sie wurden bisher immer relativ schnellwiederlegt",
+          "source_url": "https://www.reddit.com/r/Aktien/comments/1oe1ojn/zu_d_wave_rigetti_und_co/"
+        }
+      }
+    ]
+  },
+  "ionq_deep_dive": {
+    "bull_case_as_stated_by_users": [
+      {
+        "claim": "SkyWater makes IonQ the only US quantum pure-play owning a domestic fab - vertical integration nobody else has",
+        "quotes": [
+          {
+            "text": "The deal could make IonQ the only U.S. quantum company with its own American chip factory. Vertical integration in quantum is actually a big deal.  Every other quantum company is dependent on third party fabrication.",
+            "score": 50,
+            "subreddit": "TheRaceTo10Million",
+            "source_url": "https://www.reddit.com/r/TheRaceTo10Million/comments/1tb38v9/is_ionq_the_next_bagger_we_havent_caught_yet_my/"
+          },
+          {
+            "text": "Yup, this is massive news!! This will push annual revenues  close to $1b",
+            "score": 12,
+            "subreddit": "IonQ",
+            "source_url": "https://www.reddit.com/r/IonQ/comments/1v9a6k1/ionq_receives_regulatory_approval_to_complete/"
+          }
+        ]
+      },
+      {
+        "claim": "Declining to take the federal equity-stake deal protected shareholders from dilution",
+        "quotes": [
+          {
+            "text": "Above is taken from Infleqtion announcement. Now you know why IonQ refused. IonQ is with shareholders.",
+            "score": 3,
+            "subreddit": "IonQ",
+            "source_url": "https://www.reddit.com/r/IonQ/comments/1tjgkdk/us_to_award_quantum_computing_firms_2_billion_and/"
+          }
+        ]
+      },
+      {
+        "claim": "Microwave/electronically-controlled ion traps avoid the laser-scaling wall competitors face",
+        "quotes": [
+          {
+            "text": "This article only further validates IonQ’s approach - manipulating ions with electric field generated from CMOS chips.",
+            "score": 6,
+            "subreddit": "QuantumComputing",
+            "source_url": "https://www.reddit.com/r/QuantumComputing/comments/1ommbgm/china_just_built_the_worlds_first_electrically/"
+          },
+          {
+            "text": "\"The use of free spaced optics (lasers) won’t work to scale, are too costly, and have fundamental space constraints.\" This is from Zachary Vernon, Director of Photonics at Quantinuum",
+            "score": 4,
+            "subreddit": "IonQ",
+            "source_url": "https://www.reddit.com/r/IonQ/comments/1uawjnh/ionq_vs_quantinuum/"
+          }
+        ]
+      }
+    ],
+    "bear_case_as_stated_by_users": [
+      {
+        "claim": "Roadmap is promises; hardware has not shipped",
+        "quotes": [
+          {
+            "text": "It all looks great on paper, but talk is cheap.",
+            "score": 8,
+            "subreddit": "IonQ",
+            "source_url": "https://www.reddit.com/r/IonQ/comments/1uawjnh/ionq_vs_quantinuum/"
+          },
+          {
+            "text": "Say after me it's a research company not a real growth company",
+            "score": 3,
+            "subreddit": "IonQ",
+            "source_url": "https://www.reddit.com/r/IonQ/comments/1oc79h9/ionq_achieves_landmark_result_setting_new_world/"
+          }
+        ]
+      },
+      {
+        "claim": "Promotional behaviour reads badly even to shareholders",
+        "quotes": [
+          {
+            "text": "A quantum computer computer needs to advertise at a UFC event ?",
+            "score": 25,
+            "subreddit": "IonQ",
+            "source_url": "https://www.reddit.com/r/IonQ/comments/1u64yvx/ionq_at_the_white_house/"
+          },
+          {
+            "text": "As a shareholder  this makes me want to puke.",
+            "score": 6,
+            "subreddit": "IonQ",
+            "source_url": "https://www.reddit.com/r/IonQ/comments/1u64yvx/ionq_at_the_white_house/"
+          },
+          {
+            "text": "It’s a marathon but why the CEO is so busy on hyping the stock up?",
+            "score": 3,
+            "subreddit": "IonQ",
+            "source_url": "https://www.reddit.com/r/IonQ/comments/1oc79h9/ionq_achieves_landmark_result_setting_new_world/"
+          }
+        ]
+      },
+      {
+        "claim": "Excluded from the $2B federal quantum award, which holders had to rationalize",
+        "quotes": [
+          {
+            "text": "Unfortunately Ionq didn’t receive anything, but is good news nevertheless for the industry as a whole.",
+            "score": 6,
+            "subreddit": "IonQ",
+            "source_url": "https://www.reddit.com/r/IonQ/comments/1tjgkdk/us_to_award_quantum_computing_firms_2_billion_and/"
+          },
+          {
+            "text": "does not bring on the list hurt them going forward when competing for US govt contracts??",
+            "score": 4,
+            "subreddit": "IonQ",
+            "source_url": "https://www.reddit.com/r/IonQ/comments/1tjgkdk/us_to_award_quantum_computing_firms_2_billion_and/"
+          }
+        ]
+      },
+      {
+        "claim": "Government revenue concentration reads as earmarks, not product-market fit",
+        "quotes": [
+          {
+            "text": "lol most of their contracts came from government earmarks , its all corruption",
+            "score": 6,
+            "subreddit": "IonQ",
+            "source_url": "https://www.reddit.com/r/IonQ/comments/1u64yvx/ionq_at_the_white_house/"
+          }
+        ]
+      },
+      {
+        "claim": "Even IonQ's error-correction efficiency claim is contested on the facts",
+        "quotes": [
+          {
+            "text": "From the article it seems Quantinuum did this two years earlier and has greatly surpassed it since. Maybe that’s why no one cares",
+            "score": 1,
+            "subreddit": "IonQStock",
+            "source_url": "https://www.reddit.com/r/IonQStock/comments/1u3zjsm/ionq_reduced_the_number_of_error_correction_and/"
+          }
+        ]
+      }
+    ],
+    "roadmap_credibility": "Holders themselves apply the discount. The 'world record' fidelity result was flagged in-thread as having been achieved on two calcium ions while the 256-qubit production system will use multi-chain barium ions, and as having already been disclosed at Analyst Day. On the Kipu Quantum optimization paper, a technically engaged holder wrote that 256 qubits is 'far less than enough to outperform in optimization problems like this. Aim for 800 fault tolerant qubits(~2027-2028)' and added that 'Optimization is never the low hanging fruit. Simulation is.' The most bullish framing in the corpus still puts the payoff at 2028+: 'the system expected to be released after 2028 will start to be significant.'",
+    "skywater_acquisition": "The single strongest bull catalyst in the corpus and the only IonQ story that produced a coherent, non-price argument. Framed as removing third-party fab dependency at the moment US policy is funding domestic semiconductor capacity. Dilution is acknowledged in the same threads and reframed as a buying opportunity. One commenter noted the strategic knot that SkyWater had acquired Infineon's foundry, which had a partnership with Quantinuum.",
+    "vs_quantinuum": "The sharpest head-to-head in the corpus. The IonQ side argues roadmap (800 vs 192 logical qubits by 2027), microwave gates over laser gates, optical interconnect, and imminent vertical integration - and reads Quantinuum's IPO timing as an insider exit before losing the performance crown. The counter-argument is that Quantinuum has shipped what IonQ has promised: 48 error-corrected logical qubits from a 98-qubit Helios machine, peer-reviewed in Nature with Sandia, versus IonQ's plan to demonstrate 12 logical qubits this fiscal year. A third group simply holds both. Notably r/wallstreetbets' reaction to the Quantinuum IPO was 670 points of jokes about the company's name, carrying no analytical content."
+  },
+  "developer_experience": [
+    {
+      "finding": "Community tooling, not vendor tooling, is what practitioners share and praise: a browser-based circuit debugger showing per-gate amplitudes and Bloch spheres, a decade-long visual-programming game, and a free software-engineer-oriented book.",
+      "quotes": [
+        {
+          "text": "Most simulators are a black box that gives you a final result; I wanted",
+          "score": 151,
+          "subreddit": "QuantumComputing",
+          "source_url": "https://www.reddit.com/r/QuantumComputing/comments/1tth95p/i_built_a_quantum_circuit_debugger_that_runs_in/"
+        },
+        {
+          "text": "Currently learning Quantum Coding . I had the same struggle and was looking for a software just like that.",
+          "score": 5,
+          "subreddit": "QuantumComputing",
+          "source_url": "https://www.reddit.com/r/QuantumComputing/comments/1tth95p/i_built_a_quantum_circuit_debugger_that_runs_in/"
+        }
+      ]
+    },
+    {
+      "finding": "Quantum-enhanced LLM results get deflated by the same in-thread arithmetic as hardware claims - a reader showed the classical version of the enhanced model was better and cheaper.",
+      "quotes": [
+        {
+          "text": "It answered questions correctly that the base model couldn’t! (but the classical implementation of their enhanced model could, and much more efficiently than the quantum implementation",
+          "score": 106,
+          "subreddit": "QuantumComputing",
+          "source_url": "https://www.reddit.com/r/QuantumComputing/comments/1tnrg8y/scientists_trained_an_ai_model_using_an_ibm/"
+        }
+      ]
+    }
+  ],
+  "opportunities": [
+    {
+      "opportunity": "Sell the verifiable, boring milestone instead of the record - the audience has pre-committed to believing shipped logical qubits",
+      "evidence": "The only competitor claim that survived practitioner scrutiny in this corpus is Quantinuum's peer-reviewed 48 logical qubits with Sandia. Every count-based or 'record' claim was debunked in-thread within a few comments.",
+      "quotes": [
+        {
+          "text": "Meanwhile, Quantinuum has already published a paper of 48 error corrected logical qubits from a 98 qubit machine, which is incredibly efficient",
+          "score": 3,
+          "subreddit": "IonQ",
+          "source_url": "https://www.reddit.com/r/IonQ/comments/1uawjnh/ionq_vs_quantinuum/"
+        }
+      ]
+    },
+    {
+      "opportunity": "Quantum sensing is an under-contested adjacent market with real defence budgets",
+      "evidence": "Practitioners volunteer sensing as more impactful than computing, and IonQ's Vector Atomic acquisition targets exactly this. No thread in the corpus disputes sensing the way every computing claim is disputed.",
+      "quotes": [
+        {
+          "text": "I think quantum sensing will be a much more impactful field than quantum computing for quite a long while.",
+          "score": 13,
+          "subreddit": "QuantumComputing",
+          "source_url": "https://www.reddit.com/r/QuantumComputing/comments/1tldqwx/computer_scientists_what_is_your_honest_opinion/"
+        }
+      ]
+    },
+    {
+      "opportunity": "PQC migration tooling: budgeted, dated, and independent of quantum hardware ever working",
+      "evidence": "The highest-scoring practitioner thread of the year is about Q-Day, and the substantive replies describe live migration programmes with named deadlines (Google internal 2029, US Gov 2035).",
+      "quotes": [
+        {
+          "text": "simply “cutting over” to quantum resistant algos is no small feat",
+          "score": 25,
+          "subreddit": "QuantumComputing",
+          "source_url": "https://www.reddit.com/r/QuantumComputing/comments/1s6z9md/went_to_rsac2026_expecting_ai_hype_left_actually/"
+        }
+      ]
+    },
+    {
+      "opportunity": "Own the missing middle of quantum education for software engineers",
+      "evidence": "Identical complaint appears independently on HN and Reddit: nothing exists between pop-science and Nielsen & Chuang. Community members are building the artifacts themselves, for free.",
+      "quotes": [
+        {
+          "text": "You need way more quantum mechanics knowledge to understand what a Bloch sphere is, what is a qubit, what are the gates etc...",
+          "score": 5,
+          "subreddit": "QuantumComputing",
+          "source_url": "https://www.reddit.com/r/QuantumComputing/comments/1piy8cc/i_wrote_a_book_quantum_computing_for_software/"
+        }
+      ]
+    }
+  ],
+  "surprises": [
+    {
+      "finding": "The most upvoted comment in the biggest r/QuantumComputing thread of the year is a superconducting-qubit researcher relaying that many of his PhD colleagues think QC will never be useful in their lifetimes - posted in the subreddit dedicated to the field.",
+      "source_url": "https://www.reddit.com/r/QuantumComputing/comments/1s6z9md/went_to_rsac2026_expecting_ai_hype_left_actually/"
+    },
+    {
+      "finding": "An active quantum-information researcher publicly refuses QC research grants, not just QC investments - the top comment in r/Physics on the subject.",
+      "source_url": "https://www.reddit.com/r/Physics/comments/1r00liq/is_quantum_computing_more_than_a_hype/"
+    },
+    {
+      "finding": "Banks are reported to be shutting down their quantum computing research departments on cost/benefit grounds - the opposite direction from the vendor narrative that finance is a lead vertical.",
+      "source_url": "https://www.reddit.com/r/Physics/comments/1r00liq/is_quantum_computing_more_than_a_hype/"
+    },
+    {
+      "finding": "Quantinuum's IPO - the sector's biggest liquidity event - generated 670 points on r/wallstreetbets consisting almost entirely of jokes about the company's name, and its CEO's CNBC debut was panned even in a rival ticker's sub.",
+      "source_url": "https://www.reddit.com/r/wallstreetbets/comments/1twvqgf/quantinuum_stock_opens_at_68_per_share_after_ipo/"
+    },
+    {
+      "finding": "A user found apparently fabricated results in a ~1,000-citation Nature QML paper and a commenter reported having independently hit the same confusion as an undergrad - the error had been sitting in the literature unchallenged.",
+      "source_url": "https://www.reddit.com/r/QuantumComputing/comments/1t193zt/i_found_fabricated_results_in_a_1kcitation_nature/"
+    },
+    {
+      "finding": "Retail holders proposed an IonQ/D-Wave merger to combine annealing and gate-model approaches - a strategy idea that appears nowhere in analyst or vendor discourse.",
+      "source_url": "https://www.reddit.com/r/QBTSstock/comments/1qsfccx/dwave_quantum_ceo_on_whats_next_after_the_most/"
+    }
+  ]
+}

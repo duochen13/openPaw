@@ -1,0 +1,1942 @@
+{
+  "meta": {
+    "source": "hackernews",
+    "discussions_total": 134,
+    "discussions_on_topic": 86,
+    "discussions_skipped_offtopic": 48,
+    "comments_analyzed": 1462,
+    "comments_in_file_total": 2517,
+    "date_range": "2011-05-17..2026-09-03 (on-topic); full file 2008-10-22..2026-09-03",
+    "offtopic_filter_note": "48 discussions were dropped as off-topic. They were pulled in by the 'IonQ'/'trapped ion' collection queries and matched on 'ion' (lithium-ion batteries, sodium-ion batteries, battery recycling, ion engines/thrusters, solar 'ion cannon' manufacturing), on surnames (Susan Fowler Rigetti), on 'atomic'/'quantum' used loosely (Atomic Database, a substack named qcontinuum, Flow Computing CPUs), plus a large set of unrelated Ask HN / Launch HN / Show HN threads and general news (Boeing criminal inquiry, Grenfell Tower, Gaza, macOS vs Linux, Heroku password reset).",
+    "scoring_note": "Every comment in the source file has score=0 - HN comment scores were not captured by the collector. All quote 'score' fields are therefore 0 and carry no signal. A 'discussion_score' field has been added to each quote so relative thread prominence is still visible.",
+    "coverage_gaps": [
+      "Atom Computing: zero mentions in the entire corpus.",
+      "Pasqal: zero mentions.",
+      "Alice & Bob: zero mentions (AWS cat qubits are discussed, but Alice & Bob itself never is).",
+      "Cirq: zero mentions by name, despite Google being the most-discussed vendor.",
+      "IonQ: only 7 comment mentions across 4 threads - too thin to characterize market perception with confidence; the sample is dominated by one critical thread and one short-seller thread.",
+      "Quantinuum/Honeywell: 2 explicit mentions. The Quantinuum H-Series thread exists (24 comments) but almost none of it engages with Quantinuum specifically.",
+      "QuEra: 1 mention. Xanadu: 2 mentions. PsiQuantum: 1 thread only. Treat all three as anecdote, not signal.",
+      "PennyLane: 1 mention. Azure Quantum: mentioned only as a distribution channel, never evaluated.",
+      "No pricing data anywhere in the corpus - not one comment reports what a QPU-hour costs on any platform.",
+      "No enterprise buyer voices except one security architect on PQC; no procurement, no ROI discussion, no deployed workloads.",
+      "Very little 2017-2020 content on trapped ions specifically; the corpus is heavily weighted toward superconducting (Google/IBM) and annealing (D-Wave).",
+      "Comment authorship is not deduplicated - a handful of prolific commenters (reikonomusha, krastanov, Strilanc, bawolff, hannob, tsimionescu) account for a disproportionate share of the expert content, which inflates apparent consensus."
+    ]
+  },
+  "pain_points": [
+    {
+      "category": "no-practical-applications",
+      "title": "After 40 years of research there is still no problem a quantum computer solves better than a classical one in production",
+      "description": "This is the single most repeated complaint in the corpus, present from 2011 through 2026 and voiced by both laypeople and self-identified researchers. Commenters distinguish sharply between 'a quantum computer exists' and 'a quantum computer is useful,' and note that every vendor demo so far is either a contrived benchmark or a toy instance. Even sympathetic commenters concede the useful-application question is open; the disagreement is only over whether it is 5 years, 30 years, or never.",
+      "priority": "critical",
+      "frequency": 61,
+      "quotes": [
+        {
+          "text": "Quantum computers aren't useful; they're still searching for a use.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=27843776",
+          "discussion_title": "Google tries out error correction on its quantum processor",
+          "discussion_score": 53,
+          "comment_author": "dekhn"
+        },
+        {
+          "text": "Quantum computers do not currently solve any problems of the size or accuracy of interest to any commercial industry that classical computers don't solve better and faster.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=24220337",
+          "discussion_title": "Amazon Braket - Amazon Web Services",
+          "discussion_score": 24,
+          "comment_author": "reikonomusha"
+        },
+        {
+          "text": "None. We're in the stage of early research, still trying to figure out how practical it is to build useful QCs at all. Anyone claiming otherwise is trying to fool people.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=36735713",
+          "discussion_title": "Quantinuum H-Series quantum computer",
+          "discussion_score": 24,
+          "comment_author": "hannob"
+        },
+        {
+          "text": "It's basically saying, \"Here's a thing. Hopefully you can find something useful to do with it, because we can't. But here are our hardware specs.\"",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=34424150",
+          "discussion_title": "IBM Quantum System Two",
+          "discussion_score": 101,
+          "comment_author": "jimmar"
+        },
+        {
+          "text": "So now the only thing stopping me from programming a quantum computer is thinking of any damned thing to do with it. Innovative new ways to feel ineffectual!",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=24220337",
+          "discussion_title": "Amazon Braket - Amazon Web Services",
+          "discussion_score": 24,
+          "comment_author": "arkanciscan"
+        }
+      ]
+    },
+    {
+      "category": "benchmark-inflation",
+      "title": "Vendor benchmarks are contrived, unfalsifiable, or outright clickbait - and HN now assumes bad faith by default",
+      "description": "Random circuit sampling, 'quantum utility', 'quantum volume' and factoring records are all read by this audience as marketing artifacts rather than progress signals. The strongest evidence is that the corpus repeatedly documents benchmarks being deflated after the fact: IBM's 2.5-day rebuttal of Google's 10,000 years, a Commodore 64 paper matching IBM's 'quantum utility', a D-Wave 'RSA-2048 factorization' of numbers whose factors differ by two bits, and a 2026 result where /dev/urandom reproduced an IBM Quantum ECC key-recovery. Note the disagreement: several commenters (including Google-affiliated ones) defend supremacy as a legitimate technical milestone even while conceding it is useless.",
+      "priority": "critical",
+      "frequency": 48,
+      "quotes": [
+        {
+          "text": "This particular problem was artificially constructed with the specific goal of demonstrating quantum supremacy. It has little to none practical use. Essentially they looked what the easiest thing is for current quantum computers to do, and formulated a problem based on that",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=21043659",
+          "discussion_title": "Quantum Supremacy Using a Programmable Superconducting Processor",
+          "discussion_score": 181,
+          "comment_author": "jd007"
+        },
+        {
+          "text": "Project Eleven just awarded 1 BTC for \"the largest quantum attack on ECC to date\", a 17-bit elliptic curve key recovered on IBM Quantum hardware. Yuval Adam replaced the quantum computer with /dev/urandom. It still recovers the key.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=47897647",
+          "discussion_title": "Replace IBM Quantum back end with /dev/urandom",
+          "discussion_score": 383,
+          "comment_author": "pigeons"
+        },
+        {
+          "text": "So it's trivial to \"do the right thing\" and succeed for the wrong reason. It's one of the many things that make small factoring/ecdlp cases bad benchmarks for progress in quantum computing.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=47897647",
+          "discussion_title": "Replace IBM Quantum back end with /dev/urandom",
+          "discussion_score": 383,
+          "comment_author": "Strilanc"
+        },
+        {
+          "text": "The only relevance to RSA-2048 is that it's not technically a lie that they factored a 2048-bit integer.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=43952396",
+          "discussion_title": "A first successful factorization of RSA-2048 integer by D-Wave quantum computer",
+          "discussion_score": 28,
+          "comment_author": "jcranmer"
+        },
+        {
+          "text": "This is ridiculous clickbait even for quantum computing standards. It might actually cross the threshold of being flag-worthy...",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=43952396",
+          "discussion_title": "A first successful factorization of RSA-2048 integer by D-Wave quantum computer",
+          "discussion_score": 28,
+          "comment_author": "formerly_proven"
+        },
+        {
+          "text": "For now, all that will be done are increasingly convincing demonstrations of 'Quantum Supremacy'. ... These problems are very contrived though, no one will actually care about the results of the computations.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=27843776",
+          "discussion_title": "Google tries out error correction on its quantum processor",
+          "discussion_score": 53,
+          "comment_author": "sebzim4500"
+        }
+      ]
+    },
+    {
+      "category": "error-correction",
+      "title": "Fault tolerance is the whole game and nobody has cleared it: physical-to-logical overhead is 1,000-10,000x",
+      "description": "Technically literate commenters consistently reframe every announcement as 'does this help error correction, yes or no'. The recurring numbers in the corpus are ~1,000 physical qubits per logical qubit (2019-2021 comments), ~10,000 (2022), and 'fewer than 1 million physical qubits to factor RSA-2048' (2026), and the recurring claim through 2021 is that not one usable logical qubit existed. Google's 2024 below-threshold surface-code result is the one announcement that earned broad respect, and even then commenters quoted Nature's own caveat about being in a 'crossover regime'.",
+      "priority": "critical",
+      "frequency": 44,
+      "quotes": [
+        {
+          "text": "Not even a single logical qubit has been achieved to date, even with error correction, so it might be a bit soon to talk of factoring anything.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=27843776",
+          "discussion_title": "Google tries out error correction on its quantum processor",
+          "discussion_score": 53,
+          "comment_author": "upofadown"
+        },
+        {
+          "text": "Any practical problem requiring only 250 qubits is in reference to error-corrected logical qubits. You need about 10,000 qubits to create one error-corrected logical qubit.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=31559297",
+          "discussion_title": "The “World's Most Powerful Quantum Computer” Is a Hoax with Staged Photos [pdf]",
+          "discussion_score": 109,
+          "comment_author": "AlanYx"
+        },
+        {
+          "text": "Fault tolerance is still very far away, and even single fault tolerant qubit (error rate of say 10^(-14)) would take a lot time from now, leave alone thousands/millions of them. We only had working error correction ... this August [2] and it's still not better if you take into account the error correction overhead.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=42212520",
+          "discussion_title": "IBM Quantum delivers on 2022 100x100 performance challenge",
+          "discussion_score": 22,
+          "comment_author": "EvgeniyZh"
+        },
+        {
+          "text": "We feel that we are currently in a 'crossover' regime between these scenarios, in which increasing system size initially suppresses the logical error per cycle, but would, with increasing size, later increase error rates.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=34898258",
+          "discussion_title": "Google claims breakthrough in quantum computer error correction",
+          "discussion_score": 128,
+          "comment_author": "cubefox"
+        },
+        {
+          "text": "The reason there are no error corrected quantum computers is because we need way (way way) many more physical qubits, and they would need to be of better quality (less decoherence).",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=21047804",
+          "discussion_title": "On the Leaked Google/NASA Quantum Supremacy Paper",
+          "discussion_score": 69,
+          "comment_author": "jebej"
+        }
+      ]
+    },
+    {
+      "category": "hype-vs-reality",
+      "title": "Insiders describe the industry as a funding machine, not a technology race",
+      "description": "The harshest hype criticism in the corpus comes from people who identify as being in or adjacent to the field, not from outsiders. Recurring specifics: ~100 quantum startups with zero demonstrated commercial products, physicists hired at software-engineer salaries to sustain fundraising narratives, and academics who privately call it a money grab while publicly raising. The disagreement worth noting: several researchers push back that QC is not fringe science, that the physics is sound, and that its funding is trivial next to crypto/web3 hype.",
+      "priority": "critical",
+      "frequency": 40,
+      "quotes": [
+        {
+          "text": "There must be around 100 quantum companies now, most of them startups, and--to my knowledge--zero of them providing anything demonstrated to be a valuable commercial product.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=27905231",
+          "discussion_title": "Quantum computing hype is bad for science",
+          "discussion_score": 136,
+          "comment_author": "reikonomusha"
+        },
+        {
+          "text": "...every month there's a perfectly respected scientist who gets a $15MM series A and starts spouting the same misinforming junk that quantum computing is going to help FedEx with logistics, or steel mills with operations planning.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=27905231",
+          "discussion_title": "Quantum computing hype is bad for science",
+          "discussion_score": 136,
+          "comment_author": "reikonomusha"
+        },
+        {
+          "text": "dozens of my old academic friends from Harvard are in on this grift. My old advisors own some of the largest enterprises in this 'sector', and all all these people (in private) regard quantum computing as a money grab. At best, as a way to fund research.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=32723697",
+          "discussion_title": "Oxford Physicist Unloads on Quantum Computing, Says It's a Hype Bubble",
+          "discussion_score": 38,
+          "comment_author": "alpineidyll3"
+        },
+        {
+          "text": "Right now, quantum computing is highly useful as a form of employment for quantum computing researchers.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=46383233",
+          "discussion_title": "Quantum Error Correction Goes FOOM",
+          "discussion_score": 70,
+          "comment_author": "nineteen999"
+        },
+        {
+          "text": "Quantum computing is mostly a scheme to get more grants/funding for quantum research, it doesn't have any real world application and most likely won't have any in the foreseeable future.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=45670443",
+          "discussion_title": "Willow quantum chip demonstrates verifiable quantum advantage on hardware",
+          "discussion_score": 480,
+          "comment_author": "portaouflop"
+        },
+        {
+          "text": "Quantum computing isn't fringe science and almost no one in the physics community questions the validity of the underlying theories. It is a large engineering challenge so it's unclear whether a working large-scale quantum computer will be realized anytime soon, but that doesn't make it fringe science.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=28896007",
+          "discussion_title": "Physicists take a key step in correcting quantum computer errors",
+          "discussion_score": 49,
+          "comment_author": "ThePhysicist"
+        }
+      ]
+    },
+    {
+      "category": "annealer-vs-gate-confusion",
+      "title": "D-Wave's 15-year marketing did lasting damage to the whole category's credibility",
+      "description": "D-Wave is the single most-discussed vendor in the corpus (108 comment mentions across 27 threads) and the sentiment is overwhelmingly negative. The specific grievance is not that annealing is worthless but that calling a quantum annealer a 'quantum computer' with 2,048 or 5,000 'qubits' trained a generation of technical readers to discount qubit counts entirely. Researchers in-thread say D-Wave's conduct poisoned public trust in their own field. Counter-voices exist: a D-Wave employee posts concrete factoring claims, and one commenter argues D-Wave is nonetheless closest to real-world usefulness.",
+      "priority": "high",
+      "frequency": 58,
+      "quotes": [
+        {
+          "text": "They have used scientific terms like \"quantum computer\" in ways that have little to do with what the rest of the scientific community means. They have lost a ton of good will to the point that I personally am extremely mistrustful of any claims they make.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=34217218",
+          "discussion_title": "What are companies doing with D-Wave's quantum hardware?",
+          "discussion_score": 62,
+          "comment_author": "krastanov"
+        },
+        {
+          "text": "Other researchers did a more apples to apples comparison, by writing an approximate program ... They found that a normal consumer laptop was actually much faster than the $10,000,000 D-wave machine.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=18142480",
+          "discussion_title": "D-Wave Launches Free Quantum Cloud Service",
+          "discussion_score": 102,
+          "comment_author": "chriswarbo"
+        },
+        {
+          "text": "Yes, I wish they'd stop calling it a \"quantum computer\". It's not a quantum computer. It's a thingy.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=2555580",
+          "discussion_title": "Is this the first practical quantum computer? (D-wave 128 qbit box)",
+          "discussion_score": 43,
+          "comment_author": "hugh3"
+        },
+        {
+          "text": "To my knowledge, it is an open challenge to find real-world problem instances where existing quantum annealers outperform state-of-the-art classical alternatives.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=34217218",
+          "discussion_title": "What are companies doing with D-Wave's quantum hardware?",
+          "discussion_score": 62,
+          "comment_author": "tasseff"
+        },
+        {
+          "text": "Currently we can factor 11-bit semiprimes fairly reliably, and our hardware is capable of running 16-bit problems. But no, it's not Shor's algorithm. ... Despite not being Shor's algorithm, we've yet to see a competitor demonstrate anything close on the factoring problem.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=20489122",
+          "discussion_title": "Google expected to achieve quantum supremacy in 2019",
+          "discussion_score": 58,
+          "comment_author": "boothby (D-Wave)"
+        },
+        {
+          "text": "Yeah, i'd consider dwave basically scammers at this point.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=43952396",
+          "discussion_title": "A first successful factorization of RSA-2048 integer by D-Wave quantum computer",
+          "discussion_score": 28,
+          "comment_author": "bawolff"
+        }
+      ]
+    },
+    {
+      "category": "qubit-count-is-the-wrong-metric",
+      "title": "Qubit counts are the headline number and the audience knows it is the wrong one",
+      "description": "Across the whole corpus commenters redirect from qubit count to two-qubit gate fidelity, coherence time, connectivity and circuit depth. They do the arithmetic in-thread: a 2.7e-3 two-qubit error rate buys ~400 entangling gates, and a shenanigan-free factoring of 21 needs ~2,000. Sparse connectivity (~3.5 neighbours) multiplies effective error via SWAP chains. The practical consequence: nobody in this audience can compare two vendors from the specs vendors publish.",
+      "priority": "high",
+      "frequency": 31,
+      "quotes": [
+        {
+          "text": "I'd say to be less concerned about the number of qubits, and more concerned about the gate fidelity and qubit coherence.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=34424150",
+          "discussion_title": "IBM Quantum System Two",
+          "discussion_score": 101,
+          "comment_author": "kvathupo"
+        },
+        {
+          "text": "Currently the two qubit gate error rate is listed as ~2.7e-3 ... That implies you can expect ~400 entangling gates before experiencing an error. A zero-shenanigans factoring of 21 takes ~2000 entangling gates. So it's not good enough to factor 21 in any meaningful sense.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=49546198",
+          "discussion_title": "IBM Quantum Nighthawk R2",
+          "discussion_score": 81,
+          "comment_author": "Strilanc (Google)"
+        },
+        {
+          "text": "This chip still has an error rate of 0.15% for two-qubits gate, and the average connectivity is only ~3.5 qubits. ... This is like if everytime your computer did a NOT gate there was a 1.5% chance it didn't flip.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=42367591",
+          "discussion_title": "Google Debuts New Quantum Chip, Error Correction Breakthrough, Roadmap Details",
+          "discussion_score": 25,
+          "comment_author": "thrance"
+        },
+        {
+          "text": "If your chip has 500 qubits with a ruinous error rate that requires a god-tier error correction algorithm to achieve a functional result equivalent to a 12 qubit computer, you should report that as \"We made a 12 qubit computer\".",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=36735713",
+          "discussion_title": "Quantinuum H-Series quantum computer",
+          "discussion_score": 24,
+          "comment_author": "lucubratory"
+        },
+        {
+          "text": "Circuit depth, with imperfect qubits and gates, is currently the limiting factor - we don't have practical error-correction for the chips of today's size.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=18784318",
+          "discussion_title": "VW Solves Quantum Chemistry Problems on a D-Wave Machine",
+          "discussion_score": 88,
+          "comment_author": "tbabej"
+        }
+      ]
+    },
+    {
+      "category": "classical-catch-up",
+      "title": "Every claimed quantum advantage so far has been eroded by a better classical algorithm",
+      "description": "The corpus contains a documented pattern, not a suspicion: IBM's tensor-network rebuttal of Sycamore, Selby's algorithm beating D-Wave, and later classical simulations that reproduced the 2019 supremacy result without a supercomputer. Commenters generalize this into a structural risk for the whole industry - that 'quantum advantage' is a moving target defined by classical effort. The interesting disagreement: a researcher in-thread says he would be happier if BQP collapsed to BPP than if he built a quantum computer, because it would be a bigger physics result.",
+      "priority": "high",
+      "frequency": 29,
+      "quotes": [
+        {
+          "text": "It's actually a well-known and very hard challenge to try to find interesting tasks where quantum algorithms beat classical ones. Experts have spent much effort trying to come up with one of these, and nigh invariably another expert comes back some time after with a classical algorithm that is just as fast as the quantum one on the same task.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=42212520",
+          "discussion_title": "IBM Quantum delivers on 2022 100x100 performance challenge",
+          "discussion_score": 22,
+          "comment_author": "tux3"
+        },
+        {
+          "text": "Further research [1] has indicated that the suspected case of quantum supremacy was not valid, as the problem can be solved classically without a supercomputer. So we have yet to see a demonstration of quantum supremacy from an NISQ system.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=32900173",
+          "discussion_title": "Disentangling the facts from the hype of quantum computing",
+          "discussion_score": 70,
+          "comment_author": "andrewla"
+        },
+        {
+          "text": "We argue that an ideal simulation of the same task can be performed on a classical system in 2.5 days and with far greater fidelity.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=21332768",
+          "discussion_title": "Quantum Supremacy Using a Programmable Superconducting Processor",
+          "discussion_score": 701,
+          "comment_author": "oliveremberton quoting IBM"
+        },
+        {
+          "text": "If the whole premise of my career vanishes one day because Computational Complexity theorists find a way to prove that BQP as a complexity class is not more powerful than BPP, I would be *happier* than if I successfully build a quantum computer",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=32900173",
+          "discussion_title": "Disentangling the facts from the hype of quantum computing",
+          "discussion_score": 70,
+          "comment_author": "krastanov"
+        },
+        {
+          "text": "But if Google were using 10 more qubits, then that classical algorithm would have failed. That is at the root of supremacy experiments: a minor increase in the number of qubits leads to exponential difficulty in classically faking the result.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=32900173",
+          "discussion_title": "Disentangling the facts from the hype of quantum computing",
+          "discussion_score": 70,
+          "comment_author": "krastanov"
+        }
+      ]
+    },
+    {
+      "category": "developer-experience",
+      "title": "Simulators beat real hardware, so there is no reason for a developer to touch a QPU today",
+      "description": "The developer-facing verdict is blunt and consistent across a decade: cloud simulators are faster, cheaper and more accurate than the hardware behind the same API, real machines need a team of physicists recalibrating daily, and you can run about a dozen statements before the output is junk. Learning curve complaints are about conceptual distance (linear algebra over complex amplitudes, circuit thinking) rather than SDK ergonomics. Notably, the one 2026 practitioner comment reports LLMs help with Qiskit/PennyLane scaffolding but get algorithms like QAOA outright wrong.",
+      "priority": "high",
+      "frequency": 27,
+      "quotes": [
+        {
+          "text": "Yes. Right now simulators tend to be faster, cheaper, and more accurate than real quantum computers.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=21684668",
+          "discussion_title": "Amazon Braket - Get Started with Quantum Computing",
+          "discussion_score": 451,
+          "comment_author": "dshields1"
+        },
+        {
+          "text": "any programmer can fire up a quantum simulator for any number of the quantum instruction languages and be more productive than with a real quantum computer.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=27905231",
+          "discussion_title": "Quantum computing hype is bad for science",
+          "discussion_score": 136,
+          "comment_author": "reikonomusha"
+        },
+        {
+          "text": "Bad performance and the fact you need a team of physicists to calibrate the machine daily are two simple examples limiting adoption more than size.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=27548561",
+          "discussion_title": "A compact quantum-computer that fits in 19-inch server racks",
+          "discussion_score": 48,
+          "comment_author": "reikonomusha"
+        },
+        {
+          "text": "The quantum computers of today are programmable (barely), and the programs do run (though you can only run a dozen or so \"statements\" before you get junk results)",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=27905231",
+          "discussion_title": "Quantum computing hype is bad for science",
+          "discussion_score": 136,
+          "comment_author": "reikonomusha"
+        },
+        {
+          "text": "I use Claude quite extensively with quantum SDKs like Qiskit and Pennylane. It tends to be very good at scaffolding and architecture, but can spiral or be outright incorrect when it comes to implementing certain algorithms like QAOA.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=49546198",
+          "discussion_title": "IBM Quantum Nighthawk R2",
+          "discussion_score": 81,
+          "comment_author": "marzchipane"
+        },
+        {
+          "text": "What language is used to program for this processor? ... Is there a quantum computer simulator? What does the development workflow look like? How do you debug? Boy I have a lot of questions!",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=10096435",
+          "discussion_title": "Announcing the D-Wave 2X Quantum Computer",
+          "discussion_score": 93,
+          "comment_author": "taylodl"
+        }
+      ]
+    },
+    {
+      "category": "shor-stagnation",
+      "title": "The Shor's-algorithm record has not moved past 21 in over a decade, and even 15 and 21 were compiled with the answer baked in",
+      "description": "Commenters use factoring as their personal 'are we there yet' oracle precisely because it is trivially verifiable, and the number has not moved. Multiple threads independently note that the published 15 and 21 factorizations used simplified circuits that presuppose the factorization. A concrete, cheap milestone repeatedly proposed by this audience: factor any 4-bit x 4-bit semiprime (55, 65, 77, 91, 143) with one unchanged setup. No vendor in the corpus has done it.",
+      "priority": "high",
+      "frequency": 24,
+      "quotes": [
+        {
+          "text": "As pointed out in [57], there has never been a genuine implementation of Shor's algorithm. The only numbers ever to have been factored by that type of algorithm are 15 and 21, and those factorizations used a simplified version of Shor's algorithm that requires one to know the factorization in advance.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=42384768",
+          "discussion_title": "The case against Google's claims of \"quantum supremacy\"",
+          "discussion_score": 183,
+          "comment_author": "thesz"
+        },
+        {
+          "text": "It's sad that no-one has demonstrated a factorization of 4+4 bits (which should include factorizing 55,65,77,91, and 143). That would be an important milestone I think.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=31559297",
+          "discussion_title": "The “World's Most Powerful Quantum Computer” Is a Hoax with Staged Photos [pdf]",
+          "discussion_score": 109,
+          "comment_author": "tromp"
+        },
+        {
+          "text": "It's 2022 and Shor's algorithm record on quantum computer is still only 21.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=32900173",
+          "discussion_title": "Disentangling the facts from the hype of quantum computing",
+          "discussion_score": 70,
+          "comment_author": "dvh"
+        },
+        {
+          "text": "Please also note that they did not run Shor's algorithm to compute this. They had to greatly simplify the algorithm, so that it works specifically for the number '21'.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=36735713",
+          "discussion_title": "Quantinuum H-Series quantum computer",
+          "discussion_score": 24,
+          "comment_author": "deng"
+        },
+        {
+          "text": "Until a quantum computer can factor products of primes larger than a few bits, I'll consider it a work in progress at best.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=42215910",
+          "discussion_title": "Understanding Google's Quantum Error Correction Breakthrough",
+          "discussion_score": 183,
+          "comment_author": "xscott"
+        }
+      ]
+    },
+    {
+      "category": "verification-and-reproducibility",
+      "title": "Results run on one-of-a-kind hardware that only the vendor owns and that classical computers cannot check",
+      "description": "A structural trust problem distinct from hype: the flagship results are produced on devices only the vendor can access, on tasks specifically chosen to be classically infeasible to verify. Commenters contrast this with factoring, which is trivially checkable. This is why 'wait for Scott Aaronson' became a running joke and a de facto verification layer in this community. Gil Kalai personally joined one thread to argue Google bundled a well-documented QEC result with an undocumented advantage claim.",
+      "priority": "high",
+      "frequency": 22,
+      "quotes": [
+        {
+          "text": "A big part of all these discussions is \"why should you trust any computational result you can't verify?\"",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=42384768",
+          "discussion_title": "The case against Google's claims of \"quantum supremacy\"",
+          "discussion_score": 183,
+          "comment_author": "drpossum"
+        },
+        {
+          "text": "only google has access to the device being built and the computation tested by them impossible to verify with classic computers, unlike Shor's algorithm which is trivial to test with known primes.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=42384768",
+          "discussion_title": "The case against Google's claims of \"quantum supremacy\"",
+          "discussion_score": 183,
+          "comment_author": "evandrofisico"
+        },
+        {
+          "text": "It is not clear why Google added to the announcement of nice published results about quantum error correction a hyped undocumented fantastic claim. I think that our work on Google's 2019 experiment provides useful information for evaluating Google's scientific conduct.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=42384768",
+          "discussion_title": "The case against Google's claims of \"quantum supremacy\"",
+          "discussion_score": 183,
+          "comment_author": "GilKalai"
+        },
+        {
+          "text": "Like other quantum supremacy claims, it cannot be proved by others.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=43347588",
+          "discussion_title": "D-Wave quantum annealers solve problems classical algorithms struggle with",
+          "discussion_score": 13,
+          "comment_author": "feverzsj"
+        },
+        {
+          "text": "As far as I'm concerned, it doesn't work until Scott Aaronson says it works.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=11668658",
+          "discussion_title": "Google Announced their D-Wave 2X Quantum Computer Works (2015)",
+          "discussion_score": 63,
+          "comment_author": "Analemma_"
+        }
+      ]
+    },
+    {
+      "category": "cryogenics-and-control-electronics",
+      "title": "The unglamorous scaling wall is wiring, control electronics and refrigeration, not qubits",
+      "description": "RF and hardware engineers in the corpus consistently point at the part nobody photographs: racks of control electronics per handful of qubits, two coax lines per qubit into a dilution refrigerator, and the fact that the iconic 'chandelier' image is the cooling system, not the computer. Commenters extrapolate that a million physical qubits implies a control-electronics density problem with no published answer. A related complaint: miniaturization demos (19-inch rack QCs) are dismissed as gimmicks that address the last-priority problem.",
+      "priority": "medium",
+      "frequency": 16,
+      "quotes": [
+        {
+          "text": "As an RF/Microwave engineer, I think the elephant in the room are the control electronics. Presently these are racks of equipment for a few logical qubits. ... How are the read and write electronics going to be reasonably sized, or ever going to achieve the density needed for a million physical qubits?",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=31559297",
+          "discussion_title": "The “World's Most Powerful Quantum Computer” Is a Hoax with Staged Photos [pdf]",
+          "discussion_score": 109,
+          "comment_author": "madengr"
+        },
+        {
+          "text": "The cryostat will undoubtedly be able to house the chip, but the extra electronics / cables must run in there as well. With 1000 qubits and 2 cables per qubit this will be a major challenge.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=21053405",
+          "discussion_title": "Scott's Supreme Quantum Supremacy FAQ",
+          "discussion_score": 603,
+          "comment_author": "itcrowd"
+        },
+        {
+          "text": "These pictures are always really fun, but they're not really \"the computer\" -- most of what you see is the cooling system.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=21335907",
+          "discussion_title": "Quantum supremacy: the gloves are off",
+          "discussion_score": 275,
+          "comment_author": "knzhou"
+        },
+        {
+          "text": "Miniaturizing quantum computers is the absolute last priority issue in the field right now. ... Putting a quantum computer--that doesn't do anything remotely useful--on a rack, or in a glass case, or whatever is, in my not so humble opinion, just a gimmick.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=27548561",
+          "discussion_title": "A compact quantum-computer that fits in 19-inch server racks",
+          "discussion_score": 48,
+          "comment_author": "reikonomusha"
+        },
+        {
+          "text": "These are all just models of the cryostats and classical computer interfaces used to cool and read out from the quantum computing devices. These are not the quantum computing devices themselves.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=49112348",
+          "discussion_title": "Quantego: A Family of Lego Models of IBM Quantum Computers",
+          "discussion_score": 69,
+          "comment_author": "ktallett"
+        }
+      ]
+    },
+    {
+      "category": "public-market-incentives",
+      "title": "SPACs, press releases and boardroom marketing are read as the actual product",
+      "description": "Rigetti's SPAC, IonQ's SPAC-era PR, and IBM's announcement cadence all draw the same reaction: the audience believes the communications are aimed at retail investors and customer boards, not at engineers. Commenters note the disclosure asymmetry (short reports, retail dilution) and one ex-employee states plainly that a technical blog post existed as SPAC marketing. This matters commercially because it means technical buyers discount vendor claims before evaluating them.",
+      "priority": "medium",
+      "frequency": 18,
+      "quotes": [
+        {
+          "text": "Yep! This was PR for IonQ SPACing so totally focused on running via their API or APIs they integrate with (Azure, AWS)",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=30343507",
+          "discussion_title": "Hello Many Worlds in Seven Quantum Languages (2021)",
+          "discussion_score": 58,
+          "comment_author": "da-bacon (ex-IonQ)"
+        },
+        {
+          "text": "SPACs are mostly a way for those with \"excess wealth\" (the investor class) to leech off of mom and pops (retail investors).",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=28772402",
+          "discussion_title": "Rigetti Computing to go public",
+          "discussion_score": 98,
+          "comment_author": "LurkingPenguin"
+        },
+        {
+          "text": "These ads are aimed at the board members of IBM's customers. ... The purpose is to make it safe to remain an IBM customer.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=49546198",
+          "discussion_title": "IBM Quantum Nighthawk R2",
+          "discussion_score": 81,
+          "comment_author": "Zigurd"
+        },
+        {
+          "text": "Gotta declare success to get the next round of funding",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=44069923",
+          "discussion_title": "Lockheed Martin and IBM combine quantum computing with HPC in new research",
+          "discussion_score": 67,
+          "comment_author": "datadrivenangel"
+        },
+        {
+          "text": "Then they hire a bunch of good academic people, pay them software-engineer salaries, and string them along to help them perpetuate the fundraising machine--not by actually doing science of course",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=27905231",
+          "discussion_title": "Quantum computing hype is bad for science",
+          "discussion_score": 136,
+          "comment_author": "reikonomusha"
+        }
+      ]
+    },
+    {
+      "category": "pqc-timeline-uncertainty",
+      "title": "Post-quantum migration is being forced by regulators while the threat timeline stays unfalsifiable",
+      "description": "By 2026 the PQC thread is the liveliest commercial conversation in the corpus, and it is driven by policy (France's ANSSI blocking PQC-free certification from 2027) rather than by demonstrated hardware progress. The split is sharp: security architects argue harvest-now-decrypt-later plus multi-decade equipment lifetimes justify migrating today regardless of QC timelines, while others argue the whole exercise is preparing for 'fairies and elves' and worry the rushed new primitives will themselves be the vulnerability. A useful concrete data point offered in-thread: the RSA-2048 resource estimate fell from ~20M noisy qubits (2019) to under 1M (2025).",
+      "priority": "medium",
+      "frequency": 21,
+      "quotes": [
+        {
+          "text": "Not because we expect a workable quantum computer by 2030 (current estimates are around 2035-2040), but because stuff survives for decades in large enterprises ... If your threat model includes store-now-decrypt-later, you should have been demanding PQC for years.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=48994116",
+          "discussion_title": "France's Anssi Will Block PQC-Free Products from Certification Starting 2027",
+          "discussion_score": 106,
+          "comment_author": "alphager (security architect)"
+        },
+        {
+          "text": "Progress in error codes, quantum processing etc. made it that in 2019, it was estimated we needed ~20 million noisy qubits to factor RSA 2048. In 2025, we know we need fewer than 1 million.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=48994116",
+          "discussion_title": "France's Anssi Will Block PQC-Free Products from Certification Starting 2027",
+          "discussion_score": 106,
+          "comment_author": "plopilop"
+        },
+        {
+          "text": "No-one has ever achieved any crypto result with a \"quantum computer\" after 20+ years and billions of dollars spent, and there's no sign they will either. ... this is preparing for fairies and elves.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=48994116",
+          "discussion_title": "France's Anssi Will Block PQC-Free Products from Certification Starting 2027",
+          "discussion_score": 106,
+          "comment_author": "pseudohadamard"
+        },
+        {
+          "text": "What are the odds that a new QS crypto scheme has a fatal flaw or is otherwise intentionally backdoored? ... Amping everyone up with fears over quantum breaking classical seems like a fantastic way to get another round of vulnerabilities injected into everyone's infrastructure.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=49546198",
+          "discussion_title": "IBM Quantum Nighthawk R2",
+          "discussion_score": 81,
+          "comment_author": "bob1029"
+        },
+        {
+          "text": "The cryptographic implications of QC are absurdly exaggerated.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=31559297",
+          "discussion_title": "The “World's Most Powerful Quantum Computer” Is a Hoax with Staged Photos [pdf]",
+          "discussion_score": 109,
+          "comment_author": "api"
+        }
+      ]
+    },
+    {
+      "category": "talent-and-education",
+      "title": "The onboarding ramp is conceptual, not tooling - and the field openly disagrees on whether developers should ramp at all",
+      "description": "Would-be entrants repeatedly ask 'when should I start learning this' and get contradictory answers from credible people in the same thread: 'now, exponential is faster than you think' versus 'wait half a decade' versus 'the field needs physicists and complexity theorists, not programmers'. The material complaint is a missing middle tier of explanation between pop-science and Nielsen & Chuang. The single highest-effort artifact in the corpus is a line-by-line layman translation of a transmon paragraph written by a non-specialist commenter.",
+      "priority": "medium",
+      "frequency": 19,
+      "quotes": [
+        {
+          "text": "There just seems to be a lack of non-introductory but non-PhD level information. Where is the \"explain it like I've been accepted into college at all\".",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=21053405",
+          "discussion_title": "Scott's Supreme Quantum Supremacy FAQ",
+          "discussion_score": 603,
+          "comment_author": "rolltiide"
+        },
+        {
+          "text": "I'd say, anyone who doesn't want to work either in academia or on \"vanity projects\" like D-Wave's much-hyped collabs with Lockheed, Google etc. should wait half a decade and see.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=14595290",
+          "discussion_title": "Rigetti Forest 1.0 - programming environment for quantum/classical computing",
+          "discussion_score": 173,
+          "comment_author": "semi-extrinsic"
+        },
+        {
+          "text": "There are many more decades of research to be done before there will be any kind of need for quantum computation programmers. Right now the field needs quantum physicists and computer science mathematicians ... not programmers per se.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=27905231",
+          "discussion_title": "Quantum computing hype is bad for science",
+          "discussion_score": 136,
+          "comment_author": "tsimionescu"
+        },
+        {
+          "text": "it's like taking a long-time K&R C programmer, and asking them to be productive in Agda. It's not that they can't, but they probably won't be able to do it by tomorrow.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=14595290",
+          "discussion_title": "Rigetti Forest 1.0 - programming environment for quantum/classical computing",
+          "discussion_score": 173,
+          "comment_author": "reikonomusha"
+        },
+        {
+          "text": "It feels to me like learning to code a new programming language in a foreign language.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=14640993",
+          "discussion_title": "Quantum Computing: A Beginner's Notes and Overview of IBM's Quantum Experience",
+          "discussion_score": 103,
+          "comment_author": "kcasey1234"
+        }
+      ]
+    }
+  ],
+  "players": [
+    {
+      "name": "IonQ",
+      "mentions": 7,
+      "discussions": 4,
+      "sentiment": "skeptical",
+      "sentiment_breakdown": {
+        "positive": 0,
+        "neutral": 4,
+        "negative": 3
+      },
+      "what_people_say": "IonQ is barely present in this corpus despite being one of the two US pure-play public quantum companies, and what little exists is unflattering. Its own product news (the Duke N-qubit Toffoli gate) was dismantled in detail by a compiler author who called the press release not written in good faith and the 'only runs on IonQ architecture' claim 'hugely misleading'. The largest IonQ-centric thread is a short-seller report alleging staged photos and sham related-party revenue, and an ex-employee describes an IonQ technical blog post as SPAC marketing. The one neutral-positive mention simply groups IonQ with Google and IBM as gate-model (as opposed to annealing) vendors.",
+      "praised_for": [
+        "Grouped with IBM and Google as a credible gate-model (not annealing) vendor",
+        "Trapped-ion modality noted as avoiding the fixed-connectivity limits of superconducting chips",
+        "Reachable through Azure and AWS APIs rather than a bespoke stack"
+      ],
+      "criticized_for": [
+        "Press releases judged misleading about architecture exclusivity and algorithmic impact",
+        "New gates announced as theory papers without hardware validation",
+        "Publicity timed to SPAC/investor needs",
+        "Subject of a 183-page short-seller fraud allegation that HN treated as plausible-if-shoddy"
+      ],
+      "quotes": [
+        {
+          "text": "New family of N-qubit gates can only be run on IonQ quantum computer architecture. ... This is hugely misleading. You can do an N-qubit Toffoli on any computer. That's what a compiler is for.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=30343328",
+          "discussion_title": "Duke University and IonQ Develop New Quantum Computing Gate",
+          "discussion_score": 19,
+          "comment_author": "reikonomusha",
+          "stance": "negative"
+        },
+        {
+          "text": "Unfortunately, I don't personally believe the headline summary and following text are written in good faith.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=30343328",
+          "discussion_title": "Duke University and IonQ Develop New Quantum Computing Gate",
+          "discussion_score": 19,
+          "comment_author": "reikonomusha",
+          "stance": "negative"
+        },
+        {
+          "text": "This is a theory paper. They haven't actually performed the gate on hardware yet ... The article reads like this is the first time anyone has tried to do Toffolis natively. Neutral atom people also do native Toffolis",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=30343328",
+          "discussion_title": "Duke University and IonQ Develop New Quantum Computing Gate",
+          "discussion_score": 19,
+          "comment_author": "Strilanc",
+          "stance": "negative"
+        },
+        {
+          "text": "Yep! This was PR for IonQ SPACing so totally focused on running via their API or APIs they integrate with (Azure, AWS)",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=30343507",
+          "discussion_title": "Hello Many Worlds in Seven Quantum Languages (2021)",
+          "discussion_score": 58,
+          "comment_author": "da-bacon (ex-IonQ)",
+          "stance": "negative"
+        },
+        {
+          "text": "there has to be enough damaging information in the document that's factually correct to make it fruitless for IONQ to pursue litigation against them.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=31559297",
+          "discussion_title": "The “World's Most Powerful Quantum Computer” Is a Hoax with Staged Photos [pdf]",
+          "discussion_score": 109,
+          "comment_author": "AlanYx",
+          "stance": "negative"
+        },
+        {
+          "text": "It's also important to distinguish between the adiabatic quantum computing of companies like D-Wave with their many qubits and the gate-based quantum computing of Google, IonQ, IBM, etc. with their fewer qubits.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=34424150",
+          "discussion_title": "IBM Quantum System Two",
+          "discussion_score": 101,
+          "comment_author": "kvathupo",
+          "stance": "neutral"
+        }
+      ]
+    },
+    {
+      "name": "IBM",
+      "mentions": 83,
+      "discussions": 35,
+      "sentiment": "mixed",
+      "sentiment_breakdown": {
+        "positive": 22,
+        "neutral": 31,
+        "negative": 30
+      },
+      "what_people_say": "IBM is credited with the most usable on-ramp in the industry - free cloud hardware, the Qiskit textbook, quantum volume as a fidelity-aware metric - and with the single most respected act of adversarial honesty in the corpus, its 2.5-day rebuttal of Google's 10,000-year supremacy claim. Against that, IBM carries the heaviest reputational baggage: Watson and blockchain are invoked in almost every IBM thread as evidence that IBM ships press releases rather than products. The 2024 Commodore 64 paper and the 2026 /dev/urandom result specifically targeted IBM Quantum claims. The most nuanced read in the corpus is that IBM does deliver the hardware it promises but the promises are calibrated for boardrooms, and that the Nighthawk-class chips are genuinely better for error correction (square grid, working mid-circuit reset, tunable couplers).",
+      "praised_for": [
+        "Free public cloud access to real hardware",
+        "Qiskit and the Qiskit textbook as the default learning path",
+        "'Quantum volume' as a metric that folds in error rate, not just qubit count",
+        "Publicly rebutting Google's supremacy claim with a concrete classical simulation",
+        "Nighthawk R2 architecture changes that actually help error correction (square grid, mid-circuit reset, tunable couplers)",
+        "Hitting announced roadmap numbers (Eagle 127q, 100x100)"
+      ],
+      "criticized_for": [
+        "Watson and blockchain cited as precedent for hype without delivery",
+        "'Announcements of announcements' and marketing-led framing",
+        "Quantum utility claims matched by a Commodore 64 in a SIGBOVIK paper",
+        "An award-winning ECC attack on IBM hardware reproduced with /dev/urandom",
+        "Cannot articulate use cases; defers to 'we're excited to see what you build'"
+      ],
+      "quotes": [
+        {
+          "text": "Is this going to be true or another marketing-push that ultimately is IBM-lies? I'm thinking of Watson, the AI game changer that was thrown into the dust bin...",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=29223030",
+          "discussion_title": "IBM achieves quantum computing breakthrough",
+          "discussion_score": 26,
+          "comment_author": "seibelj",
+          "stance": "negative"
+        },
+        {
+          "text": "IBM has been doing a commendable job at managing expectations wrt/ quantum computing.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=34424150",
+          "discussion_title": "IBM Quantum System Two",
+          "discussion_score": 101,
+          "comment_author": "Chabsff",
+          "stance": "positive"
+        },
+        {
+          "text": "Really what matters about this chip is that it is better suited for error correction. They have a square grid connectivity (previous IBM chips incurred fatal overheads from their heavy hex connectivity), they can actually reset their qubits now",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=49546198",
+          "discussion_title": "IBM Quantum Nighthawk R2",
+          "discussion_score": 81,
+          "comment_author": "Strilanc (Google)",
+          "stance": "positive"
+        },
+        {
+          "text": "I watched some of the presentations at their recent quantum summit. They have smart people building sophisticated systems, but they struggled to define meaningful use cases for quantum computing.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=34424150",
+          "discussion_title": "IBM Quantum System Two",
+          "discussion_score": 101,
+          "comment_author": "jimmar",
+          "stance": "negative"
+        },
+        {
+          "text": "IBM talks about a metric called \"quantum volume\" that combines number of qubits with error rate to summarise useful computing performance.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=16102153",
+          "discussion_title": "Intel's 49-Qubit Chip Shoots for Quantum Supremacy",
+          "discussion_score": 54,
+          "comment_author": "ajdlinux (IBMer)",
+          "stance": "positive"
+        },
+        {
+          "text": "It's a jab at QC and a right hook onto IBM's snake oil selling chin.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=47897647",
+          "discussion_title": "Replace IBM Quantum back end with /dev/urandom",
+          "discussion_score": 383,
+          "comment_author": "holografix",
+          "stance": "negative"
+        }
+      ]
+    },
+    {
+      "name": "Google (Quantum AI / Sycamore / Willow)",
+      "mentions": 91,
+      "discussions": 41,
+      "sentiment": "mixed",
+      "sentiment_breakdown": {
+        "positive": 30,
+        "neutral": 30,
+        "negative": 31
+      },
+      "what_people_say": "Google is simultaneously the most technically respected and the most accused-of-overclaiming player. Its 2024-2025 below-threshold surface-code error-correction results are treated as the only genuine landmark in the corpus - commenters call it the first experiment showing logical qubit lifetime improving with code distance. Its supremacy and 'advantage' announcements, by contrast, have been contested every single time: by IBM in 2019, by Gil Kalai across a five-year research program, and by later classical simulations. A recurring meta-complaint is that Google bundles a solid peer-reviewed result with an undocumented headline claim. Google employees post openly in these threads with disclaimers, which the community treats as a credibility asset.",
+      "praised_for": [
+        "First convincing below-threshold quantum error correction (distance 3 to 5 to 7 scaling)",
+        "Publishing circuits and measurement data to Zenodo for independent analysis",
+        "Employees engaging directly and with disclosure in HN threads",
+        "Judged 'far ahead of the competition (e.g. Rigetti, IBM) in terms of maturity and qubit control' by an ex-superconducting-qubit PhD",
+        "Optimizing the classical simulators they benchmarked against"
+      ],
+      "criticized_for": [
+        "Supremacy claims repeatedly deflated (10,000 years -> 2.5 days -> no supercomputer needed)",
+        "Nevin's law criticized as 'overfit 3 data points ... and called it a law named after himself'",
+        "'Verifiable quantum advantage' framing read as the fifth iteration of the same announcement",
+        "Attaching hyped undocumented claims to genuine QEC papers",
+        "Benchmarks nobody can independently verify"
+      ],
+      "quotes": [
+        {
+          "text": "I think John's team neatly demonstrated that they are far ahead of the competition (e.g. Rigetti, IBM) in terms of maturity and qubit control, and if that's any indication of future success I would strongly bet on their team for building the first actually working quantum computer.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=21335907",
+          "discussion_title": "Quantum supremacy: the gloves are off",
+          "discussion_score": 275,
+          "comment_author": "ThePhysicist",
+          "stance": "positive"
+        },
+        {
+          "text": "This is the first quantum error correction experiment showing actual improvement as size is increased (without any cheating such as postselection or only running for a single step).",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=42215910",
+          "discussion_title": "Understanding Google's Quantum Error Correction Breakthrough",
+          "discussion_score": 183,
+          "comment_author": "Strilanc (Google, disclosed)",
+          "stance": "positive"
+        },
+        {
+          "text": "Some boob at google's QC group overfit 3 data points, two of which were questionable, and called it a \"law\" named after himself.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=20489122",
+          "discussion_title": "Google expected to achieve quantum supremacy in 2019",
+          "discussion_score": 58,
+          "comment_author": "scottlocklin",
+          "stance": "negative"
+        },
+        {
+          "text": "It is not clear why Google added to the announcement of nice published results about quantum error correction a hyped undocumented fantastic claim.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=42384768",
+          "discussion_title": "The case against Google's claims of \"quantum supremacy\"",
+          "discussion_score": 183,
+          "comment_author": "GilKalai",
+          "stance": "negative"
+        },
+        {
+          "text": "> demonstrates the first-ever algorithm to achieve verifiable quantum advantage on hardware. ... Am I crazy or have I heard this same announcement from Google and others like 5 times at this point?",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=45670443",
+          "discussion_title": "Willow quantum chip demonstrates verifiable quantum advantage on hardware",
+          "discussion_score": 480,
+          "comment_author": "einsteinx2",
+          "stance": "negative"
+        },
+        {
+          "text": "This result is notably more open than most papers. The circuits executed and measurement data collected are available on Zenodo ... You can do your own analysis of the claim.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=34898258",
+          "discussion_title": "Google claims breakthrough in quantum computer error correction",
+          "discussion_score": 128,
+          "comment_author": "Strilanc",
+          "stance": "positive"
+        }
+      ]
+    },
+    {
+      "name": "D-Wave",
+      "mentions": 108,
+      "discussions": 27,
+      "sentiment": "negative",
+      "sentiment_breakdown": {
+        "positive": 12,
+        "neutral": 36,
+        "negative": 60
+      },
+      "what_people_say": "D-Wave is the most discussed and most distrusted company in the corpus. The consensus, stable from 2011 to 2026, is that D-Wave built something real but is not a quantum computer in the sense the rest of the field uses the term, has never demonstrated asymptotic advantage over classical annealing, and marketed 2,048- and 5,000-'qubit' numbers that are not comparable to gate-model qubits. Researchers say this specifically damaged public trust in quantum computing generally. The dissent is real though: D-Wave has paying customers and a working cloud API, one D-Wave engineer notes no competitor has matched their factoring demonstrations, and one commenter argues D-Wave is the closest thing to real-world usefulness in the industry. The 2025 'RSA-2048 factorization' paper reset opinion sharply negative.",
+      "praised_for": [
+        "Actually shipping hardware you can buy or reach through a cloud API",
+        "Impressive lithography, fabrication and control-line engineering",
+        "Publishing open-source classical baselines (dwave-neal) to compare against",
+        "Best-in-class demonstrations on small factoring-as-optimization problems",
+        "Genuinely amenable to physical implementation compared with gate-model machines"
+      ],
+      "criticized_for": [
+        "Calling a quantum annealer a 'quantum computer'",
+        "No demonstrated asymptotic speedup over classical algorithms; laptops beating the $10M machine",
+        "Qubit counts not comparable to gate-model qubits and used to imply exponential search",
+        "'RSA-2048' headline for numbers whose factors differ in two bit positions",
+        "Damaging the credibility of the wider field; called 'basically scammers' and 'a bathtub accelerator'"
+      ],
+      "quotes": [
+        {
+          "text": "What they have done has significantly damaged the trust that the public had in my field of research.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=34217218",
+          "discussion_title": "What are companies doing with D-Wave's quantum hardware?",
+          "discussion_score": 62,
+          "comment_author": "krastanov",
+          "stance": "negative"
+        },
+        {
+          "text": "D-Wave continuing the trend of being so misleading it borders on fraud...",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=43952396",
+          "discussion_title": "A first successful factorization of RSA-2048 integer by D-Wave quantum computer",
+          "discussion_score": 28,
+          "comment_author": "bawolff",
+          "stance": "negative"
+        },
+        {
+          "text": "They found that a normal consumer laptop was actually much faster than the $10,000,000 D-wave machine.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=18142480",
+          "discussion_title": "D-Wave Launches Free Quantum Cloud Service",
+          "discussion_score": 102,
+          "comment_author": "chriswarbo",
+          "stance": "negative"
+        },
+        {
+          "text": "There's no other quantum computing device that is as close to attaining real-world usefulness than D-Wave.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=43347588",
+          "discussion_title": "D-Wave quantum annealers solve problems classical algorithms struggle with",
+          "discussion_score": 13,
+          "comment_author": "rebanevapustus",
+          "stance": "positive"
+        },
+        {
+          "text": "Not just one, though. We've sold a few to customers, not to mention the computers in our Burnaby lab that you can easily access through our cloud service.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=43347588",
+          "discussion_title": "D-Wave quantum annealers solve problems classical algorithms struggle with",
+          "discussion_score": 13,
+          "comment_author": "boothby (D-Wave)",
+          "stance": "positive"
+        },
+        {
+          "text": "Most people in the QC field are extremely sceptical about D-Wave, since there is no conclusive demonstration that their system has any advantage over optimized classical algorithms.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=34217218",
+          "discussion_title": "What are companies doing with D-Wave's quantum hardware?",
+          "discussion_score": 62,
+          "comment_author": "fsh",
+          "stance": "negative"
+        }
+      ]
+    },
+    {
+      "name": "Rigetti",
+      "mentions": 25,
+      "discussions": 16,
+      "sentiment": "mixed",
+      "sentiment_breakdown": {
+        "positive": 11,
+        "neutral": 10,
+        "negative": 4
+      },
+      "what_people_say": "Rigetti is the one vendor whose engineering culture the corpus consistently likes, largely because its people showed up and answered questions: Chad Rigetti did an in-thread AMA in 2014, and Rigetti engineers ran the Forest/pyQuil/quilc launch threads with unusually candid answers ('8 qubits will not solve any problems that a classical computer can't'). Quil and quilc drew real engineering respect, including a long appreciative thread about writing an optimizing quantum compiler in Common Lisp. The negative turn is commercial rather than technical: the 2021 SPAC drew accusations of retail-investor extraction, and 'full-stack quantum computing' and 'leader in scalable quantum processor technology' were read as empty marketing given no scalable quantum computer exists.",
+      "praised_for": [
+        "Founder and engineers answering hard technical questions directly on HN",
+        "Quil / pyQuil / quilc as a real, open, well-engineered toolchain",
+        "Candor about what 8-20 qubits can and cannot do",
+        "Hybrid classical-quantum design aimed at near-term devices rather than Shor",
+        "Raw hardware-level API access that IBM Q did not offer at the time"
+      ],
+      "criticized_for": [
+        "Going public via SPAC, read as an exit at retail expense",
+        "Marketing language ('full-stack', 'scalable') that outruns the physics",
+        "One founder claim about exponential capability gains challenged in-thread as 'bullshit'",
+        "Named after the founder, which some read as a governance smell"
+      ],
+      "quotes": [
+        {
+          "text": "This is a good question. 8 qubits will not solve any problems that a classical computer can't. In fact, considering just how blazing fast modern CPUs are, you can simulate an 8-qubit chip faster and with more fidelity than you can with 8 homegrown qubits.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=14595290",
+          "discussion_title": "Rigetti Forest 1.0 - programming environment for quantum/classical computing",
+          "discussion_score": 173,
+          "comment_author": "reikonomusha (Rigetti)",
+          "stance": "positive"
+        },
+        {
+          "text": "Please don't make bullshit claims about exponential speedups. I don't know exactly what technology you are claiming to have, but statements like this cause me to believe less in your technology, not more.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=14595290",
+          "discussion_title": "Rigetti Forest 1.0 - programming environment for quantum/classical computing",
+          "discussion_score": 173,
+          "comment_author": "algorias",
+          "stance": "negative"
+        },
+        {
+          "text": "SBCL (which Rigetti has chosen for qvm and quilc) is better than OCaml in pretty much every aspect of importance for these projects.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=19274094",
+          "discussion_title": "Quilc: An optimizing quantum compiler written in Common Lisp",
+          "discussion_score": 93,
+          "comment_author": "armitron",
+          "stance": "positive"
+        },
+        {
+          "text": "Fortunately in this case, even if quantum computing might not be all it's cracked up to be, Rigetti is a \"full-stack\" quantum computing company, so it's an amazing opportunity. /s",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=28772402",
+          "discussion_title": "Rigetti Computing to go public",
+          "discussion_score": 98,
+          "comment_author": "LurkingPenguin",
+          "stance": "negative"
+        },
+        {
+          "text": "> leader in scalable quantum processor technology ... I thought quantum computing was still in the research phase? What's there to scale?",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=28772402",
+          "discussion_title": "Rigetti Computing to go public",
+          "discussion_score": 98,
+          "comment_author": "ricardobeat",
+          "stance": "negative"
+        },
+        {
+          "text": "Congrats to the team, well deserved! ... they have built an amazing company and achieved things I wouldn't have thought possible",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=28772402",
+          "discussion_title": "Rigetti Computing to go public",
+          "discussion_score": 98,
+          "comment_author": "ThePhysicist",
+          "stance": "positive"
+        }
+      ]
+    },
+    {
+      "name": "PsiQuantum",
+      "mentions": 7,
+      "discussions": 1,
+      "sentiment": "mixed",
+      "sentiment_breakdown": {
+        "positive": 2,
+        "neutral": 3,
+        "negative": 2
+      },
+      "what_people_say": "PsiQuantum appears in exactly one thread but generates the most substantive pro-vendor argument in the whole corpus. A researcher who works on photonic hardware says he is more excited about PsiQuantum's silicon-photonic cluster-state route than about Google's or IBM's transmons, and singles out PsiQuantum as the only company that refuses to sell near-term quantum machine learning and optimization stories. The counter-position is equally sharp: the same thread opens by calling the announcement nonsense hype that skips the '40 different technical revolutions' needed for error correction, and notes PsiQuantum had been secretive with no working website. Coverage is thin - treat this as one informed opinion, not a consensus.",
+      "praised_for": [
+        "Cluster-state / measurement-based model argued to scale better once the prototype exists",
+        "Refusing to market near-term quantum ML and optimization applications",
+        "Aiming straight at fault-tolerant machines rather than NISQ demos",
+        "Silicon photonics means no dilution refrigerator for the qubits themselves"
+      ],
+      "criticized_for": [
+        "Press release offers no account of how error correction is solved",
+        "Extreme secrecy; no working website for a long period",
+        "'Vapor until I can buy one, or at least use it in the cloud'"
+      ],
+      "quotes": [
+        {
+          "text": "Such nonsense hype they didn't even bother to offer any case for how they surmounted the 40 different technical revolutions needed to achieve actual error correction.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=27080883",
+          "discussion_title": "PsiQuantum to Build the World's First Full-Scale Quantum Computer",
+          "discussion_score": 14,
+          "comment_author": "alpineidyll3",
+          "stance": "negative"
+        },
+        {
+          "text": "I work in this field, and personally, I am more excited about PsiQuantum than about Google's or IBM's transmon devices.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=27080883",
+          "discussion_title": "PsiQuantum to Build the World's First Full-Scale Quantum Computer",
+          "discussion_score": 14,
+          "comment_author": "krastanov",
+          "stance": "positive"
+        },
+        {
+          "text": "Personally, I feel PsiQuantum is the only company that does not talk about nonsensical near-term quantum applications and quantum machine learning and quantum optimization and other questionable applications of quantum computing.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=27080883",
+          "discussion_title": "PsiQuantum to Build the World's First Full-Scale Quantum Computer",
+          "discussion_score": 14,
+          "comment_author": "krastanov",
+          "stance": "positive"
+        },
+        {
+          "text": "Sure, it sounds promising. But it's all vapor until I can buy one, or at least use it in the cloud.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=27080883",
+          "discussion_title": "PsiQuantum to Build the World's First Full-Scale Quantum Computer",
+          "discussion_score": 14,
+          "comment_author": "klyrs",
+          "stance": "negative"
+        },
+        {
+          "text": "The thing is that they may have an amazing breakthrough - but at least three are needed to make a workable quantum computer (time for decoherence, control/measurement, error correction).",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=27080883",
+          "discussion_title": "PsiQuantum to Build the World's First Full-Scale Quantum Computer",
+          "discussion_score": 14,
+          "comment_author": "sgt101",
+          "stance": "neutral"
+        }
+      ]
+    },
+    {
+      "name": "Quantinuum / Honeywell",
+      "mentions": 2,
+      "discussions": 2,
+      "sentiment": "neutral",
+      "sentiment_breakdown": {
+        "positive": 1,
+        "neutral": 1,
+        "negative": 0
+      },
+      "what_people_say": "Barely covered. The Quantinuum H-Series thread exists but almost none of its 25 comments engage with Quantinuum specifically - they use it as a hook to relitigate 'what is QC even for' and 'quantum volume is a bad benchmark'. The one substantive technical mention places Quantinuum's trapped ions (with QuEra's cold atoms) as the alternative to superconducting qubits that escapes fixed-connectivity penalties but has other limitations. A separate 2025 thread covers the trapped-ion certified-randomness Nature paper without naming the vendor, and the reception there was dismissive.",
+      "praised_for": [
+        "Trapped-ion architecture avoids the fixed-connectivity overhead of superconducting chips",
+        "Quantum volume measured on commercial systems interwoven with real customer jobs",
+        "Reported ~1000x lead on quantum volume over the next best result"
+      ],
+      "criticized_for": [
+        "Quantum volume itself judged an uninterpretable benchmark",
+        "Certified randomness treated as a solution in search of a problem"
+      ],
+      "quotes": [
+        {
+          "text": "Moreover the currently leading approach, superconducting qubits (Google, IBM), have fixed connectivity and applying gate on two disconnected qubits have additional overhead. Alternative approaches (Quantinuum's ion, QuEra cold atoms) don't have these limitations but have others.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=42212520",
+          "discussion_title": "IBM Quantum delivers on 2022 100x100 performance challenge",
+          "discussion_score": 22,
+          "comment_author": "EvgeniyZh",
+          "stance": "positive"
+        },
+        {
+          "text": "Even if the QV benchmark isnt great, 1000x the next best result is something.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=36735713",
+          "discussion_title": "Quantinuum H-Series quantum computer",
+          "discussion_score": 24,
+          "comment_author": "rbanffy",
+          "stance": "neutral"
+        },
+        {
+          "text": "I have a reverse biased OA91 germanium diode here that cost $0.05 and does the same thing. Has the desperate search for applications of \"quantum computing\" really come to this?",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=43484100",
+          "discussion_title": "Certified randomness using a trapped-ion quantum processor",
+          "discussion_score": 27,
+          "comment_author": "nonrandomstring",
+          "stance": "negative"
+        }
+      ]
+    },
+    {
+      "name": "Microsoft (Q# / Azure Quantum / Majorana)",
+      "mentions": 8,
+      "discussions": 4,
+      "sentiment": "neutral",
+      "sentiment_breakdown": {
+        "positive": 3,
+        "neutral": 4,
+        "negative": 1
+      },
+      "what_people_say": "Microsoft appears almost entirely as a language and tooling story, not a hardware story. Q# is repeatedly recommended as the friendliest entry point for a developer who already knows C# or F#, and its origin as an F# computation-expression DSL is discussed appreciatively. Azure Quantum appears only as a distribution channel for other vendors' hardware. The topological / Majorana program is mentioned exactly once, in a single parenthetical - 'teams that try fancy topologically protected models (Microsoft, paper retractions notwithstanding)' - which is the entirety of the corpus's engagement with Majorana.",
+      "praised_for": [
+        "Q# is the most approachable non-Python entry point for mainstream developers",
+        "Q#'s F#/computation-expression lineage is respected as good language design",
+        "Azure as a hardware distribution channel alongside AWS"
+      ],
+      "criticized_for": [
+        "Topological qubit program referenced only alongside its paper retractions",
+        "Q# is the odd one out in a Python-dominated ecosystem"
+      ],
+      "quotes": [
+        {
+          "text": "The Microsoft Q# tutorial seems friendly enough to wade into without much knowledge in the field (especially if you know C# or F#).",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=16543876",
+          "discussion_title": "Google Engineers Think This 72-Qubit Processor Can Achieve Quantum Supremacy",
+          "discussion_score": 91,
+          "comment_author": "52-6F-62",
+          "stance": "positive"
+        },
+        {
+          "text": "Q# originated as a DSL in F#, which has extremely strong DSL-creating capabilities in its [computation expressions]",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=30343507",
+          "discussion_title": "Hello Many Worlds in Seven Quantum Languages (2021)",
+          "discussion_score": 58,
+          "comment_author": "Smaug123",
+          "stance": "positive"
+        },
+        {
+          "text": "teams that try fancy topologically protected models (Microsoft, paper retractions notwithstanding)",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=27080883",
+          "discussion_title": "PsiQuantum to Build the World's First Full-Scale Quantum Computer",
+          "discussion_score": 14,
+          "comment_author": "krastanov",
+          "stance": "negative"
+        },
+        {
+          "text": "Interesting - 6 of the 7 languages discussed are Python libraries. ... Of the ones mentioned, looks like only Q# and QASM aren't Python-based.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=30343507",
+          "discussion_title": "Hello Many Worlds in Seven Quantum Languages (2021)",
+          "discussion_score": 58,
+          "comment_author": "thatcherc",
+          "stance": "neutral"
+        }
+      ]
+    },
+    {
+      "name": "QuEra",
+      "mentions": 1,
+      "discussions": 1,
+      "sentiment": "neutral",
+      "sentiment_breakdown": {
+        "positive": 1,
+        "neutral": 0,
+        "negative": 0
+      },
+      "what_people_say": "One mention only. A condensed-matter PhD student lists QuEra's cold atoms alongside Quantinuum's ions as the architectures that escape the fixed-connectivity limitation of superconducting qubits, while noting they carry different limitations. There is a separate, unattributed nod to neutral-atom groups already doing native Toffoli gates - implicitly undercutting IonQ's novelty claim - but QuEra is not named there. This is the thinnest coverage of any player included here.",
+      "praised_for": [
+        "Cold-atom architecture avoids fixed-connectivity penalties",
+        "Neutral-atom groups credited with native multi-qubit gates ahead of trapped-ion claims"
+      ],
+      "criticized_for": [
+        "Not discussed in enough depth for any criticism to appear"
+      ],
+      "quotes": [
+        {
+          "text": "Alternative approaches (Quantinuum's ion, QuEra cold atoms) don't have these limitations but have others.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=42212520",
+          "discussion_title": "IBM Quantum delivers on 2022 100x100 performance challenge",
+          "discussion_score": 22,
+          "comment_author": "EvgeniyZh",
+          "stance": "positive"
+        },
+        {
+          "text": "The article reads like this is the first time anyone has tried to do Toffolis natively. Neutral atom people also do native Toffolis",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=30343328",
+          "discussion_title": "Duke University and IonQ Develop New Quantum Computing Gate",
+          "discussion_score": 19,
+          "comment_author": "Strilanc",
+          "stance": "neutral"
+        }
+      ]
+    },
+    {
+      "name": "Xanadu",
+      "mentions": 2,
+      "discussions": 1,
+      "sentiment": "mixed",
+      "sentiment_breakdown": {
+        "positive": 0,
+        "neutral": 1,
+        "negative": 1
+      },
+      "what_people_say": "Two comments, both in the PsiQuantum thread. One commenter notes a Nature blueprint for photonic QC alongside 'quite some skepticism toward the company in online circles'. The reply gives a careful, neutral technical contrast: Xanadu's continuous-variable approach avoids the hard problem of consistent single photons but has to obtain non-Gaussian resources, which is 'just as difficult (but difficult in a different way)'. PennyLane, Xanadu's SDK, is mentioned once by a working quantum software engineer as part of his daily toolchain.",
+      "praised_for": [
+        "Continuous-variable approach starts from easy-to-produce coherent states",
+        "PennyLane in active use by at least one working quantum software engineer"
+      ],
+      "criticized_for": [
+        "Reputational skepticism reported in 'online circles'",
+        "Non-Gaussian resource generation is as hard as the single-photon problem it avoids"
+      ],
+      "quotes": [
+        {
+          "text": "They recently outlined a blueprint for photonic QC in Nature[1], but I've seen quite some skepticism toward the company in online circles.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=27080883",
+          "discussion_title": "PsiQuantum to Build the World's First Full-Scale Quantum Computer",
+          "discussion_score": 14,
+          "comment_author": "curt15",
+          "stance": "negative"
+        },
+        {
+          "text": "obtaining \"non-Gaussian\" resources is just as difficult (but difficult in a different way) as obtaining consistent single photon states.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=27080883",
+          "discussion_title": "PsiQuantum to Build the World's First Full-Scale Quantum Computer",
+          "discussion_score": 14,
+          "comment_author": "krastanov",
+          "stance": "neutral"
+        }
+      ]
+    },
+    {
+      "name": "AWS (Braket / cat qubits / Ocelot)",
+      "mentions": 10,
+      "discussions": 4,
+      "sentiment": "mixed",
+      "sentiment_breakdown": {
+        "positive": 4,
+        "neutral": 4,
+        "negative": 2
+      },
+      "what_people_say": "Braket's 2019 launch was one of the highest-scoring quantum threads in the corpus (451 points) but the discussion was mostly about the bra-ket pun and about the fact that the simulators behind the service are better than the hardware in front of it. Nobody in the corpus reports doing anything useful with Braket. The 2025 cat-qubit / Ocelot announcement got a small, unusually constructive thread focused on hardware-efficient error correction and on quantum simulation (nitrogen fixation, high-temperature superconductivity) as the credible payoff. The framing of Braket as a multi-vendor marketplace is treated as its actual value proposition.",
+      "praised_for": [
+        "Multi-vendor access from one API - the closest thing to a neutral procurement layer",
+        "Good name (bra-ket notation)",
+        "Cat-qubit approach framed as making error correction cheaper, not just bigger",
+        "Simulators as the genuinely useful part of the service"
+      ],
+      "criticized_for": [
+        "Launched into a market with no applications: 'the only thing stopping me ... is thinking of any damned thing to do with it'",
+        "Nothing in the corpus reports a real workload run on it",
+        "Return to batch-queue timesharing as a developer experience"
+      ],
+      "quotes": [
+        {
+          "text": "Amazon Braket - A fully managed service that allows scientists, researchers, and developers to begin experimenting with computers from multiple quantum hardware providers in a single place.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=21684668",
+          "discussion_title": "Amazon Braket - Get Started with Quantum Computing",
+          "discussion_score": 451,
+          "comment_author": "appwiz",
+          "stance": "positive"
+        },
+        {
+          "text": "Yes. Right now simulators tend to be faster, cheaper, and more accurate than real quantum computers.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=21684668",
+          "discussion_title": "Amazon Braket - Get Started with Quantum Computing",
+          "discussion_score": 451,
+          "comment_author": "dshields1",
+          "stance": "negative"
+        },
+        {
+          "text": "So now the only thing stopping me from programming a quantum computer is thinking of any damned thing to do with it.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=24220337",
+          "discussion_title": "Amazon Braket - Amazon Web Services",
+          "discussion_score": 24,
+          "comment_author": "arkanciscan",
+          "stance": "negative"
+        },
+        {
+          "text": "No doubt writing software to run on Amazon Braket would be a pretty similar process if it weren't for the simulators.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=24220337",
+          "discussion_title": "Amazon Braket - Amazon Web Services",
+          "discussion_score": 24,
+          "comment_author": "onion2k",
+          "stance": "neutral"
+        },
+        {
+          "text": "A fruitful avenue may be in quantum simulation ... In biochemistry, we could hope to understand how bacteria are able to do nitrogen fixation, possibly leading to a more energy efficient and less GHG-emitting alternative to the Haber process.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=43203745",
+          "discussion_title": "AWS Cat Qubits Make Quantum Error Correction Effective, Affordable",
+          "discussion_score": 42,
+          "comment_author": "wasabi991011",
+          "stance": "positive"
+        }
+      ]
+    },
+    {
+      "name": "Qiskit",
+      "mentions": 9,
+      "discussions": 5,
+      "sentiment": "positive",
+      "sentiment_breakdown": {
+        "positive": 6,
+        "neutral": 3,
+        "negative": 0
+      },
+      "what_people_say": "Qiskit is the least contested thing in the entire corpus. It is cited as the default learning path (the Qiskit textbook), the default way to touch real hardware for free, and, in the most recent thread, as a toolchain a professional quantum software engineer uses daily alongside PennyLane with LLM assistance. There is no criticism of Qiskit itself anywhere in the corpus - only of what the hardware behind it can do.",
+      "praised_for": [
+        "Free access to real IBM hardware with a usable Python API",
+        "Qiskit textbook as the canonical developer on-ramp",
+        "OpenQASM published as an open spec with collaborative governance",
+        "Good enough that LLMs can scaffold with it"
+      ],
+      "criticized_for": [
+        "No criticism of the SDK appears in the corpus"
+      ],
+      "quotes": [
+        {
+          "text": "IBM has a nice online resource for learning quantum computing using their framework (Qiskit)",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=30343507",
+          "discussion_title": "Hello Many Worlds in Seven Quantum Languages (2021)",
+          "discussion_score": 58,
+          "comment_author": "da-bacon",
+          "stance": "positive"
+        },
+        {
+          "text": "I use Claude quite extensively with quantum SDKs like Qiskit and Pennylane. It tends to be very good at scaffolding and architecture, but can spiral or be outright incorrect when it comes to implementing certain algorithms like QAOA.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=49546198",
+          "discussion_title": "IBM Quantum Nighthawk R2",
+          "discussion_score": 81,
+          "comment_author": "marzchipane",
+          "stance": "positive"
+        },
+        {
+          "text": "Along with QIR like as is listed in the comment, these are two open assembly specs with collaborative governance.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=30343507",
+          "discussion_title": "Hello Many Worlds in Seven Quantum Languages (2021)",
+          "discussion_score": 58,
+          "comment_author": "wzeng",
+          "stance": "positive"
+        }
+      ]
+    },
+    {
+      "name": "Intel",
+      "mentions": 6,
+      "discussions": 6,
+      "sentiment": "neutral",
+      "sentiment_breakdown": {
+        "positive": 2,
+        "neutral": 4,
+        "negative": 0
+      },
+      "what_people_say": "Intel shows up as a 49-qubit press release in 2018 and as a 300mm-fab / cryoprober capability note in 2022, and then disappears. The consistent reaction is the corpus's standard one: the qubit count was announced without any gate fidelity numbers, and commenters could not find benchmarks for the preceding 17-qubit part either. Intel is otherwise cited approvingly for the manufacturing angle - CMOS-compatible fabrication and cryogenic wafer probing - which nobody else in the corpus is doing.",
+      "praised_for": [
+        "300mm CMOS fab and cryoprober capabilities as a differentiated manufacturing story"
+      ],
+      "criticized_for": [
+        "Announced 49 qubits with no published qubit-quality numbers",
+        "Benchmarks for prior 17-qubit part also unavailable"
+      ],
+      "quotes": [
+        {
+          "text": "Did they give any numbers on the quality of the qubits? ... Qubits with even a 1% error rate per operation just won't cut it.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=16102153",
+          "discussion_title": "Intel's 49-Qubit Chip Shoots for Quantum Supremacy",
+          "discussion_score": 54,
+          "comment_author": "Strilanc (Google, disclosed)",
+          "stance": "neutral"
+        },
+        {
+          "text": "No they didn't. I've also had problems finding the benchmarks for their 17 qubit processor. I would appreciate if someone could link them to me.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=16102153",
+          "discussion_title": "Intel's 49-Qubit Chip Shoots for Quantum Supremacy",
+          "discussion_score": 54,
+          "comment_author": "vtomole",
+          "stance": "neutral"
+        },
+        {
+          "text": "It does point to Intel's high-water marks ... (300mm fab) ... (cryoprober talk abstract)",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=32900173",
+          "discussion_title": "Disentangling the facts from the hype of quantum computing",
+          "discussion_score": 70,
+          "comment_author": "meltyness",
+          "stance": "positive"
+        }
+      ]
+    },
+    {
+      "name": "Lockheed Martin (as customer)",
+      "mentions": 7,
+      "discussions": 4,
+      "sentiment": "skeptical",
+      "sentiment_breakdown": {
+        "positive": 1,
+        "neutral": 2,
+        "negative": 4
+      },
+      "what_people_say": "Lockheed is the corpus's cautionary tale about what a marquee logo actually means. Its $10M D-Wave purchase, cited for years as validation, is reframed in-thread by an ex-Lockheed researcher as routine dead-end R&D spend and by another commenter as a Canadian industrial-offset obligation rather than a technology decision. The 2025 Lockheed-IBM quantum-chemistry collaboration drew the same response, plus comparisons to Lockheed's compact fusion reactor. The lesson HN draws: enterprise logos in quantum press releases carry approximately zero signal.",
+      "praised_for": [
+        "Willingness to fund exploratory work at scale"
+      ],
+      "criticized_for": [
+        "$10M D-Wave purchase possibly an offset obligation, not a technology choice",
+        "Cited as validation of D-Wave for a decade with nothing to show",
+        "Compact fusion reactor invoked as the precedent for Lockheed moonshot announcements"
+      ],
+      "quotes": [
+        {
+          "text": "LM consistently blows 10 mil over 3 ears on stupid dead end projects and nobody even blinks. ... this d-wave project looks like a toy that some kids in a lab bought.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=3621334",
+          "discussion_title": "D-Wave Defies World of Critics With 'First Quantum Cloud'",
+          "discussion_score": 59,
+          "comment_author": "dustingetz",
+          "stance": "negative"
+        },
+        {
+          "text": "He suggested that the actual story with the Lockheed purchase was that LM sells an awful lot of gear to Canada, and as part of the contract they are expected to buy some number of million worth of Canadian tech in return.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=3621334",
+          "discussion_title": "D-Wave Defies World of Critics With 'First Quantum Cloud'",
+          "discussion_score": 59,
+          "comment_author": "flashingleds",
+          "stance": "negative"
+        },
+        {
+          "text": "How's that Lockheed fusion reactor coming along?",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=44069923",
+          "discussion_title": "Lockheed Martin and IBM combine quantum computing with HPC in new research",
+          "discussion_score": 67,
+          "comment_author": "tiahura",
+          "stance": "negative"
+        },
+        {
+          "text": "This is the second one LMT has purchased. Which means they liked it enough to buy the upgraded model.",
+          "score": 0,
+          "source_url": "https://news.ycombinator.com/item?id=5506241",
+          "discussion_title": "Lockheed Martin pays $10M for D-Wave's Quantum Computer",
+          "discussion_score": 69,
+          "comment_author": "dsl",
+          "stance": "positive"
+        }
+      ]
+    }
+  ],
+  "sentiment": {
+    "overall": "Predominantly skeptical, and the skepticism is technically literate rather than reflexive. The modal HN position across 15 years is: the physics is sound and the engineering is real, but no vendor has demonstrated a useful result, every headline benchmark has been deflated after the fact, and the industry's communications are calibrated for investors rather than engineers. Bullishness is concentrated on two narrow claims - that error correction is now empirically working, and that quantum simulation of physical systems will eventually pay off. Outright dismissal ('fringe science', 'as credible as perpetual motion') is a small minority and gets argued down in-thread by working physicists.",
+    "distribution": {
+      "bullish": 10,
+      "skeptical": 52,
+      "neutral": 24
+    },
+    "distribution_unit": "on-topic discussion threads, classified by dominant tone (not individual comments; comment-level scores are all zero in the source so no upvote-weighted measure is possible)",
+    "notable_shifts": "2011-2016: the argument is 'is D-Wave even quantum', and the community's frame is fraud-detection. 2017-2018: vendor engineers (Rigetti, IBM, Google) show up in threads and the tone becomes curious and technical; the first 'when should I learn this' questions appear. 2019-2020: the Google-vs-IBM supremacy fight moves the debate from 'is it real' to 'is the benchmark legitimate', and the community learns that advantage claims get deflated - this is the durability inflection. 2021-2023: peak disillusionment; 'quantum computing hype is bad for science', an IonQ short report, an Oxford physicist's hype-bubble piece, and insiders describing a funding machine. 2024-2026: the conversation narrows almost entirely to error correction, and here the tone genuinely improves - Google's below-threshold result and the 'QEC Goes FOOM' thread get respectful, substantive engagement that supremacy claims never got. Simultaneously a completely separate, more commercially serious thread emerges around PQC compliance (ANSSI 2027, harvest-now-decrypt-later), driven by regulation rather than by hardware progress. But the credibility floor has not risen: the 2026 /dev/urandom debunk of an award-winning IBM Quantum result was received as entirely unsurprising.",
+    "expert_voices": [
+      {
+        "claim": "Error correction is the only metric that matters; ignore everything else a vendor says.",
+        "quote": "Whenever a quantum computing company says anything other than \"it made error correction better\" or \"it will make error correction better\", you can ignore that. It's just some side quest.",
+        "source_url": "https://news.ycombinator.com/item?id=49546198",
+        "who": "Strilanc, Google Quantum AI (self-disclosed, author on the AlphaQubit and QEC papers)"
+      },
+      {
+        "claim": "D-Wave's terminology abuse damaged public trust in quantum computing research generally.",
+        "quote": "They have used scientific terms like \"quantum computer\" in ways that have little to do with what the rest of the scientific community means. They have lost a ton of good will to the point that I personally am extremely mistrustful of any claims they make.",
+        "source_url": "https://news.ycombinator.com/item?id=34217218",
+        "who": "krastanov, works on quantum computer hardware (photonics)"
+      },
+      {
+        "claim": "There are ~100 quantum startups and zero demonstrated commercial products; the money is actively degrading the science.",
+        "quote": "There must be around 100 quantum companies now, most of them startups, and--to my knowledge--zero of them providing anything demonstrated to be a valuable commercial product.",
+        "source_url": "https://news.ycombinator.com/item?id=27905231",
+        "who": "reikonomusha, Rigetti (quilc/QVM author)"
+      },
+      {
+        "claim": "NISQ has a hard gate budget of a few thousand operations, and fault tolerance is far away; quantum simulation is the realistic near-term payoff.",
+        "quote": "As for now I guess we are in thousands of total gates we can apply before noise kills us. Maybe 10000 in the very very best case. ... The killer application for NISQ, in my opinion, are quantum simulations",
+        "source_url": "https://news.ycombinator.com/item?id=42212520",
+        "who": "EvgeniyZh, condensed matter theory PhD student"
+      },
+      {
+        "claim": "There are no error-corrected quantum computers because we need far more and far better physical qubits - not because of any exotic obstacle.",
+        "quote": "The reason there are no error corrected quantum computers is because we need way (way way) many more physical qubits, and they would need to be of better quality (less decoherence).",
+        "source_url": "https://news.ycombinator.com/item?id=21047804",
+        "who": "jebej, self-identified quantum physicist"
+      },
+      {
+        "claim": "Google's team was materially ahead of Rigetti and IBM on qubit control and system maturity as of 2019.",
+        "quote": "I think John's team neatly demonstrated that they are far ahead of the competition (e.g. Rigetti, IBM) in terms of maturity and qubit control",
+        "source_url": "https://news.ycombinator.com/item?id=21335907",
+        "who": "ThePhysicist, built and operated a superconducting two-qubit processor for his 2010 PhD"
+      },
+      {
+        "claim": "Google attached an undocumented hyped claim to an otherwise sound error-correction paper, and this bears on its scientific conduct.",
+        "quote": "It is not clear why Google added to the announcement of nice published results about quantum error correction a hyped undocumented fantastic claim.",
+        "source_url": "https://news.ycombinator.com/item?id=42384768",
+        "who": "GilKalai, posting under his own name; leading quantum computing skeptic"
+      },
+      {
+        "claim": "D-Wave can reliably factor 11-bit semiprimes and run 16-bit problems - not with Shor's algorithm - and no competitor has matched it on that problem.",
+        "quote": "Currently we can factor 11-bit semiprimes fairly reliably, and our hardware is capable of running 16-bit problems. But no, it's not Shor's algorithm. ... Despite not being Shor's algorithm, we've yet to see a competitor demonstrate anything close on the factoring problem.",
+        "source_url": "https://news.ycombinator.com/item?id=20489122",
+        "who": "boothby, D-Wave (designs the on-chip circuit architecture)"
+      },
+      {
+        "claim": "Quantum computing is not fringe science; the physics is not in question, the engineering timeline is.",
+        "quote": "Quantum computing isn't fringe science and almost no one in the physics community questions the validity of the underlying theories. It is a large engineering challenge so it's unclear whether a working large-scale quantum computer will be realized anytime soon, but that doesn't make it fringe science.",
+        "source_url": "https://news.ycombinator.com/item?id=28896007",
+        "who": "ThePhysicist, superconducting qubit PhD"
+      },
+      {
+        "claim": "Enterprises should migrate to PQC now for equipment-lifetime reasons, independent of any quantum computing timeline.",
+        "quote": "Not because we expect a workable quantum computer by 2030 (current estimates are around 2035-2040), but because stuff survives for decades in large enterprises",
+        "source_url": "https://news.ycombinator.com/item?id=48994116",
+        "who": "alphager, security architect at a major European company"
+      },
+      {
+        "claim": "Working quantum software engineers get real value from LLMs on SDK scaffolding but not on algorithm implementation.",
+        "quote": "I use Claude quite extensively with quantum SDKs like Qiskit and Pennylane. It tends to be very good at scaffolding and architecture, but can spiral or be outright incorrect when it comes to implementing certain algorithms like QAOA.",
+        "source_url": "https://news.ycombinator.com/item?id=49546198",
+        "who": "marzchipane, quantum software engineer"
+      }
+    ]
+  },
+  "technical_blockers": [
+    {
+      "blocker": "Fault-tolerance overhead",
+      "detail": "Every credible application requires error-corrected logical qubits, and the corpus's own estimates for physical-per-logical range from ~1,000 to ~10,000. Google's 2024 result was the first to show logical lifetime improving with code distance, and even that is described as barely breaking even and in a 'crossover regime'.",
+      "quotes": [
+        {
+          "text": "You need about 10,000 qubits to create one error-corrected logical qubit.",
+          "source_url": "https://news.ycombinator.com/item?id=31559297"
+        },
+        {
+          "text": "On an absolute scale, that logical qubit is still not good enough. It needs to be made even bigger. And there needs to be a dozen of them instead of one. And it's barely breaking even; you want strong gains in quality from adding quantity not just minor gains.",
+          "source_url": "https://news.ycombinator.com/item?id=34898258"
+        }
+      ]
+    },
+    {
+      "blocker": "Two-qubit gate error rate caps circuit depth",
+      "detail": "At ~1e-3 two-qubit error you get a few hundred entangling gates before an error is near-certain. Useful computations need millions to billions. This is the arithmetic that lets commenters dismiss most announcements in one line.",
+      "quotes": [
+        {
+          "text": "Most interesting quantum computations take millions or billions of gates. Factoring classically intractable numbers takes tens of billions of gates. No one is going to do that many quantum gates without error correction.",
+          "source_url": "https://news.ycombinator.com/item?id=49546198"
+        },
+        {
+          "text": "As for now I guess we are in thousands of total gates we can apply before noise kills us. Maybe 10000 in the very very best case.",
+          "source_url": "https://news.ycombinator.com/item?id=42212520"
+        }
+      ]
+    },
+    {
+      "blocker": "Sparse qubit connectivity",
+      "detail": "Superconducting chips have fixed, low-degree connectivity, so a two-qubit gate between distant qubits compiles into SWAP chains that multiply circuit depth and error. Trapped-ion and neutral-atom architectures escape this but bring other limits. IBM's move from heavy-hex to a square grid in Nighthawk was explicitly praised on these grounds.",
+      "quotes": [
+        {
+          "text": "In those architectures, the limited connectivity enforces usage of SWAP gates, which increases the circuit depth.",
+          "source_url": "https://news.ycombinator.com/item?id=18784318"
+        },
+        {
+          "text": "the average connectivity is only ~3.5 qubits. Meaning, if you want to apply a CX to two qubits that are 10 links away you get an error rate of 1.5%.",
+          "source_url": "https://news.ycombinator.com/item?id=42367591"
+        }
+      ]
+    },
+    {
+      "blocker": "Control electronics and cryogenic I/O density",
+      "detail": "Racks of RF control hardware per handful of qubits, and roughly two coax lines per qubit into a dilution refrigerator, with no published path to a million physical qubits. Leakage removal (mid-circuit reset) was also a hard blocker on IBM hardware until recently.",
+      "quotes": [
+        {
+          "text": "Presently these are racks of equipment for a few logical qubits.",
+          "source_url": "https://news.ycombinator.com/item?id=31559297"
+        },
+        {
+          "text": "With 1000 qubits and 2 cables per qubit this will be a major challenge.",
+          "source_url": "https://news.ycombinator.com/item?id=21053405"
+        },
+        {
+          "text": "they can actually reset their qubits now (previous IBM chips couldn't scale to long running computations because once leakage arose nothing could remove it except waiting a long time)",
+          "source_url": "https://news.ycombinator.com/item?id=49546198"
+        }
+      ]
+    },
+    {
+      "blocker": "No verification story for classically intractable results",
+      "detail": "The tasks chosen to demonstrate advantage are, by construction, the ones a classical computer cannot check. Factoring is the community's preferred alternative because it is trivially verifiable, and it has not advanced. This is a scientific-method blocker as much as an engineering one.",
+      "quotes": [
+        {
+          "text": "even if it can sample from the distribution, it is difficult to verify that in fact the correct distribution was sampled. This is in contrast to the problem of factoring, where to verify the computation we just need to multiply the numbers together",
+          "source_url": "https://news.ycombinator.com/item?id=21043659"
+        },
+        {
+          "text": "only google has access to the device being built and the computation tested by them impossible to verify with classic computers",
+          "source_url": "https://news.ycombinator.com/item?id=42384768"
+        }
+      ]
+    },
+    {
+      "blocker": "Algorithm scarcity",
+      "detail": "The set of quantum algorithms with a credible practical advantage is tiny, and several commenters (including researchers) say inventing new ones is intrinsically much harder than classical algorithm design. Grover is too slow to matter in practice; Shor will be obsoleted by PQC migration; simulation is the remaining candidate.",
+      "quotes": [
+        {
+          "text": "we know only a handful of algorithms which might run on a general quantum computer (if we had one!). Among those, only two performs something which would actually be useful (Grover and Shor). And we have only those, not for a lack of trying..",
+          "source_url": "https://news.ycombinator.com/item?id=49546198"
+        },
+        {
+          "text": "shor because everyone will switch to pqc if qc ever becomes relavent and grover is too slow to ever be useful",
+          "source_url": "https://news.ycombinator.com/item?id=43952396"
+        }
+      ]
+    },
+    {
+      "blocker": "Open question whether error correction can work at all at scale",
+      "detail": "A minority but persistent position, granted as legitimate even by Aaronson according to one commenter: the physical error rate might fundamentally stay above the correction threshold as logical qubit count grows. This is the difference between an engineering timeline and an impossibility.",
+      "quotes": [
+        {
+          "text": "the most compelling of these would be that the error rate of physical qubits might fundamentally always exceed the threshold for correction with any real ECC as the number of logical qubits increases.",
+          "source_url": "https://news.ycombinator.com/item?id=28896007"
+        },
+        {
+          "text": "We can keep solving the engineering challenges, but the universe might simply not allow us to get a return on investment with every additional qubit.",
+          "source_url": "https://news.ycombinator.com/item?id=28896007"
+        }
+      ]
+    }
+  ],
+  "opportunities": [
+    {
+      "opportunity": "Position on error correction, not qubit count - it is the only claim this audience will not discount",
+      "evidence": "The corpus shows a decade of qubit-count announcements being ignored or mocked, and exactly one class of result (below-threshold surface-code scaling) earning genuine respect, including from skeptics. A Google researcher states the filter explicitly. Any vendor whose public narrative is qubit count is being auto-discounted by the most technical segment of its buyer pool.",
+      "quotes": [
+        {
+          "text": "Whenever a quantum computing company says anything other than \"it made error correction better\" or \"it will make error correction better\", you can ignore that. It's just some side quest.",
+          "source_url": "https://news.ycombinator.com/item?id=49546198"
+        },
+        {
+          "text": "I'd say to be less concerned about the number of qubits, and more concerned about the gate fidelity and qubit coherence.",
+          "source_url": "https://news.ycombinator.com/item?id=34424150"
+        }
+      ]
+    },
+    {
+      "opportunity": "Publish a cheap, verifiable, unambiguous milestone (e.g. general 4-bit x 4-bit semiprime factoring) before competitors do",
+      "evidence": "The audience has repeatedly named the specific milestone it would accept, and no vendor has claimed it. It is verifiable on a laptop, it cannot be gamed by precompilation, and the corpus shows that the absence of it is the single most-cited reason for disbelief. Whoever ships it converts the field's loudest skeptics into references.",
+      "quotes": [
+        {
+          "text": "It's sad that no-one has demonstrated a factorization of 4+4 bits (which should include factorizing 55,65,77,91, and 143). That would be an important milestone I think.",
+          "source_url": "https://news.ycombinator.com/item?id=31559297"
+        },
+        {
+          "text": "I agree that a proper demonstration should be of factoring any product of an m-bit prime by an n-bit prime. So if it only worked for 3*7 and not (with the exact same setup) for 3*5 then it shouldn't count.",
+          "source_url": "https://news.ycombinator.com/item?id=31559297"
+        }
+      ]
+    },
+    {
+      "opportunity": "Quantum simulation of chemistry and materials is the one application this audience concedes",
+      "evidence": "Across skeptical threads spanning 2013 to 2026, the same use case keeps surviving scrutiny: simulating quantum systems. Even committed skeptics name it as the exception. Named targets recur: nitrogen fixation / the Haber process, high-temperature superconductivity, battery chemistry, Hubbard-model physics. Crucially, several commenters argue physics-model simulation is nearer than chemistry because chemistry needs deeper circuits and faces very strong classical baselines.",
+      "quotes": [
+        {
+          "text": "The killer application for NISQ, in my opinion, are quantum simulations, i.e. simulations of quantum systems with quantum computers.",
+          "source_url": "https://news.ycombinator.com/item?id=42212520"
+        },
+        {
+          "text": "I'm a massive quantum computing skeptic. However, I do believe that if there is going to be an actual real and practical QC use case with verifiable quantum advantage in our lifetimes ... it's going to be molecular interaction simulation",
+          "source_url": "https://news.ycombinator.com/item?id=44069923"
+        },
+        {
+          "text": "In biochemistry, we could hope to understand how bacteria are able to do nitrogen fixation ... In material science, we could hope to better understand the mechanism for current high-temperature superconductivity",
+          "source_url": "https://news.ycombinator.com/item?id=43203745"
+        }
+      ]
+    },
+    {
+      "opportunity": "Build the neutral benchmark and verification layer the industry refuses to build for itself",
+      "evidence": "Commenters explicitly complain that every vendor pushes the benchmark that flatters it, that quantum volume does not map to anything intelligible, and that cost-per-capability is never reported. Independent, cross-vendor, cost-normalized benchmarking with published circuits and raw data is a wide-open position, and the corpus shows the community rewards openness (Google's Zenodo data release was singled out for praise).",
+      "quotes": [
+        {
+          "text": "each company will push a benchmark that makes their machine look the best.",
+          "source_url": "https://news.ycombinator.com/item?id=36735713"
+        },
+        {
+          "text": "How does something like quantum volume analogize to address space or FLOPs or something somewhat intelligle in classical computing? ... How has qubit density per dollar spent on the computer changed over this same span of time? Did the technology actually get better or did they just throw more money at it?",
+          "source_url": "https://news.ycombinator.com/item?id=36735713"
+        }
+      ]
+    },
+    {
+      "opportunity": "PQC migration tooling and cryptographic inventory is a real, funded, near-term market that does not depend on QC working",
+      "evidence": "This is the only part of the corpus where someone describes an actual budgeted purchasing program. A security architect at a major European company reports demanding full cryptographic inventories now and PQC by 2028 explicitly regardless of QC timelines, and France's ANSSI is making PQC a certification gate from 2027. Vendors already sell migration services. Demand here is driven by regulation and equipment lifetimes, not by physics.",
+      "quotes": [
+        {
+          "text": "We're currently demanding a full cryptographic inventory of every new product purchased or service built in-house and will start demanding PQC in 2028.",
+          "source_url": "https://news.ycombinator.com/item?id=48994116"
+        },
+        {
+          "text": "there are plenty of IT consulting firms who will happily sell post-quantum migration services to get ahead of that deadline.",
+          "source_url": "https://news.ycombinator.com/item?id=36735713"
+        }
+      ]
+    },
+    {
+      "opportunity": "Own the missing middle of quantum education - between pop-science and Nielsen & Chuang",
+      "evidence": "The single most-upvoted-in-spirit artifact in the corpus is a volunteer line-by-line translation of a transmon paper paragraph, written because nothing at that level existed. Multiple threads contain the same request in different words. Whoever owns the credible intermediate explainer owns the developer funnel, and the corpus shows IBM already captured a chunk of it with the Qiskit textbook.",
+      "quotes": [
+        {
+          "text": "There just seems to be a lack of non-introductory but non-PhD level information. Where is the \"explain it like I've been accepted into college at all\".",
+          "source_url": "https://news.ycombinator.com/item?id=21053405"
+        },
+        {
+          "text": "But if there was ever a paragraph that sounded like pure technobabble, this is it. Replace the technobabble found in the star trek matter transporter with quantum lingo, and it would sound very similar.",
+          "source_url": "https://news.ycombinator.com/item?id=21053405"
+        }
+      ]
+    },
+    {
+      "opportunity": "Radical candor is a competitive differentiator in this market",
+      "evidence": "The vendors that earned goodwill in this corpus did it by understating: Rigetti's engineer saying 8 qubits can't beat a CPU, Google's Strilanc telling readers to ignore non-error-correction news and posting raw data, IBM's public rebuttal of a rival's claim, and PsiQuantum being praised specifically for refusing to sell quantum ML. The vendors that lost the room did it with press releases. In a market where technical buyers pre-discount all claims, verifiable understatement is the cheapest available credibility.",
+      "quotes": [
+        {
+          "text": "8 qubits will not solve any problems that a classical computer can't.",
+          "source_url": "https://news.ycombinator.com/item?id=14595290"
+        },
+        {
+          "text": "Personally, I feel PsiQuantum is the only company that does not talk about nonsensical near-term quantum applications and quantum machine learning and quantum optimization",
+          "source_url": "https://news.ycombinator.com/item?id=27080883"
+        },
+        {
+          "text": "This result is notably more open than most papers. The circuits executed and measurement data collected are available on Zenodo ... You can do your own analysis of the claim.",
+          "source_url": "https://news.ycombinator.com/item?id=34898258"
+        }
+      ]
+    }
+  ],
+  "surprises": [
+    "The harshest critics of quantum vendors on HN are people who work for quantum vendors. A Google quantum researcher tells readers to ignore any company announcement that isn't about error correction (https://news.ycombinator.com/item?id=49546198), and a Rigetti compiler author publicly dismantles IonQ's own press release as 'not written in good faith' (https://news.ycombinator.com/item?id=30343328).",
+    "IonQ is nearly invisible in 15 years of HN quantum discussion - 7 comment mentions total - and its single largest thread is a short-seller report alleging staged photos and sham revenue, which commenters critiqued for being shoddily written rather than for being wrong (https://news.ycombinator.com/item?id=31559297).",
+    "The 2013 Lockheed Martin $10M D-Wave purchase, cited for a decade as commercial validation, is described in-thread as possibly a Canadian industrial-offset obligation rather than a technology decision - and Google's D-Wave purchase is separately rumored to have been an employee-retention move (https://news.ycombinator.com/item?id=3621334, https://news.ycombinator.com/item?id=34217218).",
+    "A Google researcher predicted in a 2025 SIGBOVIK April Fool's paper that a small-number factoring/ECDLP bounty would be won by a submission where the quantum computer contributed nothing - then warned the bounty organizers - and in 2026 exactly that happened, with /dev/urandom reproducing the winning IBM Quantum result (https://news.ycombinator.com/item?id=47897647).",
+    "Gil Kalai, the field's most prominent skeptic, personally posted in the HN thread about his own critique of Google, and a Google employee replied asking in good faith how much he should update his priors (https://news.ycombinator.com/item?id=42384768).",
+    "Simulators are better than the hardware they front: 'Right now simulators tend to be faster, cheaper, and more accurate than real quantum computers' - said on the Amazon Braket launch thread itself (https://news.ycombinator.com/item?id=21684668).",
+    "The single most useful technical artifact in the corpus was produced by a non-specialist for free: a line-by-line plain-English translation of the transmon paragraph from Google's supremacy paper, written by a distributed-systems engineer because no such explanation existed (https://news.ycombinator.com/item?id=21053405).",
+    "Scott Aaronson functions as this community's de facto verification layer - 27 of 86 on-topic threads reference him, and 'it doesn't work until Scott Aaronson says it works' is repeated near-verbatim across a decade (https://news.ycombinator.com/item?id=11668658, https://news.ycombinator.com/item?id=45670443).",
+    "The only concrete purchasing behavior described anywhere in 15 years of this corpus is post-quantum crypto procurement - and the buyer explicitly says it is not because he expects a working quantum computer (https://news.ycombinator.com/item?id=48994116).",
+    "A researcher building quantum hardware says he would be happier if his field were proven pointless: 'If the whole premise of my career vanishes one day because Computational Complexity theorists find a way to prove that BQP ... is not more powerful than BPP, I would be *happier* than if I successfully build a quantum computer' (https://news.ycombinator.com/item?id=32900173)."
+  ]
+}
