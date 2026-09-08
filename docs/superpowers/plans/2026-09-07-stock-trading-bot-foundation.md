@@ -86,479 +86,46 @@ Expected: 49 passed, ruff clean, mypy clean.
 
 ---
 
-### Task 4: Store schema
+### Tasks 4-5: COMPLETE
 
-**Files:**
-- Create: `stock-trading-bot/src/stock_trading_bot/store.py`
-- Test: `stock-trading-bot/tests/test_store_schema.py`
+Landed in `9301ae6`, `79d432d`, `6ae9326`, `aeba2f1`. Read the committed
+`src/stock_trading_bot/store.py` rather than the original task text.
 
-- [ ] **Step 1: Write the failing test**
+**Two real holes were found by adversarially attacking the gateway, and both are worth
+knowing about because the same mistake is easy to repeat in later layers.**
 
-Create `stock-trading-bot/tests/test_store_schema.py`:
+1. `PointInTimeView` originally held a generic query callable, and the `known_at <= t`
+   predicate lived only in each accessor's SQL text. So
+   `view._query("SELECT * FROM price_bar WHERE ticker = :ticker", ...)` returned
+   future-dated rows, and `view._query("DELETE ...")` mutated the append-only store.
+   The guarantee was a property of every call site rather than of the view - exactly
+   the failure the class exists to prevent.
+2. The first fix gave the view its own connection with `PRAGMA query_only = ON`. But a
+   pragma is a per-connection *setting*: `view._conn.execute("PRAGMA query_only = OFF")`
+   re-enabled writes.
 
-```python
-import sqlite3
+**The design now standing, which later layers must not weaken:**
 
-import pytest
+- The view's connection is opened with a `mode=ro` URI. That is an open *flag*, not a
+  setting, so it cannot be revoked. `PRAGMA query_only = ON` is applied as well.
+- `_query` re-checks every row in Python before returning it. An accessor whose SQL
+  forgets the predicate still cannot emit a future-dated row.
+- A returned row with no `known_at` column raises, rather than silently bypassing the
+  check. Fail loud on misuse, fail closed on data.
+- The accessors keep the predicate in their SQL too, so SQLite can use the `known_at`
+  indexes instead of filtering everything in Python.
 
-from stock_trading_bot.store import Store
+**When you add an accessor to `PointInTimeView`, you get the guarantee for free.** Do not
+add a method that reaches around `_query`.
 
-
-@pytest.mark.unit
-def test_open_creates_the_expected_tables(tmp_path):
-    store = Store.open(tmp_path / "panel.sqlite")
-    names = {
-        row[0]
-        for row in store._conn.execute(
-            "SELECT name FROM sqlite_master WHERE type='table'"
-        )
-    }
-    assert {"price_bar", "corporate_action", "fundamental_fact"} <= names
-
-
-@pytest.mark.unit
-def test_open_is_idempotent(tmp_path):
-    path = tmp_path / "panel.sqlite"
-    Store.open(path).close()
-    Store.open(path).close()  # must not raise
-
-
-@pytest.mark.unit
-def test_price_bar_rejects_a_duplicate_observation(tmp_path):
-    store = Store.open(tmp_path / "panel.sqlite")
-    row = dict(
-        ticker="NVDA",
-        session_date="2026-09-04",
-        event_time="2026-09-04T20:00:00.000000+00:00",
-        observed_at="2026-09-04T20:05:00.000000+00:00",
-        known_at="2026-09-04T20:20:00.000000+00:00",
-        open=100.0, high=105.0, low=99.0, close=104.0, volume=1000.0,
-        source="stooq",
-    )
-    store.insert_price_bar(**row)
-    with pytest.raises(sqlite3.IntegrityError):
-        store.insert_price_bar(**row)
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize("bad_ts", [
-    "2026-09-04T20:20:00+00:00",           # seconds only, no microseconds
-    "2026-09-04T13:20:00.000000-07:00",    # correct instant, non-UTC offset
-    "2026-09-04T20:20:00.000000Z",         # Z instead of +00:00
-    "2026-09-04",                          # date only
-])
-def test_a_noncanonical_timestamp_is_rejected_by_the_database(tmp_path, bad_ts):
-    """Lexicographic ordering must be a property of the column, not of the
-    writer. A non-canonical string is the same instant but sorts differently."""
-    store = Store.open(tmp_path / "panel.sqlite")
-    with pytest.raises(sqlite3.IntegrityError):
-        store.insert_price_bar(
-            ticker="NVDA", session_date="2026-09-04",
-            event_time="2026-09-04T20:00:00.000000+00:00",
-            observed_at="2026-09-04T20:05:00.000000+00:00",
-            known_at=bad_ts,
-            open=100.0, high=105.0, low=99.0, close=104.0, volume=1000.0,
-            source="stooq",
-        )
-
-
-@pytest.mark.unit
-def test_a_restatement_appends_rather_than_overwriting(tmp_path):
-    """Append-only: a corrected value is a new row with a later known_at."""
-    store = Store.open(tmp_path / "panel.sqlite")
-    common = dict(
-        ticker="NVDA", session_date="2026-09-04",
-        event_time="2026-09-04T20:00:00.000000+00:00",
-        open=100.0, high=105.0, low=99.0, close=104.0, volume=1000.0,
-        source="stooq",
-    )
-    store.insert_price_bar(
-        observed_at="2026-09-04T20:05:00.000000+00:00",
-        known_at="2026-09-04T20:20:00.000000+00:00", **common
-    )
-    store.insert_price_bar(
-        observed_at="2026-09-05T09:00:00.000000+00:00",
-        known_at="2026-09-05T09:15:00.000000+00:00", **{**common, "close": 104.5}
-    )
-    count = store._conn.execute(
-        "SELECT COUNT(*) FROM price_bar WHERE ticker='NVDA'"
-    ).fetchone()[0]
-    assert count == 2
-```
-
-- [ ] **Step 2: Run test to verify it fails**
-
-Run: `.venv/bin/pytest tests/test_store_schema.py -v`
-Expected: FAIL with `ModuleNotFoundError: No module named 'stock_trading_bot.store'`
-
-- [ ] **Step 3: Write the implementation**
-
-Create `stock-trading-bot/src/stock_trading_bot/store.py`:
-
-```python
-"""Append-only point-in-time fact store (spec §5).
-
-Design rules enforced here:
-  - Four timestamps on every fact: event_time, observed_at, known_at, valid_from.
-  - Append-only. No UPDATE, ever. A restatement is a new row with a later
-    known_at and the same event_time, which is what makes "do not backfill
-    revisions into past predictions" automatic.
-  - observed_at is part of every primary key, so a re-observation appends
-    instead of colliding.
-  - A NULL known_at means invisible. See PointInTimeView in Task 5.
-"""
-from __future__ import annotations
-
-import sqlite3
-from pathlib import Path
-
-#: The canonical shape produced by timestamps.to_iso: fixed-width UTC with
-#: microseconds. Enforced at the database boundary so that lexicographic
-#: comparison always equals chronological comparison - making that a property
-#: of the COLUMN, not merely of whoever happened to write the row. Without it,
-#: one hand-built string entering by another route (a fixture, a migration, a
-#: notebook INSERT) silently breaks ordering with no error anywhere.
-_CANONICAL_TS = (
-    "[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T"
-    "[0-9][0-9]:[0-9][0-9]:[0-9][0-9].[0-9][0-9][0-9][0-9][0-9][0-9]+00:00"
-)
-
-
-def _ts_check(column: str) -> str:
-    """A CHECK clause pinning `column` to the canonical timestamp shape."""
-    return f"CHECK ({column} IS NULL OR {column} GLOB '{_CANONICAL_TS}')"
-
-
-_SCHEMA = f"""
-CREATE TABLE IF NOT EXISTS price_bar (
-    ticker       TEXT NOT NULL,
-    session_date TEXT NOT NULL,
-    event_time   TEXT NOT NULL {_ts_check('event_time')},
-    observed_at  TEXT NOT NULL {_ts_check('observed_at')},
-    known_at     TEXT          {_ts_check('known_at')},
-    open         REAL NOT NULL,
-    high         REAL NOT NULL,
-    low          REAL NOT NULL,
-    close        REAL NOT NULL,
-    volume       REAL NOT NULL,
-    source       TEXT NOT NULL,
-    PRIMARY KEY (ticker, session_date, observed_at)
-);
-
-CREATE TABLE IF NOT EXISTS corporate_action (
-    ticker         TEXT NOT NULL,
-    effective_date TEXT NOT NULL,
-    action_type    TEXT NOT NULL CHECK (action_type IN ('split', 'dividend')),
-    ratio          REAL,
-    amount         REAL,
-    event_time     TEXT NOT NULL {_ts_check('event_time')},
-    observed_at    TEXT NOT NULL {_ts_check('observed_at')},
-    known_at       TEXT          {_ts_check('known_at')},
-    source         TEXT NOT NULL,
-    PRIMARY KEY (ticker, effective_date, action_type, observed_at)
-);
-
-CREATE TABLE IF NOT EXISTS fundamental_fact (
-    ticker        TEXT NOT NULL,
-    concept       TEXT NOT NULL,
-    unit          TEXT NOT NULL,
-    fiscal_period TEXT NOT NULL,
-    value         REAL NOT NULL,
-    accession     TEXT NOT NULL,
-    event_time    TEXT NOT NULL {_ts_check('event_time')},
-    observed_at   TEXT NOT NULL {_ts_check('observed_at')},
-    known_at      TEXT          {_ts_check('known_at')},
-    valid_from    TEXT,
-    source        TEXT NOT NULL,
-    PRIMARY KEY (ticker, concept, fiscal_period, accession)
-);
-
-CREATE INDEX IF NOT EXISTS ix_price_known  ON price_bar (ticker, known_at);
-CREATE INDEX IF NOT EXISTS ix_action_known ON corporate_action (ticker, known_at);
-CREATE INDEX IF NOT EXISTS ix_fact_known   ON fundamental_fact (ticker, known_at);
-"""
-
-
-class Store:
-    """Owns the connection. Callers wanting to read facts use `as_of`."""
-
-    def __init__(self, conn: sqlite3.Connection) -> None:
-        self._conn = conn
-
-    @classmethod
-    def open(cls, path: str | Path) -> "Store":
-        path = Path(path)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        conn = sqlite3.connect(path)
-        conn.row_factory = sqlite3.Row
-        conn.execute("PRAGMA foreign_keys = ON")
-        conn.executescript(_SCHEMA)
-        conn.commit()
-        return cls(conn)
-
-    def close(self) -> None:
-        self._conn.close()
-
-    def insert_price_bar(self, **row) -> None:
-        self._insert("price_bar", row)
-
-    def insert_corporate_action(self, **row) -> None:
-        self._insert("corporate_action", row)
-
-    def insert_fundamental_fact(self, **row) -> None:
-        self._insert("fundamental_fact", row)
-
-    def _insert(self, table: str, row: dict) -> None:
-        cols = ", ".join(row)
-        marks = ", ".join(f":{c}" for c in row)
-        self._conn.execute(f"INSERT INTO {table} ({cols}) VALUES ({marks})", row)
-        self._conn.commit()
-```
-
-- [ ] **Step 4: Run test to verify it passes**
-
-Run: `.venv/bin/pytest tests/test_store_schema.py -v`
-Expected: PASS, 8 passed
-
-- [ ] **Step 5: Commit**
+**Verify before starting Task 6:**
 
 ```bash
-git add stock-trading-bot/src/stock_trading_bot/store.py stock-trading-bot/tests/test_store_schema.py
-git commit -m "feat(stock-trading-bot): append-only point-in-time schema"
+cd /Users/duochen/Desktop/career/openPaw/stock-trading-bot
+.venv/bin/pytest -q && .venv/bin/ruff check . && .venv/bin/mypy
 ```
 
----
-
-### Task 5: The `PointInTimeView` gateway
-
-This is the central architectural bet (spec §5.2). One test here protects every feature builder written later.
-
-**Files:**
-- Modify: `stock-trading-bot/src/stock_trading_bot/store.py` (append `PointInTimeView`, add `Store.as_of`)
-- Test: `stock-trading-bot/tests/test_store_pointintime.py`
-
-- [ ] **Step 1: Write the failing test**
-
-Create `stock-trading-bot/tests/test_store_pointintime.py`:
-
-```python
-from datetime import datetime, timezone
-
-import pytest
-
-from stock_trading_bot.store import Store
-
-T = datetime(2026, 9, 7, 12, 0, 0, tzinfo=timezone.utc)
-
-
-def _bar(store, session_date, known_at, close=100.0):
-    store.insert_price_bar(
-        ticker="NVDA",
-        session_date=session_date,
-        event_time=f"{session_date}T20:00:00.000000+00:00",
-        observed_at=f"{session_date}T20:05:00.000000+00:00",
-        known_at=known_at,
-        open=99.0, high=101.0, low=98.0, close=close, volume=1000.0,
-        source="stooq",
-    )
-
-
-@pytest.fixture
-def store(tmp_path):
-    return Store.open(tmp_path / "panel.sqlite")
-
-
-@pytest.mark.unit
-def test_view_returns_rows_known_before_t(store):
-    _bar(store, "2026-09-01", "2026-09-01T20:20:00.000000+00:00")
-    assert len(store.as_of(T).price_bars("NVDA")) == 1
-
-
-@pytest.mark.unit
-def test_view_refuses_a_row_known_after_t(store):
-    """The single most important test in the codebase."""
-    _bar(store, "2026-09-08", "2026-09-08T20:20:00.000000+00:00")
-    assert store.as_of(T).price_bars("NVDA") == []
-
-
-@pytest.mark.unit
-def test_null_known_at_is_invisible_not_visible(store):
-    """Unknown vintage fails closed (spec §5.1)."""
-    _bar(store, "2026-09-01", None)
-    assert store.as_of(T).price_bars("NVDA") == []
-
-
-@pytest.mark.unit
-def test_boundary_is_inclusive(store):
-    _bar(store, "2026-09-07", "2026-09-07T12:00:00.000000+00:00")
-    assert len(store.as_of(T).price_bars("NVDA")) == 1
-
-
-@pytest.mark.unit
-def test_latest_observation_wins_for_a_restated_session(store):
-    _bar(store, "2026-09-01", "2026-09-01T20:20:00.000000+00:00", close=100.0)
-    store.insert_price_bar(
-        ticker="NVDA", session_date="2026-09-01",
-        event_time="2026-09-01T20:00:00.000000+00:00",
-        observed_at="2026-09-02T09:00:00.000000+00:00",
-        known_at="2026-09-02T09:15:00.000000+00:00",
-        open=99.0, high=101.0, low=98.0, close=100.5, volume=1000.0,
-        source="stooq",
-    )
-    bars = store.as_of(T).price_bars("NVDA")
-    assert len(bars) == 1
-    assert bars[0]["close"] == 100.5
-
-
-@pytest.mark.unit
-def test_restatement_is_invisible_before_it_was_known(store):
-    """As-of 2026-09-01T21:00 we must still see the original value."""
-    _bar(store, "2026-09-01", "2026-09-01T20:20:00.000000+00:00", close=100.0)
-    store.insert_price_bar(
-        ticker="NVDA", session_date="2026-09-01",
-        event_time="2026-09-01T20:00:00.000000+00:00",
-        observed_at="2026-09-02T09:00:00.000000+00:00",
-        known_at="2026-09-02T09:15:00.000000+00:00",
-        open=99.0, high=101.0, low=98.0, close=100.5, volume=1000.0,
-        source="stooq",
-    )
-    early = datetime(2026, 9, 1, 21, 0, 0, tzinfo=timezone.utc)
-    bars = store.as_of(early).price_bars("NVDA")
-    assert len(bars) == 1
-    assert bars[0]["close"] == 100.0
-
-
-@pytest.mark.unit
-def test_view_exposes_no_raw_connection(store):
-    """Feature builders must have no way to bypass the filter."""
-    view = store.as_of(T)
-    assert not hasattr(view, "execute")
-    assert not hasattr(view, "_conn")
-
-
-@pytest.mark.unit
-def test_as_of_rejects_a_naive_datetime(store):
-    with pytest.raises(ValueError):
-        store.as_of(datetime(2026, 9, 7, 12, 0, 0))
-```
-
-- [ ] **Step 2: Run test to verify it fails**
-
-Run: `.venv/bin/pytest tests/test_store_pointintime.py -v`
-Expected: FAIL with `AttributeError: 'Store' object has no attribute 'as_of'`
-
-- [ ] **Step 3: Write the implementation**
-
-Append to `stock-trading-bot/src/stock_trading_bot/store.py`:
-
-```python
-class PointInTimeView:
-    """A read-only window on the store as it was visible at `t`.
-
-    Feature builders receive only this object. It holds no attribute named
-    `execute` or `_conn`, so there is no handle to bypass the filter with; the
-    connection is captured in a closure instead. Every query this class issues
-    appends `known_at IS NOT NULL AND known_at <= :t`.
-
-    That NULL check is load-bearing: a fact whose vintage we do not know must
-    be invisible, never assumed available.
-    """
-
-    __slots__ = ("_query", "_t")
-
-    def __init__(self, conn: sqlite3.Connection, t: str) -> None:
-        def query(sql: str, params: dict) -> list[dict]:
-            return [dict(r) for r in conn.execute(sql, {**params, "t": t})]
-
-        object.__setattr__(self, "_query", query)
-        object.__setattr__(self, "_t", t)
-
-    @property
-    def t(self) -> str:
-        return self._t
-
-    def price_bars(self, ticker: str) -> list[dict]:
-        """Visible bars, one row per session, latest visible observation wins."""
-        return self._query(
-            """
-            SELECT p.* FROM price_bar p
-            JOIN (
-                SELECT session_date, MAX(observed_at) AS observed_at
-                FROM price_bar
-                WHERE ticker = :ticker
-                  AND known_at IS NOT NULL AND known_at <= :t
-                GROUP BY session_date
-            ) latest
-              ON p.session_date = latest.session_date
-             AND p.observed_at  = latest.observed_at
-            WHERE p.ticker = :ticker
-              AND p.known_at IS NOT NULL AND p.known_at <= :t
-            ORDER BY p.session_date
-            """,
-            {"ticker": ticker},
-        )
-
-    def corporate_actions(self, ticker: str) -> list[dict]:
-        return self._query(
-            """
-            SELECT * FROM corporate_action
-            WHERE ticker = :ticker
-              AND known_at IS NOT NULL AND known_at <= :t
-            ORDER BY effective_date
-            """,
-            {"ticker": ticker},
-        )
-
-    def fundamental_facts(self, ticker: str, concept: str | None = None) -> list[dict]:
-        clause = "AND concept = :concept" if concept else ""
-        return self._query(
-            f"""
-            SELECT * FROM fundamental_fact
-            WHERE ticker = :ticker {clause}
-              AND known_at IS NOT NULL AND known_at <= :t
-            ORDER BY fiscal_period, accession
-            """,
-            {"ticker": ticker, "concept": concept},
-        )
-```
-
-Then add this method to the `Store` class, immediately after `close`:
-
-```python
-    def as_of(self, t: datetime) -> "PointInTimeView":
-        """The only supported way to read facts.
-
-        Anything reachable through the returned view was knowable at `t`.
-        """
-        if t.tzinfo is None:
-            raise ValueError("as_of requires a timezone-aware datetime")
-        return PointInTimeView(self._conn, to_iso(t))
-```
-
-And add these imports at the top of `store.py`:
-
-```python
-from datetime import datetime
-
-from stock_trading_bot.timestamps import to_iso
-```
-
-- [ ] **Step 4: Run test to verify it passes**
-
-Run: `.venv/bin/pytest tests/test_store_pointintime.py -v`
-Expected: PASS, 8 passed
-
-- [ ] **Step 5: Run the whole suite**
-
-Run: `.venv/bin/pytest -v`
-Expected: PASS, 65 passed (49 from Tasks 1-3, plus 4 schema and 12 point-in-time)
-
-- [ ] **Step 6: Commit**
-
-```bash
-git add stock-trading-bot/src/stock_trading_bot/store.py stock-trading-bot/tests/test_store_pointintime.py
-git commit -m "feat(stock-trading-bot): PointInTimeView gateway, null known_at fails closed"
-```
+Expected: 69 passed, ruff clean, mypy clean.
 
 ---
 
@@ -1481,6 +1048,18 @@ def test_run_config_exposes_latency_budgets():
 
 
 @pytest.mark.unit
+def test_config_paths_resolve_against_the_project_root_not_the_cwd(tmp_path, monkeypatch):
+    """Otherwise the database lands somewhere different depending on where the
+    CLI happened to be invoked from."""
+    from stock_trading_bot.config import PROJECT_ROOT, resolve_path
+
+    monkeypatch.chdir(tmp_path)
+    resolved = resolve_path(load_run_config()["paths"]["db"])
+    assert resolved.is_absolute()
+    assert resolved == PROJECT_ROOT / "data/db/panel.sqlite"
+
+
+@pytest.mark.unit
 def test_every_watchlist_symbol_is_path_safe():
     from stock_trading_bot.naming import safe_ticker_component
 
@@ -1510,7 +1089,17 @@ from pathlib import Path
 
 import yaml
 
-_CONFIG_DIR = Path(__file__).resolve().parents[2] / "config"
+#: The package lives at <root>/src/stock_trading_bot/, so the project root is
+#: two levels up. Config paths resolve against this rather than the process
+#: cwd, so `stock-trading ingest` writes to the same database regardless of
+#: which directory it was invoked from.
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+_CONFIG_DIR = PROJECT_ROOT / "config"
+
+
+def resolve_path(relative: str) -> Path:
+    """Resolve a path from run.yaml against the project root."""
+    return PROJECT_ROOT / relative
 
 
 @dataclass(frozen=True)
@@ -1656,7 +1245,7 @@ import argparse
 import sqlite3
 from datetime import datetime, timezone
 
-from stock_trading_bot.config import load_run_config
+from stock_trading_bot.config import load_run_config, resolve_path
 from stock_trading_bot.ingest import prices
 from stock_trading_bot.naming import safe_ticker_component
 from stock_trading_bot.store import Store
@@ -1665,7 +1254,7 @@ from stock_trading_bot.store import Store
 def _ingest(args: argparse.Namespace) -> int:
     symbol = safe_ticker_component(args.ticker)
     cfg = load_run_config()
-    store = Store.open(args.db or cfg["paths"]["db"])
+    store = Store.open(args.db or resolve_path(cfg["paths"]["db"]))
     bars = prices.fetch_stooq(
         symbol,
         observed_at=datetime.now(timezone.utc),
@@ -1782,8 +1371,8 @@ Run manifests record the config hash, data vintages consumed, and cache hit rate
 - [ ] **Step 6: Run the full suite**
 
 Run: `cd /Users/duochen/Desktop/career/openPaw/stock-trading-bot && .venv/bin/pytest -v`
-Expected: PASS, 109 passed (49 from Tasks 1-3 + 8 schema + 12 point-in-time + 10 live-profile
-+ 4 freshness + 6 stooq + 5 corporate actions + 5 edgar + 2 import graph + 5 config + 3 cli).
+Expected: PASS, 110 passed (69 from Tasks 1-5 + 10 live-profile + 4 freshness + 6 stooq
++ 5 corporate actions + 5 edgar + 2 import graph + 6 config + 3 cli).
 Also run `.venv/bin/ruff check .` and `.venv/bin/mypy`; both must be clean.
 
 - [ ] **Step 7: Verify the CLI works end to end against the live network**
@@ -1810,7 +1399,7 @@ git commit -m "feat(stock-trading-bot): CLI ingest command and README"
 
 ## Definition of done
 
-- [ ] `.venv/bin/pytest` passes with 109 tests.
+- [ ] `.venv/bin/pytest` passes with 110 tests.
 - [ ] `.venv/bin/ruff check .` and `.venv/bin/mypy` are both clean.
 - [ ] `stock-trading ingest NVDA` writes bars, and a second run writes zero.
 - [ ] The import-graph test has been shown to fail on a deliberate violation.
