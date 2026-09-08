@@ -1,0 +1,7 @@
+data/db/
+data/cache/
+data/raw/
+reports/
+.venv/
+__pycache__/
+*.pyc
