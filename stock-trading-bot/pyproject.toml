@@ -3,17 +3,16 @@ name = "stock-trading-bot"
 version = "0.1.0"
 description = "Point-in-time equity research and signal evaluation. Reports and paper evaluation only."
 requires-python = ">=3.13"
+# Only what code in this repo actually imports today. numpy, pandas,
+# scikit-learn and pydantic arrive with the modelling and extraction layers;
+# declaring them now would make the lockfile lie about what is needed.
 dependencies = [
     "requests>=2.32",
-    "pydantic>=2.9",
     "pyyaml>=6.0",
-    "numpy>=2.0",
-    "pandas>=2.2",
-    "scikit-learn>=1.5",
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0"]
+dev = ["pytest>=8.0", "ruff>=0.6", "mypy>=1.11", "types-requests", "types-PyYAML"]
 
 [project.scripts]
 stock-trading = "stock_trading_bot.cli:main"
@@ -33,4 +32,16 @@ testpaths = ["tests"]
 # present and silently unimportable. This makes the test suite independent of it.
 pythonpath = ["src"]
 markers = ["unit: fast test with no network access"]
-addopts = "-q"
+addopts = "-q --strict-markers"
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.mypy]
+files = ["src"]
+strict = true
+warn_unreachable = true
