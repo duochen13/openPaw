@@ -100,8 +100,33 @@ Skip this step entirely if the user passed `--no-publish` (print the places JSON
    with that Name exists; if yes `notion-update-page`, else `notion-create-pages`.
    Map `why_loved`→`Why people love it`, first `source_urls`→`Source links`,
    `map_link`→`Map link`, `Status` default `want-to-go`.
-4. On any Notion failure, keep `data/analysis/{slug}_places_{ts}.json` and report its
-   path — nothing is lost.
+   (If `notion-query-data-sources` returns a *Business-plan required* error, fall back to
+   `notion-search` scoped to the data source (`data_source_url`) to find existing rows by
+   Name. Likewise, `Tags` only accepts options already in the schema — map to existing
+   options or omit unknown ones.)
+4. **Attach the trip map to Notion (the "Google-map form").** Run Step 7/8 first so
+   `data/maps/{slug}_map.html` and `data/maps/{slug}.kml` exist, then attach both to a
+   `🗺️ Travel — <Destination> (Map)` page. Two ways:
+   - **Preferred — `scripts/upload_to_notion.py`** (uploads the file *bytes* from disk via the
+     Notion File Upload API; no hand-transcription):
+     ```bash
+     NOTION_TOKEN=ntn_xxx python3 scripts/upload_to_notion.py \
+       --slug {slug} --dest "<Destination>" --parent-page <PARENT_PAGE_ID> [--db-url <DB_URL>]
+     ```
+     One-time setup: create an internal integration (https://www.notion.so/my-integrations),
+     **share the parent page with it**, and `export NOTION_TOKEN`. It prints the map page URL.
+   - **Fallback (no token) — MCP tools:** `notion-create-attachment` with `content` = the text
+     of each file (filenames `{slug}_map.html`, `{slug}.kml`; each returns a `file-upload://…`
+     `markdown_source`), then `notion-create-pages` a `🗺️ Travel — <Destination> (Map)` page
+     with a `<file src="file-upload://…">` block for BOTH files, a one-line how-to, and a
+     `<mention-database>` link to the DB. (Emitting a ~30 KB HTML inline is token-heavy — prefer
+     the script.)
+   - Note: the map HTML embeds the Maps JS API key, so the uploaded file contains it (fine for
+     a private workspace; don't add an HTTP-referrer restriction if you also open the file
+     locally, since `file://` has no referrer).
+   Skip this sub-step under `--no-publish`.
+5. On any Notion failure, keep `data/analysis/{slug}_places_{ts}.json` and the
+   `data/maps/{slug}_map.html` — report their paths; nothing is lost.
 
 ## Data layout
 ```
@@ -123,7 +148,12 @@ After the places JSON is validated (and geocoded for `map_link`), build the map 
 python3 scripts/build_map.py data/analysis/{slug}_places_{ts}.json
 ```
 `build_map.py` geocodes each place to lat/lng via Nominatim (writes `lat`/`lng` back
-into the JSON) and emits `data/maps/{slug}.kml` with one colored pin per place.
+into the JSON) and emits `data/maps/{slug}.kml` with one colored pin per place. It
+**also automatically emits the interactive Google Maps viewer** `data/maps/{slug}_map.html`
+(see Step 8) from the same geocoded data — so set `GOOGLE_MAPS_API_KEY` before running:
+```bash
+GOOGLE_MAPS_API_KEY=... python3 scripts/build_map.py data/analysis/{slug}_places_{ts}.json
+```
 
 Then tell the user how to load it (this is the "mark in Google Maps" step):
 1. Open **Google My Maps** (mymaps.google.com) → **Create a new map**.
@@ -133,3 +163,23 @@ Then tell the user how to load it (this is the "mark in Google Maps" step):
 
 Run this even under `--no-publish` (the KML is the deliverable); only the Notion
 step is skipped in that mode.
+
+## Step 8 — Interactive Google Map viewer (`data/maps/{slug}_map.html`)
+This runs **automatically as part of Step 7** (`build_map.py` calls
+`build_gmap_html.write_map_html` on the same geocoded data) — it is the final
+deliverable of every run, including under `--no-publish`. No separate command needed.
+
+Output: `data/maps/{slug}_map.html` — a self-contained, full-screen Google Map with
+one pin per place; clicking a pin opens a popup (name, `type · area`, the why-loved
+quote, rating if present, and the first source link). The map auto-fits bounds to
+all pins. After the run, tell the user: `open data/maps/{slug}_map.html`.
+
+- The Maps **JS** API key is read from `GOOGLE_MAPS_API_KEY` and injected into the
+  output; if unset, a `YOUR_API_KEY` placeholder is written so the file still
+  generates (the map won't render until a key is added). A JS key is necessarily
+  visible in client HTML — restrict it with an **HTTP-referrer restriction** in the
+  Google Cloud console rather than secrecy.
+- Places without `lat`/`lng` are skipped (counted in the page footer).
+- v1 is pins + popups only (no sidebar list, type filter, or day-grouping).
+- To regenerate the HTML alone (without re-geocoding), run:
+  `GOOGLE_MAPS_API_KEY=... python3 scripts/build_gmap_html.py data/analysis/{slug}_places_{ts}.json`

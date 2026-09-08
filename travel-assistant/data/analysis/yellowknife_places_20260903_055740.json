@@ -1,0 +1,500 @@
+{
+  "destination": "Yellowknife",
+  "generated_at": "2026-09-03T10:50:28.284831+00:00",
+  "source_mode": "fallback",
+  "places": [
+    {
+      "name": "Bullock's Bistro",
+      "type": "restaurant",
+      "area": "Old Town",
+      "why_loved": "Stop for delicious fish meal straight from Great Slave Lake, at Bullock's Bistro.",
+      "source_urls": [
+        "https://packedforlife.com/things-to-do-yellowknife/",
+        "https://patricklam.ca/post/20220507-yellowknife/",
+        "https://epicureandculture.com/a-trip-back-in-time-in-yellowknifes-old-town/",
+        "https://www.tripadvisor.com/Restaurant_Review-g154966-d702633-Reviews-Bullock_s_Bistro-Yellowknife_Northwest_Territories.html"
+      ],
+      "mention_count": 5,
+      "sentiment": "mixed",
+      "tags": [
+        "fish and chips",
+        "Great Slave Lake",
+        "institution",
+        "cash-heavy",
+        "book ahead"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=Bullock%27s%20Bistro%20Old%20Town%20Yellowknife",
+      "rating": null,
+      "lat": 62.4647539,
+      "lng": -114.3501031
+    },
+    {
+      "name": "North Star Adventures (Aurora Hunting Tour)",
+      "type": "other",
+      "area": "Downtown pickup / Ingraham Trail",
+      "why_loved": "best aurora hunting tour in Yellowknife",
+      "source_urls": [
+        "https://www.tripadvisor.com/ShowUserReviews-g154966-d2173267-r425432289-North_Star_Adventures-Yellowknife_Northwest_Territories.html"
+      ],
+      "mention_count": 4,
+      "sentiment": "positive",
+      "tags": [
+        "aurora",
+        "Indigenous-owned",
+        "chase the lights",
+        "night tour"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=North%20Star%20Adventures%20%28Aurora%20Hunting%20Tour%29%20Downtown%20pickup%20/%20Ingraham%20Trail%20Yellowknife",
+      "rating": null,
+      "lat": null,
+      "lng": null
+    },
+    {
+      "name": "Aurora Village",
+      "type": "sight",
+      "area": "Ingraham Trail teepee site — pin is the downtown office/check-in (4802 49 St)",
+      "why_loved": "Aurora Village is one of the region's most iconic experiences: viewing the auroras in a small out-of-town space populated by teepees.",
+      "source_urls": [
+        "https://vancouverscape.com/yellowknife-nwt-auroras-two-ways/",
+        "https://www.tripadvisor.com/Attraction_Review-g154966-d25336758-Reviews-Aurora_Village-Yellowknife_Northwest_Territories.html",
+        "https://www.tripadvisor.com/ShowUserReviews-g154966-d586758-r750156544-Aurora_Village-Yellowknife_Northwest_Territories.html"
+      ],
+      "mention_count": 4,
+      "sentiment": "mixed",
+      "tags": [
+        "aurora",
+        "teepees",
+        "heated",
+        "large groups",
+        "tour bus"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=Aurora%20Village%20Ingraham%20Trail%20%28out%20of%20town%29%20Yellowknife",
+      "rating": null,
+      "lat": 62.4552024,
+      "lng": -114.3688769
+    },
+    {
+      "name": "The Woodyard Brewhouse & Eatery (NWT Brewing Co.)",
+      "type": "bar",
+      "area": "Old Town",
+      "why_loved": "Sip local, award winning craft beer from the NWT Brewing Company, at the Woodyard",
+      "source_urls": [
+        "https://packedforlife.com/things-to-do-yellowknife/",
+        "https://wanderlog.com/list/geoCategory/372256/best-restaurants-to-have-dinner-in-yellowknife"
+      ],
+      "mention_count": 3,
+      "sentiment": "positive",
+      "tags": [
+        "craft beer",
+        "bison burger",
+        "comfort food",
+        "patio"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=The%20Woodyard%20Brewhouse%20%26%20Eatery%20%28NWT%20Brewing%20Co.%29%20Old%20Town%20Yellowknife",
+      "rating": null,
+      "lat": 62.461679,
+      "lng": -114.3535192
+    },
+    {
+      "name": "Bush Pilot's Monument",
+      "type": "sight",
+      "area": "Old Town (Pilot's Rock)",
+      "why_loved": "The Bush Pilots Monument gives a good view of downtown Yellowknife from on the water.",
+      "source_urls": [
+        "https://patricklam.ca/post/20220507-yellowknife/",
+        "https://epicureandculture.com/a-trip-back-in-time-in-yellowknifes-old-town/"
+      ],
+      "mention_count": 3,
+      "sentiment": "positive",
+      "tags": [
+        "viewpoint",
+        "free",
+        "sunset",
+        "short climb",
+        "stairs"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=Bush%20Pilot%27s%20Monument%20Old%20Town%20%28Pilot%27s%20Rock%29%20Yellowknife",
+      "rating": null,
+      "lat": 62.4655991,
+      "lng": -114.3481955
+    },
+    {
+      "name": "Wildcat Cafe",
+      "type": "restaurant",
+      "area": "Old Town",
+      "why_loved": "First opened in 1937, it is the oldest restaurant in Yellowknife.",
+      "source_urls": [
+        "https://en.wikipedia.org/wiki/The_Wildcat_Cafe",
+        "https://packedforlife.com/things-to-do-yellowknife/",
+        "https://wildcatcafeyk.wixsite.com/wildcat-cafe-yk"
+      ],
+      "mention_count": 3,
+      "sentiment": "positive",
+      "tags": [
+        "historic log cabin",
+        "seasonal",
+        "lunch",
+        "closed Mon-Tue"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=Wildcat%20Cafe%20Old%20Town%20Yellowknife",
+      "rating": null,
+      "lat": 62.4665936,
+      "lng": -114.3488741
+    },
+    {
+      "name": "Cameron Falls Trail",
+      "type": "sight",
+      "area": "Hidden Lake Territorial Park, Ingraham Trail (47 km east)",
+      "why_loved": "The 1.2 kilometre, there and back, hiking trail is a moderate adventure with some elevation hiking over rocks before arriving at a lookout overlooking a 17 metre waterfall, river and canyon.",
+      "source_urls": [
+        "https://packedforlife.com/yellowknife-hiking-cameron-falls/",
+        "https://www.nwtparks.ca/plan-your-trip/road-trips/ingraham-trail"
+      ],
+      "mention_count": 3,
+      "sentiment": "positive",
+      "tags": [
+        "hike",
+        "waterfall",
+        "fall colours",
+        "suspension bridge",
+        "needs a car"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=Cameron%20Falls%20Trail%20Hidden%20Lake%20Territorial%20Park%2C%20Ingraham%20Trail%20%2847%20km%20east%29%20Yellowknife",
+      "rating": null,
+      "lat": 62.5208735,
+      "lng": -113.6872484
+    },
+    {
+      "name": "Prince of Wales Northern Heritage Centre",
+      "type": "sight",
+      "area": "Frame Lake, Downtown",
+      "why_loved": "The Prince of Wales Northern Heritage Centre is well worth a visit, with informative displays.",
+      "source_urls": [
+        "https://patricklam.ca/post/20220507-yellowknife/",
+        "https://packedforlife.com/things-to-do-yellowknife/"
+      ],
+      "mention_count": 2,
+      "sentiment": "positive",
+      "tags": [
+        "museum",
+        "free",
+        "Dene history",
+        "rainy day"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=Prince%20of%20Wales%20Northern%20Heritage%20Centre%20Frame%20Lake%2C%20Downtown%20Yellowknife",
+      "rating": null,
+      "lat": 62.4562467,
+      "lng": -114.380029
+    },
+    {
+      "name": "Old Town Glassworks",
+      "type": "shop",
+      "area": "3510 MacDonald Drive, Old Town",
+      "why_loved": "Old Town Glassworks is a workers cooperative creating beautiful glassware, out of recycled materialsm rescued from the shores of Great Slave Lake.",
+      "source_urls": [
+        "https://packedforlife.com/things-to-do-yellowknife/"
+      ],
+      "mention_count": 2,
+      "sentiment": "positive",
+      "tags": [
+        "souvenir",
+        "workshop",
+        "recycled glass",
+        "local craft"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=Old%20Town%20Glassworks%203510%20MacDonald%20Drive%2C%20Old%20Town%20Yellowknife",
+      "rating": null,
+      "lat": 62.4661239,
+      "lng": -114.3465634
+    },
+    {
+      "name": "Birchwood Coffee Kǫ̀",
+      "type": "cafe",
+      "area": "Downtown",
+      "why_loved": "Birchwood is a great place to grab a muffin or breakfast sandwich with your coffee, to sit awhile.",
+      "source_urls": [
+        "https://packedforlife.com/things-to-do-yellowknife/"
+      ],
+      "mention_count": 2,
+      "sentiment": "positive",
+      "tags": [
+        "breakfast",
+        "coffee",
+        "sit-down"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=Birchwood%20Coffee%20K%C7%AB%CC%80%20Downtown%20Yellowknife",
+      "rating": null,
+      "lat": 62.4536426,
+      "lng": -114.3680237
+    },
+    {
+      "name": "Copperhouse Eatery & Lounge",
+      "type": "restaurant",
+      "area": "Range Lake Road",
+      "why_loved": "Head out for the best pizza in town at the Copperhouse Eatery & Lounge",
+      "source_urls": [
+        "https://packedforlife.com/things-to-do-yellowknife/",
+        "https://wanderlog.com/list/geoCategory/372256/best-restaurants-to-have-dinner-in-yellowknife"
+      ],
+      "mention_count": 2,
+      "sentiment": "positive",
+      "tags": [
+        "pizza",
+        "wood oven",
+        "family friendly",
+        "patio"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=Copperhouse%20Eatery%20%26%20Lounge%20Range%20Lake%20Road%20Yellowknife",
+      "rating": null,
+      "lat": 62.4454978,
+      "lng": -114.4119848
+    },
+    {
+      "name": "Zehabesha Traditional Ethiopian Food",
+      "type": "restaurant",
+      "area": "Downtown",
+      "why_loved": "Let your tastebuds dance with the most delicious traditional Ethiopian food at Zehabesha",
+      "source_urls": [
+        "https://packedforlife.com/things-to-do-yellowknife/",
+        "https://wanderlog.com/list/geoCategory/372256/best-restaurants-to-have-dinner-in-yellowknife"
+      ],
+      "mention_count": 2,
+      "sentiment": "positive",
+      "tags": [
+        "Ethiopian",
+        "vegetarian friendly",
+        "sharing plates"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=Zehabesha%20Traditional%20Ethiopian%20Food%20Downtown%20Yellowknife",
+      "rating": null,
+      "lat": 62.4527619,
+      "lng": -114.3694607
+    },
+    {
+      "name": "Aurora Ninja Photo Tours",
+      "type": "other",
+      "area": "Yellowknife (mobile)",
+      "why_loved": "based on experience, David and Wynne seem to know exactly where to find 'em too.",
+      "source_urls": [
+        "https://vancouverscape.com/yellowknife-nwt-auroras-two-ways/"
+      ],
+      "mention_count": 1,
+      "sentiment": "positive",
+      "tags": [
+        "aurora",
+        "photography",
+        "small group",
+        "cheaper than Aurora Village"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=Aurora%20Ninja%20Photo%20Tours%20Yellowknife%20%28mobile%29%20Yellowknife",
+      "rating": null,
+      "lat": null,
+      "lng": null
+    },
+    {
+      "name": "Aurora Hunting Tours",
+      "type": "other",
+      "area": "Yellowknife (mobile)",
+      "why_loved": "The best part is that you're hunting for the aurora instead of just sitting in a cabin while your tour guides watch videos.",
+      "source_urls": [
+        "https://www.tripadvisor.com/AttractionProductReview-g154966-d17799486-Aurora_Hunting_Tours-Yellowknife_Northwest_Territories.html"
+      ],
+      "mention_count": 1,
+      "sentiment": "positive",
+      "tags": [
+        "aurora",
+        "mobile",
+        "small group"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=Aurora%20Hunting%20Tours%20Yellowknife%20%28mobile%29%20Yellowknife",
+      "rating": null,
+      "lat": null,
+      "lng": null
+    },
+    {
+      "name": "Northwest Territories Legislative Assembly",
+      "type": "sight",
+      "area": "Frame Lake, Downtown",
+      "why_loved": "Designed to reflect the natural surroundings and highlight the openess of consensus government, this architectural beauty sits along the shore of Frame Lake.",
+      "source_urls": [
+        "https://packedforlife.com/things-to-do-yellowknife/"
+      ],
+      "mention_count": 1,
+      "sentiment": "positive",
+      "tags": [
+        "free tour",
+        "architecture",
+        "consensus government",
+        "polar bear rug"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=Northwest%20Territories%20Legislative%20Assembly%20Frame%20Lake%2C%20Downtown%20Yellowknife",
+      "rating": null,
+      "lat": 62.4595222,
+      "lng": -114.3820579
+    },
+    {
+      "name": "Gallery of the Midnight Sun",
+      "type": "shop",
+      "area": "Old Town",
+      "why_loved": "Works of Inuit art and contemporary paintings hung side by side to display the best Yellowknife had to offer",
+      "source_urls": [
+        "https://epicureandculture.com/a-trip-back-in-time-in-yellowknifes-old-town/"
+      ],
+      "mention_count": 1,
+      "sentiment": "positive",
+      "tags": [
+        "Inuit art",
+        "gallery",
+        "souvenir"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=Gallery%20of%20the%20Midnight%20Sun%20Old%20Town%20Yellowknife",
+      "rating": null,
+      "lat": 62.4621208,
+      "lng": -114.3528226
+    },
+    {
+      "name": "Weaver & Devore Trading",
+      "type": "shop",
+      "area": "Old Town",
+      "why_loved": "Trading posts like Weaver & Devore thrived and cafes, bars and bistros popped up along the shores of the Great Slave Lake",
+      "source_urls": [
+        "https://epicureandculture.com/a-trip-back-in-time-in-yellowknifes-old-town/"
+      ],
+      "mention_count": 1,
+      "sentiment": "positive",
+      "tags": [
+        "historic outfitter",
+        "general store",
+        "Old Town"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=Weaver%20%26%20Devore%20Trading%20Old%20Town%20Yellowknife",
+      "rating": null,
+      "lat": 62.4645006,
+      "lng": -114.350561
+    },
+    {
+      "name": "Buffalo Airways",
+      "type": "sight",
+      "area": "108 Berry Street (airport)",
+      "why_loved": "Buffalo Airways, a long-time northern business has been operating WWII aircraft since 1970.",
+      "source_urls": [
+        "https://packedforlife.com/things-to-do-yellowknife/"
+      ],
+      "mention_count": 1,
+      "sentiment": "positive",
+      "tags": [
+        "Ice Pilots",
+        "vintage aircraft",
+        "hangar",
+        "aviation"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=Buffalo%20Airways%20108%20Berry%20Street%20%28airport%29%20Yellowknife",
+      "rating": null,
+      "lat": 62.4679381,
+      "lng": -114.4262991
+    },
+    {
+      "name": "Barren Ground Coffee",
+      "type": "cafe",
+      "area": "Downtown",
+      "why_loved": "Barren Ground we recommend for grabbing a great expresso drink to go, along with a brownie or pastry and a bag of your favourite locally roasted beans.",
+      "source_urls": [
+        "https://packedforlife.com/things-to-do-yellowknife/"
+      ],
+      "mention_count": 1,
+      "sentiment": "positive",
+      "tags": [
+        "espresso",
+        "local roaster",
+        "takeaway",
+        "beans to bring home"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=Barren%20Ground%20Coffee%20Downtown%20Yellowknife",
+      "rating": null,
+      "lat": null,
+      "lng": null
+    },
+    {
+      "name": "Old Town Paddle Co",
+      "type": "other",
+      "area": "Old Town / Great Slave Lake",
+      "why_loved": "get your SUP adventure on with Old Town Paddle Co",
+      "source_urls": [
+        "https://packedforlife.com/things-to-do-yellowknife/"
+      ],
+      "mention_count": 1,
+      "sentiment": "positive",
+      "tags": [
+        "SUP",
+        "kayak",
+        "Great Slave Lake",
+        "weather dependent"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=Old%20Town%20Paddle%20Co%20Old%20Town%20/%20Great%20Slave%20Lake%20Yellowknife",
+      "rating": null,
+      "lat": null,
+      "lng": null
+    },
+    {
+      "name": "Jackpine Paddle",
+      "type": "other",
+      "area": "Yellowknife Bay",
+      "why_loved": "take a Yellowknife Bay Tour with Jackpine Paddle leaving at noon",
+      "source_urls": [
+        "https://packedforlife.com/things-to-do-yellowknife/"
+      ],
+      "mention_count": 1,
+      "sentiment": "positive",
+      "tags": [
+        "guided canoe",
+        "Yellowknife Bay",
+        "half day"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=Jackpine%20Paddle%20Yellowknife%20Bay%20Yellowknife",
+      "rating": null,
+      "lat": null,
+      "lng": null
+    },
+    {
+      "name": "NWT Diamond Centre",
+      "type": "shop",
+      "area": "5105 49 St, Downtown",
+      "why_loved": "At the NWT Diamond Centre enjoy an exhibition and short video on diamond exploration, mining and manufacturing in the north.",
+      "source_urls": [
+        "https://packedforlife.com/things-to-do-yellowknife/"
+      ],
+      "mention_count": 1,
+      "sentiment": "positive",
+      "tags": [
+        "diamonds",
+        "exhibition",
+        "downtown",
+        "indoor"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=NWT%20Diamond%20Centre%205105%2049%20St%2C%20Downtown%20Yellowknife",
+      "rating": null,
+      "lat": 62.4533785,
+      "lng": -114.367127
+    },
+    {
+      "name": "The Book Cellar",
+      "type": "shop",
+      "area": "Downtown",
+      "why_loved": "Buy an actual book from The Book Cellar, for a relaxing evening read.",
+      "source_urls": [
+        "https://packedforlife.com/things-to-do-yellowknife/"
+      ],
+      "mention_count": 1,
+      "sentiment": "positive",
+      "tags": [
+        "bookstore",
+        "northern authors",
+        "indoor"
+      ],
+      "map_link": "https://www.google.com/maps/search/?api=1&query=The%20Book%20Cellar%20Downtown%20Yellowknife",
+      "rating": null,
+      "lat": null,
+      "lng": null
+    }
+  ]
+}

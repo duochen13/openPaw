@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Map — Sunshine Coast BC</title>
+<style>
+  html, body { height: 100%; margin: 0; font-family: -apple-system, system-ui, sans-serif; }
+  #map { height: calc(100% - 34px); width: 100%; }
+  #footer { height: 34px; line-height: 34px; padding: 0 12px; font-size: 13px;
+             color: #444; background: #f5f5f5; border-top: 1px solid #ddd;
+             box-sizing: border-box; overflow: hidden; white-space: nowrap; }
+  .iw-title { font-weight: 600; font-size: 15px; margin: 0 0 2px; }
+  .iw-meta { color: #666; font-size: 12px; margin: 0 0 6px; }
+  .iw-why { margin: 0 0 6px; max-width: 260px; }
+  .iw-link { font-size: 12px; }
+  #legend { position: absolute; bottom: 44px; left: 10px; z-index: 5; background: #fff;
+             border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,.3); padding: 8px 11px;
+             font-size: 12px; line-height: 1.7; }
+  #legend .lg-hd { font-weight: 600; margin-bottom: 3px; }
+  .lg-row { display: flex; align-items: center; white-space: nowrap;
+             cursor: pointer; user-select: none; padding: 1px 4px; margin: 0 -4px;
+             border-radius: 4px; }
+  .lg-row:hover { background: #f0f0f0; }
+  .lg-off { opacity: .4; }
+  .lg-off .lg-lbl { text-decoration: line-through; }
+  .lg-dot { width: 11px; height: 11px; border-radius: 50%; margin-right: 7px;
+             border: 1px solid rgba(0,0,0,.25); flex: 0 0 auto; }
+  #legend .lg-hint { font-size: 10px; color: #999; margin-top: 5px; }
+  #routebox { position: absolute; bottom: 44px; left: 50%; transform: translateX(-50%); z-index: 5;
+               display: none; background: #fff; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,.3);
+               padding: 6px 12px; font-size: 13px; max-width: 90%; }
+  #searchbox { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 6;
+                width: min(340px, 82%); }
+  #searchbox gmp-place-autocomplete { width: 100%; box-shadow: 0 1px 4px rgba(0,0,0,.3);
+                border-radius: 8px; background: #fff; }
+  .rb { cursor: pointer; user-select: none; }
+  .rb-note { color: #999; font-size: 11px; }
+  .route-label { position: absolute; transform: translate(-50%, -50%); background: #1a73e8; color: #fff;
+                  font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 10px;
+                  white-space: nowrap; box-shadow: 0 1px 2px rgba(0,0,0,.35); pointer-events: none; }
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div id="searchbox"></div>
+<div id="legend"></div>
+<div id="routebox"></div>
+<div id="footer">21 places shown</div>
+<script>
+const PLACES = [{"name": "The Gumboot Restaurant", "type": "restaurant", "area": "Roberts Creek", "why_loved": "serves up some killer meals and the staff are so friendly", "source_urls": ["https://www.emrvacationrentals.com/blog/best-restaurants-sunshine-coast-bc/", "https://www.mysunshinecoastbc.com/sunshine-coast-restaurants-cafes", "https://www.sunshinecoastcanada.com/food-drink/coffee-bakeries/", "https://happiestoutdoors.ca/things-to-do-on-the-sunshine-coast-bc/", "https://theworldonmynecklace.com/things-to-do-on-the-sunshine-coast-bc/"], "mention_count": 5, "sentiment": "positive", "tags": ["restaurant", "cafe", "local-favorite", "soup"], "map_link": "https://www.google.com/maps/search/?api=1&query=The%20Gumboot%20Restaurant%20Roberts%20Creek%20Sunshine%20Coast%20BC", "rating": null, "lat": 49.4207067, "lng": -123.642657}, {"name": "Strait Coffee", "type": "cafe", "area": "Sechelt", "why_loved": "fabulous sandwiches, and the best cheesecake on the Sunshine Coast.", "source_urls": ["https://www.mysunshinecoastbc.com/sunshine-coast-restaurants-cafes", "https://www.sunshinecoastcanada.com/food-drink/coffee-bakeries/", "https://www.sunshinecoastcanada.com/blog/post/diving-into-the-sunshine-coasts-coffee-scene/", "https://happiestoutdoors.ca/things-to-do-on-the-sunshine-coast-bc/"], "mention_count": 4, "sentiment": "positive", "tags": ["coffee", "roaster", "cafe", "bakery"], "map_link": "https://www.google.com/maps/search/?api=1&query=Strait%20Coffee%20Sechelt%20Sunshine%20Coast%20BC", "rating": null, "lat": 49.4412155, "lng": -123.7097376}, {"name": "Skookumchuck Narrows", "type": "sight", "area": "Egmont", "why_loved": "one of the great whitewater wonders of the world", "source_urls": ["https://offtracktravel.ca/things-to-do-sunshine-coast-bc/", "https://happiestoutdoors.ca/things-to-do-on-the-sunshine-coast-bc/", "https://theworldonmynecklace.com/things-to-do-on-the-sunshine-coast-bc/", "https://www.sunshinecoastcanada.com/things-to-do/hidden-gems/"], "mention_count": 4, "sentiment": "positive", "tags": ["hike", "tidal-rapids", "nature", "provincial-park"], "map_link": "https://www.google.com/maps/search/?api=1&query=Skookumchuck%20Narrows%20Egmont%20Sunshine%20Coast%20BC", "rating": null, "lat": 49.7406329, "lng": -123.9127945}, {"name": "Soames Hill", "type": "sight", "area": "Gibsons", "why_loved": "short, quick and has an awesome effort to reward ratio", "source_urls": ["https://offtracktravel.ca/things-to-do-sunshine-coast-bc/", "https://happiestoutdoors.ca/things-to-do-on-the-sunshine-coast-bc/", "https://theworldonmynecklace.com/things-to-do-on-the-sunshine-coast-bc/"], "mention_count": 3, "sentiment": "positive", "tags": ["hike", "viewpoint", "nature"], "map_link": "https://www.google.com/maps/search/?api=1&query=Soames%20Hill%20Gibsons%20Sunshine%20Coast%20BC", "rating": null, "lat": 49.4006197, "lng": -123.508918}, {"name": "Gibsons Tapworks", "type": "bar", "area": "Gibsons", "why_loved": "scenic elevated patio and experimental style", "source_urls": ["https://www.mysunshinecoastbc.com/sunshine-coast-restaurants-cafes", "https://offtracktravel.ca/things-to-do-sunshine-coast-bc/", "https://happiestoutdoors.ca/things-to-do-on-the-sunshine-coast-bc/"], "mention_count": 3, "sentiment": "positive", "tags": ["brewery", "patio", "beer"], "map_link": "https://www.google.com/maps/search/?api=1&query=Gibsons%20Tapworks%20Gibsons%20Sunshine%20Coast%20BC", "rating": null, "lat": 49.4027705, "lng": -123.5048225}, {"name": "Beachcomber Coffee", "type": "cafe", "area": "Gibsons", "why_loved": "house-roasted beans—featuring medium to dark roasts", "source_urls": ["https://www.sunshinecoastcanada.com/food-drink/coffee-bakeries/", "https://www.sunshinecoastcanada.com/blog/post/diving-into-the-sunshine-coasts-coffee-scene/", "https://happiestoutdoors.ca/things-to-do-on-the-sunshine-coast-bc/"], "mention_count": 3, "sentiment": "positive", "tags": ["coffee", "roaster", "cafe"], "map_link": "https://www.google.com/maps/search/?api=1&query=Beachcomber%20Coffee%20Gibsons%20Sunshine%20Coast%20BC", "rating": null, "lat": 49.4018994, "lng": -123.5061411}, {"name": "Molly's Reach", "type": "restaurant", "area": "Gibsons", "why_loved": "famous cafe from the show", "source_urls": ["https://www.mysunshinecoastbc.com/sunshine-coast-restaurants-cafes", "https://www.sunshinecoastcanada.com/blog/post/diving-into-the-sunshine-coasts-coffee-scene/", "https://happiestoutdoors.ca/things-to-do-on-the-sunshine-coast-bc/"], "mention_count": 3, "sentiment": "positive", "tags": ["restaurant", "landmark", "iconic"], "map_link": "https://www.google.com/maps/search/?api=1&query=Molly%27s%20Reach%20Gibsons%20Sunshine%20Coast%20BC", "rating": null, "lat": 49.4016052, "lng": -123.5055085}, {"name": "Black Bean Cafe", "type": "cafe", "area": "Gibsons", "why_loved": "roasts their own beans in Gibsons", "source_urls": ["https://www.mysunshinecoastbc.com/sunshine-coast-restaurants-cafes", "https://www.sunshinecoastcanada.com/blog/post/diving-into-the-sunshine-coasts-coffee-scene/", "https://happiestoutdoors.ca/things-to-do-on-the-sunshine-coast-bc/"], "mention_count": 3, "sentiment": "positive", "tags": ["coffee", "roaster", "cafe"], "map_link": "https://www.google.com/maps/search/?api=1&query=Black%20Bean%20Cafe%20Gibsons%20Sunshine%20Coast%20BC", "rating": null, "lat": 49.4016047, "lng": -123.5055091}, {"name": "The Wobbly Canoe", "type": "restaurant", "area": "Davis Bay", "why_loved": "perfect place to enjoy a casual dinner, try a local beer or signature cocktail and enjoy the laid-back local vibe", "source_urls": ["https://www.emrvacationrentals.com/blog/best-restaurants-sunshine-coast-bc/", "https://www.mysunshinecoastbc.com/sunshine-coast-restaurants-cafes", "https://happiestoutdoors.ca/things-to-do-on-the-sunshine-coast-bc/"], "mention_count": 3, "sentiment": "positive", "tags": ["restaurant", "patio", "casual", "oceanfront"], "map_link": "https://www.google.com/maps/search/?api=1&query=The%20Wobbly%20Canoe%20Davis%20Bay%20Sunshine%20Coast%20BC", "rating": null, "lat": 49.4458134, "lng": -123.726546}, {"name": "The Basted Baker", "type": "cafe", "area": "Sechelt", "why_loved": "cozy nook on Cowrie Street", "source_urls": ["https://www.mysunshinecoastbc.com/sunshine-coast-restaurants-cafes", "https://www.sunshinecoastcanada.com/blog/post/diving-into-the-sunshine-coasts-coffee-scene/", "https://happiestoutdoors.ca/things-to-do-on-the-sunshine-coast-bc/"], "mention_count": 3, "sentiment": "positive", "tags": ["bakery", "cafe", "coffee"], "map_link": "https://www.google.com/maps/search/?api=1&query=The%20Basted%20Baker%20Sechelt%20Sunshine%20Coast%20BC", "rating": null, "lat": 49.4722574, "lng": -123.7573195}, {"name": "Gourmet Girl", "type": "cafe", "area": "Davis Bay", "why_loved": "offer easy grab-and-go options", "source_urls": ["https://www.mysunshinecoastbc.com/sunshine-coast-restaurants-cafes", "https://www.sunshinecoastcanada.com/blog/post/diving-into-the-sunshine-coasts-coffee-scene/", "https://happiestoutdoors.ca/things-to-do-on-the-sunshine-coast-bc/"], "mention_count": 3, "sentiment": "positive", "tags": ["cafe", "catering", "grab-and-go"], "map_link": "https://www.google.com/maps/search/?api=1&query=Gourmet%20Girl%20Davis%20Bay%20Sunshine%20Coast%20BC", "rating": null, "lat": 49.4458134, "lng": -123.726546}, {"name": "Sunshine Coast Trail", "type": "sight", "area": "Sunshine Coast", "why_loved": "Canada's longest hut-to-hut hike", "source_urls": ["https://offtracktravel.ca/things-to-do-sunshine-coast-bc/", "https://happiestoutdoors.ca/things-to-do-on-the-sunshine-coast-bc/", "https://www.sunshinecoastcanada.com/things-to-do/hidden-gems/"], "mention_count": 3, "sentiment": "positive", "tags": ["hike", "trail", "multi-day", "nature"], "map_link": "https://www.google.com/maps/search/?api=1&query=Sunshine%20Coast%20Trail%20Sunshine%20Coast%20Sunshine%20Coast%20BC", "rating": null, "lat": 49.593371, "lng": -123.9676682}, {"name": "Saffron Restaurant", "type": "restaurant", "area": "Sechelt", "why_loved": "serves incredible authentic northern Indian cuisine made with in-house ground spices", "source_urls": ["https://www.emrvacationrentals.com/blog/best-restaurants-sunshine-coast-bc/", "https://www.mysunshinecoastbc.com/sunshine-coast-restaurants-cafes"], "mention_count": 2, "sentiment": "positive", "tags": ["restaurant", "indian", "cuisine"], "map_link": "https://www.google.com/maps/search/?api=1&query=Saffron%20Restaurant%20Sechelt%20Sunshine%20Coast%20BC", "rating": null, "lat": 49.4720982, "lng": -123.760502}, {"name": "The Lagoon Restaurant", "type": "restaurant", "area": "Pender Harbour", "why_loved": "menu that is inspired by the Mediterranean, filled with fresh seafood and incredible local produce", "source_urls": ["https://www.emrvacationrentals.com/blog/best-restaurants-sunshine-coast-bc/", "https://happiestoutdoors.ca/things-to-do-on-the-sunshine-coast-bc/"], "mention_count": 2, "sentiment": "positive", "tags": ["restaurant", "seafood", "mediterranean", "waterfront"], "map_link": "https://www.google.com/maps/search/?api=1&query=The%20Lagoon%20Restaurant%20Pender%20Harbour%20Sunshine%20Coast%20BC", "rating": null, "lat": 49.6222165, "lng": -124.0196125}, {"name": "Skookumchuck Bakery & Cafe", "type": "cafe", "area": "Egmont", "why_loved": "specialize in homemade pizzas, ginormous cinnamon buns", "source_urls": ["https://www.sunshinecoastcanada.com/blog/post/diving-into-the-sunshine-coasts-coffee-scene/", "https://happiestoutdoors.ca/things-to-do-on-the-sunshine-coast-bc/"], "mention_count": 2, "sentiment": "positive", "tags": ["bakery", "cafe", "cinnamon-buns", "pizza"], "map_link": "https://www.google.com/maps/search/?api=1&query=Skookumchuck%20Bakery%20%26%20Cafe%20Egmont%20Sunshine%20Coast%20BC", "rating": null, "lat": 49.7487059, "lng": -123.9348746}, {"name": "Persephone Brewing", "type": "bar", "area": "Gibsons", "why_loved": "relaxed beer garden and huge choice of beers (the cider is also fab)", "source_urls": ["https://offtracktravel.ca/things-to-do-sunshine-coast-bc/", "https://happiestoutdoors.ca/things-to-do-on-the-sunshine-coast-bc/"], "mention_count": 2, "sentiment": "positive", "tags": ["brewery", "beer-garden", "farm-to-keg", "cider"], "map_link": "https://www.google.com/maps/search/?api=1&query=Persephone%20Brewing%20Gibsons%20Sunshine%20Coast%20BC", "rating": null, "lat": 49.4207588, "lng": -123.5082391}, {"name": "Gibsons Public Market", "type": "shop", "area": "Gibsons", "why_loved": "Vendors there sell amazing cheese, meat, bread, chocolate, veggies, and more.", "source_urls": ["https://www.mysunshinecoastbc.com/sunshine-coast-restaurants-cafes", "https://happiestoutdoors.ca/things-to-do-on-the-sunshine-coast-bc/"], "mention_count": 2, "sentiment": "positive", "tags": ["market", "food", "shopping", "local"], "map_link": "https://www.google.com/maps/search/?api=1&query=Gibsons%20Public%20Market%20Gibsons%20Sunshine%20Coast%20BC", "rating": null, "lat": 49.3981677, "lng": -123.5080595}, {"name": "Porpoise Bay Provincial Park", "type": "sight", "area": "Sechelt", "why_loved": "white sand beach backed by the second-growth forest", "source_urls": ["https://happiestoutdoors.ca/things-to-do-on-the-sunshine-coast-bc/", "https://theworldonmynecklace.com/things-to-do-on-the-sunshine-coast-bc/"], "mention_count": 2, "sentiment": "positive", "tags": ["beach", "provincial-park", "swimming", "camping"], "map_link": "https://www.google.com/maps/search/?api=1&query=Porpoise%20Bay%20Provincial%20Park%20Sechelt%20Sunshine%20Coast%20BC", "rating": null, "lat": 49.5066505, "lng": -123.7512185}, {"name": "Princess Louisa Inlet", "type": "sight", "area": "Egmont", "why_loved": "one of the most beautiful places I've ever seen in Canada", "source_urls": ["https://offtracktravel.ca/things-to-do-sunshine-coast-bc/", "https://www.sunshinecoastcanada.com/things-to-do/hidden-gems/"], "mention_count": 2, "sentiment": "positive", "tags": ["inlet", "waterfalls", "boating", "nature"], "map_link": "https://www.google.com/maps/search/?api=1&query=Princess%20Louisa%20Inlet%20Egmont%20Sunshine%20Coast%20BC", "rating": null, "lat": 50.1874642, "lng": -123.7879571}, {"name": "Cliff Gilker Park", "type": "sight", "area": "Roberts Creek", "why_loved": "Two creeks wind through the trees, creating lots of cascades and waterfalls.", "source_urls": ["https://happiestoutdoors.ca/things-to-do-on-the-sunshine-coast-bc/", "https://theworldonmynecklace.com/things-to-do-on-the-sunshine-coast-bc/"], "mention_count": 2, "sentiment": "positive", "tags": ["park", "hike", "waterfalls", "nature"], "map_link": "https://www.google.com/maps/search/?api=1&query=Cliff%20Gilker%20Park%20Roberts%20Creek%20Sunshine%20Coast%20BC", "rating": null, "lat": 49.428998, "lng": -123.637282}, {"name": "Smoke on the Water BBQ Shack", "type": "restaurant", "area": "Gibsons", "why_loved": "one of the best places for authentic BBQ in British Columbia", "source_urls": ["https://www.emrvacationrentals.com/blog/best-restaurants-sunshine-coast-bc/"], "mention_count": 1, "sentiment": "positive", "tags": ["restaurant", "bbq", "casual"], "map_link": "https://www.google.com/maps/search/?api=1&query=Smoke%20on%20the%20Water%20BBQ%20Shack%20Gibsons%20Sunshine%20Coast%20BC", "rating": null, "lat": 49.4007475, "lng": -123.5045775}];
+let MAP = null;
+let INFO = null;
+
+// Category -> pin color + legend label. Unknown types fall back to "other".
+const CATS = {
+  restaurant: { color: "#E8453C", label: "Food" },
+  cafe:       { color: "#F5A623", label: "Caf\u00e9 / bakery" },
+  bar:        { color: "#8E44AD", label: "Bar / brewery" },
+  sight:      { color: "#2E9E4F", label: "Outdoors / sights" },
+  shop:       { color: "#2D7DD2", label: "Shop / market" },
+  other:      { color: "#7F8C8D", label: "Other" },
+  added:      { color: "#D81B8C", label: "Added by you" }
+};
+function catFor(t) { return CATS[t] ? t : "other"; }
+
+// Filter state: markers grouped by category, which categories are shown, and which exist.
+const MARKERS_BY_CAT = {};
+const SELECTED = {};
+let PRESENT = new Set();
+
+// A Material "place" teardrop, tip anchored at the location.
+const PIN_PATH = "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z";
+function pinIcon(color) {
+  return { path: PIN_PATH, fillColor: color, fillOpacity: 1,
+            strokeColor: "#ffffff", strokeWeight: 1.2, scale: 1.7,
+            anchor: new google.maps.Point(12, 22) };
+}
+
+function buildLegend(present) {
+  const el = document.getElementById("legend");
+  const rows = ['<div class="lg-hd">Categories</div>'];
+  Object.keys(CATS).forEach(function (k) {
+    if (!present.has(k)) return;
+    const off = SELECTED[k] ? "" : " lg-off";
+    rows.push('<div class="lg-row' + off + '" data-cat="' + k + '">' +
+      '<span class="lg-dot" style="background:' + CATS[k].color + '"></span>' +
+      '<span class="lg-lbl">' + CATS[k].label + '</span></div>');
+  });
+  rows.push('<div class="lg-hint">click to filter</div>');
+  el.innerHTML = rows.join("");
+  el.querySelectorAll(".lg-row").forEach(function (row) {
+    row.addEventListener("click", function () { toggleCat(row.getAttribute("data-cat")); });
+  });
+}
+
+function toggleCat(cat) {
+  SELECTED[cat] = !SELECTED[cat];
+  (MARKERS_BY_CAT[cat] || []).forEach(function (m) { m.setVisible(SELECTED[cat]); });
+  buildLegend(PRESENT);
+  rebuildRoute();  // route follows the filter: legs to hidden pins disappear
+}
+
+function escapeHtml(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+function infoContent(p) {
+  const meta = [p.type, p.area].filter(Boolean).map(escapeHtml).join(" \u00b7 ");
+  const rating = (typeof p.rating === "number") ? ' \u2b50 ' + p.rating : '';
+  const url = (p.source_urls && p.source_urls.length) ? p.source_urls[0] : (p.map_link || null);
+  const link = url ? '<div class="iw-link"><a href="' + encodeURI(url) +
+      '" target="_blank" rel="noopener">source</a></div>' : '';
+  const rm = '<div class="iw-link"><a href="#" class="iw-remove" data-id="' +
+      escapeHtml(p.id) + '">remove</a></div>';
+  return '<div class="iw-title">' + escapeHtml(p.name) + '</div>' +
+         '<div class="iw-meta">' + meta + rating + '</div>' +
+         (p.why_loved ? '<div class="iw-why">' + escapeHtml(p.why_loved) + '</div>' : '') +
+         link + rm;
+}
+
+function initMap() {
+  const map = new google.maps.Map(document.getElementById("map"), {
+    mapTypeControl: true, streetViewControl: false
+  });
+  MAP = map;
+  INFO = new google.maps.InfoWindow();
+  const bounds = new google.maps.LatLngBounds();
+  PLACES.forEach(function (p, i) {
+    p.id = p.id || ("p" + i);
+    const cat = catFor(p.type);
+    PRESENT.add(cat);
+    if (SELECTED[cat] === undefined) SELECTED[cat] = true;
+    addMarker(p);
+    bounds.extend({ lat: p.lat, lng: p.lng });
+  });
+  buildLegend(PRESENT);
+  if (PLACES.length === 1) { map.setCenter(PLACES[0]); map.setZoom(14); }
+  else if (PLACES.length > 1) { map.fitBounds(bounds); }
+  else { map.setCenter({ lat: 20, lng: 0 }); map.setZoom(2); }
+  rebuildRoute();
+  initSearch();
+}
+
+// --- Driving route via the Google Routes API. Follows the category filter and is
+//     recomputed whenever the visible set changes. Legs under MIN_LEG_MIN are not drawn.
+var ROUTE = {polylines: [], labels: [], visible: true, mode: null, hours: "0", gen: 0, legCache: {}};
+var RouteLabel = null;
+var EST_SPEED_KMH = 55;   // fallback road speed if the Routes API is unavailable
+var MIN_LEG_MIN = 10;     // do not draw a connector for legs shorter than this many minutes
+
+function _fmtDur(h) {
+  var m = h * 60;
+  if (m < 60) return "~" + Math.round(m) + " min";
+  return "~" + h.toFixed(1) + " h";
+}
+
+function _haversine(a, b) {
+  var R = 6371, toRad = Math.PI / 180;
+  var dLat = (b.lat - a.lat) * toRad, dLng = (b.lng - a.lng) * toRad;
+  var la1 = a.lat * toRad, la2 = b.lat * toRad;
+  var x = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+          Math.cos(la1) * Math.cos(la2) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  return 2 * R * Math.asin(Math.sqrt(x));
+}
+
+// Greedy nearest-neighbour chain, starting from the south-easternmost pin.
+function orderPins(pins) {
+  if (pins.length <= 2) return pins.slice();
+  var rest = pins.slice(), start = 0;
+  for (var i = 1; i < rest.length; i++) { if (rest[i].lng > rest[start].lng) start = i; }
+  var ordered = [rest.splice(start, 1)[0]];
+  while (rest.length) {
+    var last = ordered[ordered.length - 1], best = 0, bd = Infinity;
+    for (var j = 0; j < rest.length; j++) {
+      var d = _haversine(last, rest[j]);
+      if (d < bd) { bd = d; best = j; }
+    }
+    ordered.push(rest.splice(best, 1)[0]);
+  }
+  return ordered;
+}
+
+function defineRouteLabel() {
+  if (RouteLabel) return;
+  RouteLabel = function (pos, text) { this.pos = pos; this.text = text; this.div = null; };
+  RouteLabel.prototype = Object.create(google.maps.OverlayView.prototype);
+  RouteLabel.prototype.onAdd = function () {
+    var d = document.createElement("div");
+    d.className = "route-label"; d.textContent = this.text;
+    this.div = d; this.getPanes().floatPane.appendChild(d);
+  };
+  RouteLabel.prototype.draw = function () {
+    if (!this.div) return;
+    var p = this.getProjection().fromLatLngToDivPixel(this.pos);
+    this.div.style.left = p.x + "px"; this.div.style.top = p.y + "px";
+  };
+  RouteLabel.prototype.onRemove = function () {
+    if (this.div && this.div.parentNode) this.div.parentNode.removeChild(this.div);
+    this.div = null;
+  };
+}
+
+function _toLL(p) { return {lat: p.lat, lng: p.lng}; }
+function _mid(path) {
+  var p = path[Math.floor(path.length / 2)];
+  return new google.maps.LatLng(p.lat, p.lng);
+}
+
+// Pins that are geocoded AND belong to a currently-selected category.
+function visiblePlaced() {
+  return PLACES.filter(function (p) {
+    return typeof p.lat === "number" && typeof p.lng === "number" &&
+           SELECTED[catFor(p.type)] !== false;
+  });
+}
+
+function clearRouteGraphics() {
+  ROUTE.polylines.forEach(function (pl) { pl.setMap(null); });
+  ROUTE.labels.forEach(function (l) { l.setMap(null); });
+  ROUTE.polylines = []; ROUTE.labels = [];
+}
+
+// One real road leg via the Routes API (cached by coordinate pair). Throws if the
+// Routes API is disabled/unavailable so the caller can fall back to estimates.
+async function realLeg(o, d) {
+  var key = o.lat.toFixed(4) + "," + o.lng.toFixed(4) + ">" + d.lat.toFixed(4) + "," + d.lng.toFixed(4);
+  if (key in ROUTE.legCache) return ROUTE.legCache[key];
+  var lib = await google.maps.importLibrary("routes");
+  var res = await lib.Route.computeRoutes({
+    origin: {lat: o.lat, lng: o.lng},
+    destination: {lat: d.lat, lng: d.lng},
+    travelMode: "DRIVING",
+    fields: ["durationMillis", "path"]
+  });
+  var r = res && res.routes && res.routes[0];
+  var leg = r ? {sec: (r.durationMillis || 0) / 1000, path: (r.path || []).map(_toLL)} : null;
+  ROUTE.legCache[key] = leg;
+  return leg;
+}
+
+// Recompute the whole route over the currently-visible pins. A generation counter
+// discards a run that a newer filter change has superseded.
+async function rebuildRoute() {
+  var gen = ++ROUTE.gen;
+  clearRouteGraphics();
+  ROUTE.hours = "0";
+  var pins = visiblePlaced();
+  if (pins.length < 2) { updateRouteBox(); return; }
+  defineRouteLabel();
+  var order = orderPins(pins);
+  var totalSec = 0, useEst = false;
+  for (var i = 0; i < order.length - 1; i++) {
+    if (gen !== ROUTE.gen) return;
+    var o = order[i], d = order[i + 1], leg = null;
+    if (!useEst) {
+      try { leg = await realLeg(o, d); }
+      catch (e) { useEst = true; }   // Routes API disabled -> estimate the rest
+    }
+    if (gen !== ROUTE.gen) return;
+    if (!leg) {
+      var h = _haversine(o, d) / EST_SPEED_KMH;
+      leg = {sec: h * 3600, path: [_toLL(o), _toLL(d)], est: true};
+    }
+    totalSec += leg.sec;
+    if (leg.sec / 60 >= MIN_LEG_MIN && leg.path.length >= 2) {
+      var est = !!leg.est;
+      ROUTE.polylines.push(new google.maps.Polyline({
+        path: leg.path, map: ROUTE.visible ? MAP : null,
+        strokeColor: "#1a73e8", strokeWeight: 4, strokeOpacity: est ? 0 : 0.7,
+        icons: est ? [{icon: {path: "M 0,-1 0,1", strokeOpacity: 0.7, strokeWeight: 3, scale: 3},
+                       offset: "0", repeat: "12px"}] : null
+      }));
+      var lbl = new RouteLabel(_mid(leg.path), _fmtDur(leg.sec / 3600));
+      lbl.setMap(ROUTE.visible ? MAP : null);
+      ROUTE.labels.push(lbl);
+    }
+  }
+  if (gen !== ROUTE.gen) return;
+  ROUTE.mode = useEst ? "est" : "real";
+  ROUTE.hours = (totalSec / 3600).toFixed(1);
+  updateRouteBox();
+}
+
+function updateRouteBox() {
+  var box = document.getElementById("routebox");
+  if (visiblePlaced().length < 2 || ROUTE.hours === "0" || ROUTE.hours === "0.0") {
+    box.style.display = "none"; return;
+  }
+  var note = ROUTE.mode === "est"
+    ? ' <span class="rb-note">(estimated — enable the Routes API for real road times)</span>'
+    : ' <span class="rb-note">(legs under ' + MIN_LEG_MIN + ' min hidden)</span>';
+  box.innerHTML = '<label class="rb"><input type="checkbox" id="rbchk"' +
+    (ROUTE.visible ? " checked" : "") + "> 🚗 Driving route · ~" + ROUTE.hours +
+    " h total" + note + "</label>";
+  box.style.display = "block";
+  document.getElementById("rbchk").addEventListener("change", function (e) {
+    toggleRoute(e.target.checked);
+  });
+}
+
+function toggleRoute(on) {
+  ROUTE.visible = on;
+  ROUTE.polylines.forEach(function (pl) { pl.setMap(on ? MAP : null); });
+  ROUTE.labels.forEach(function (l) { l.setMap(on ? MAP : null); });
+}
+
+
+var ADDED_SEQ = 0;
+
+// Delegated handler for the "remove" link inside any pin's popup.
+document.addEventListener("click", function (e) {
+  var a = e.target.closest ? e.target.closest(".iw-remove") : null;
+  if (a) { e.preventDefault(); removePlace(a.getAttribute("data-id")); }
+});
+
+// Shared marker factory (used for both collected and user-added pins).
+function addMarker(p) {
+  var cat = catFor(p.type);
+  if (!MARKERS_BY_CAT[cat]) MARKERS_BY_CAT[cat] = [];
+  var marker = new google.maps.Marker({
+    position: {lat: p.lat, lng: p.lng}, title: p.name,
+    map: (SELECTED[cat] !== false) ? MAP : null,
+    icon: pinIcon(CATS[cat].color)
+  });
+  p.__marker = marker;
+  MARKERS_BY_CAT[cat].push(marker);
+  marker.addListener("click", function () { INFO.setContent(infoContent(p)); INFO.open(MAP, marker); });
+  return marker;
+}
+
+// Google Places Autocomplete search box (Places API New). Degrades to hidden if unavailable.
+async function initSearch() {
+  try {
+    var places = await google.maps.importLibrary("places");
+    var pac = new places.PlaceAutocompleteElement();
+    document.getElementById("searchbox").appendChild(pac);
+    pac.addEventListener("gmp-select", async function (e) {
+      try {
+        var place = e.placePrediction.toPlace();
+        await place.fetchFields({fields: ["displayName", "location", "formattedAddress"]});
+        addPlace(place.displayName || "Added place",
+                 place.formattedAddress || "", place.location.lat(), place.location.lng());
+      } catch (err) { /* ignore a single failed selection */ }
+    });
+  } catch (e) {
+    var sb = document.getElementById("searchbox");
+    if (sb) sb.style.display = "none";  // Places API not enabled -> no search box
+  }
+}
+
+// Add a user-chosen pin; it behaves like any collected pin (filterable + routed).
+function addPlace(name, area, lat, lng) {
+  var id = "added-" + (++ADDED_SEQ);
+  var p = {name: name, type: "added", area: area || "", why_loved: "Added by you",
+           source_urls: [], map_link: null, rating: null, lat: lat, lng: lng, added: true, id: id};
+  PLACES.push(p);
+  if (SELECTED["added"] === undefined) SELECTED["added"] = true;
+  PRESENT.add("added");
+  var marker = addMarker(p);
+  MAP.panTo({lat: lat, lng: lng});
+  if (MAP.getZoom() < 12) MAP.setZoom(13);
+  INFO.setContent(infoContent(p));
+  INFO.open(MAP, marker);
+  buildLegend(PRESENT);
+  rebuildRoute();
+}
+
+// Remove any pin (collected or user-added) via its popup's "remove" link.
+function removePlace(id) {
+  var cat = null;
+  for (var i = 0; i < PLACES.length; i++) {
+    if (PLACES[i].id === id) {
+      var p = PLACES[i];
+      cat = catFor(p.type);
+      if (p.__marker) p.__marker.setMap(null);
+      var arr = MARKERS_BY_CAT[cat] || [];
+      var mi = arr.indexOf(p.__marker);
+      if (mi >= 0) arr.splice(mi, 1);
+      PLACES.splice(i, 1);
+      break;
+    }
+  }
+  if (cat && !(MARKERS_BY_CAT[cat] || []).length) PRESENT.delete(cat);
+  INFO.close();
+  buildLegend(PRESENT);
+  rebuildRoute();
+}
+
+</script>
+<script async
+  src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBgffprU0aMHo1xfK6jBeC3bJUtkVfHejk&libraries=routes,places&callback=initMap">
+</script>
+</body>
+</html>

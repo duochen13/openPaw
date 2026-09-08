@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <name>Travel — Vancouver, BC</name>
+    <Style id="restaurant"><IconStyle><color>ff0000ff</color></IconStyle></Style>
+    <Style id="cafe"><IconStyle><color>ff00a5ff</color></IconStyle></Style>
+    <Style id="bar"><IconStyle><color>ff800080</color></IconStyle></Style>
+    <Style id="sight"><IconStyle><color>ff00ff00</color></IconStyle></Style>
+    <Style id="shop"><IconStyle><color>ffff0000</color></IconStyle></Style>
+    <Style id="other"><IconStyle><color>ff808080</color></IconStyle></Style>
+    <Placemark>
+      <name>Capilano Suspension Bridge</name>
+      <description>Swaying 70 meters above the river, surrounded by lush rainforest.
+Area: North Vancouver
+https://www.isango.com/theguidebook/15-must-see-and-do-attractions-in-vancouver-bc-in-2026/
+https://vancouverplanner.com/best-things-to-do-in-vancouver/
+https://joyceinthebay.com/travel/good-food-in-vancouver-canada/</description>
+      <styleUrl>#sight</styleUrl>
+      <Point><coordinates>-123.1160482,49.342704,0</coordinates></Point>
+    </Placemark>
+    <Placemark>
+      <name>Revolver</name>
+      <description>the Vancouver cafe that serious coffee people take their coffee-industry friends to
+Area: Gastown
+https://vancityguide.ca/best-of/vancouver-2026/coffee
+https://www.localspecialtycoffee.com/cities/good-coffee-shops-in-vancouver
+https://wheatlesswanderlust.com/best-coffee-shops-vancouver/</description>
+      <styleUrl>#cafe</styleUrl>
+      <Point><coordinates>-123.109459,49.2831716,0</coordinates></Point>
+    </Placemark>
+    <Placemark>
+      <name>Timbertrain Coffee Roasters</name>
+      <description>in-house roasting and some of the best-trained barista staff in the city — the coffee version of a destination restaurant
+Area: Gastown
+https://vancityguide.ca/best-of/vancouver-2026/coffee
+https://www.localspecialtycoffee.com/cities/good-coffee-shops-in-vancouver
+https://wheatlesswanderlust.com/best-coffee-shops-vancouver/</description>
+      <styleUrl>#cafe</styleUrl>
+      <Point><coordinates>-123.1094962,49.2839055,0</coordinates></Point>
+    </Placemark>
+    <Placemark>
+      <name>Published on Main</name>
+      <description>Chef Gus Stieffenhofer-Brandson's ever-changing menu turns B.C.'s best ingredients into playful, inventive dishes
+Area: Main Street
+https://www.timeout.com/vancouver/restaurants/best-restaurants-in-vancouver
+https://nomsmagazine.com/canadas-100-best-2026-bc-restaurants/</description>
+      <styleUrl>#restaurant</styleUrl>
+      <Point><coordinates>-123.1011732,49.2528469,0</coordinates></Point>
+    </Placemark>
+    <Placemark>
+      <name>Kissa Tanto</name>
+      <description>The signature charcoal udon is practically a Vancouver icon at this point
+Area: Chinatown
+https://www.timeout.com/vancouver/restaurants/best-restaurants-in-vancouver
+https://nomsmagazine.com/canadas-100-best-2026-bc-restaurants/</description>
+      <styleUrl>#restaurant</styleUrl>
+      <Point><coordinates>-123.0981769,49.2804783,0</coordinates></Point>
+    </Placemark>
+    <Placemark>
+      <name>Burdock &amp; Co.</name>
+      <description>Chef Andrea Carlson's cooking is elegant, vegetable-forward and deeply connected to the seasons
+https://www.timeout.com/vancouver/restaurants/best-restaurants-in-vancouver
+https://nomsmagazine.com/canadas-100-best-2026-bc-restaurants/</description>
+      <styleUrl>#restaurant</styleUrl>
+      <Point><coordinates>-123.1007601,49.2609848,0</coordinates></Point>
+    </Placemark>
+    <Placemark>
+      <name>AnnaLena</name>
+      <description>Chef Michael Robbins delivers tasting menus packed with surprise and delight
+Area: Kitsilano
+https://www.timeout.com/vancouver/restaurants/best-restaurants-in-vancouver
+https://nomsmagazine.com/canadas-100-best-2026-bc-restaurants/</description>
+      <styleUrl>#restaurant</styleUrl>
+      <Point><coordinates>-123.1467646,49.2708255,0</coordinates></Point>
+    </Placemark>
+    <Placemark>
+      <name>Elem</name>
+      <description>Tasting menu changes constantly but often highlights vegetables, fermentation and unexpected flavour
+https://www.timeout.com/vancouver/restaurants/best-restaurants-in-vancouver
+https://nomsmagazine.com/canadas-100-best-2026-bc-restaurants/</description>
+      <styleUrl>#restaurant</styleUrl>
+      <Point><coordinates>-123.1005431,49.266186,0</coordinates></Point>
+    </Placemark>
+    <Placemark>
+      <name>Stanley Park</name>
+      <description>This is the mother of all Vancouver parks.
+Area: Downtown
+https://vancouverplanner.com/best-things-to-do-in-vancouver/
+https://www.isango.com/theguidebook/15-must-see-and-do-attractions-in-vancouver-bc-in-2026/</description>
+      <styleUrl>#sight</styleUrl>
+      <Point><coordinates>-123.136622,49.2945696,0</coordinates></Point>
+    </Placemark>
+    <Placemark>
+      <name>Granville Island</name>
+      <description>Home to local artists and their art galleries. It's also home to street performers
+Area: False Creek
+https://vancouverplanner.com/best-things-to-do-in-vancouver/
+https://www.isango.com/theguidebook/15-must-see-and-do-attractions-in-vancouver-bc-in-2026/</description>
+      <styleUrl>#sight</styleUrl>
+      <Point><coordinates>-123.136246,49.2695368,0</coordinates></Point>
+    </Placemark>
+    <Placemark>
+      <name>Grouse Mountain</name>
+      <description>From the epic Grouse Grind hike and zip lining in Vancouver in summer to skiing
+Area: North Vancouver
+https://vancouverplanner.com/best-things-to-do-in-vancouver/
+https://www.isango.com/theguidebook/15-must-see-and-do-attractions-in-vancouver-bc-in-2026/</description>
+      <styleUrl>#sight</styleUrl>
+      <Point><coordinates>-123.0767805,49.3794719,0</coordinates></Point>
+    </Placemark>
+    <Placemark>
+      <name>VanDusen Botanical Garden</name>
+      <description>22-hectare public garden, maintained by over 1200 volunteers, displays plant
+Area: Shaughnessy
+https://vancouverplanner.com/best-things-to-do-in-vancouver/
+https://www.isango.com/theguidebook/15-must-see-and-do-attractions-in-vancouver-bc-in-2026/</description>
+      <styleUrl>#sight</styleUrl>
+      <Point><coordinates>-123.1325932,49.2396191,0</coordinates></Point>
+    </Placemark>
+    <Placemark>
+      <name>Vancouver Art Gallery</name>
+      <description>The largest art gallery in Western Canada hosts a permanent collection of about
+Area: Downtown
+https://vancouverplanner.com/best-things-to-do-in-vancouver/
+https://www.isango.com/theguidebook/15-must-see-and-do-attractions-in-vancouver-bc-in-2026/</description>
+      <styleUrl>#sight</styleUrl>
+      <Point><coordinates>-123.1206248,49.2828495,0</coordinates></Point>
+    </Placemark>
+    <Placemark>
+      <name>Kitsilano Beach</name>
+      <description>To hang with the beautiful people and check out Canada's longest swimming pool
+Area: Kitsilano
+https://vancouverplanner.com/best-things-to-do-in-vancouver/
+https://www.isango.com/theguidebook/15-must-see-and-do-attractions-in-vancouver-bc-in-2026/</description>
+      <styleUrl>#sight</styleUrl>
+      <Point><coordinates>-123.1537326,49.2756531,0</coordinates></Point>
+    </Placemark>
+    <Placemark>
+      <name>Science World</name>
+      <description>An iconic Vancouver building: a geodesic sphere at the edge of False Creek
+Area: False Creek
+https://vancouverplanner.com/best-things-to-do-in-vancouver/
+https://www.isango.com/theguidebook/15-must-see-and-do-attractions-in-vancouver-bc-in-2026/</description>
+      <styleUrl>#sight</styleUrl>
+      <Point><coordinates>-123.1043893,49.2720848,0</coordinates></Point>
+    </Placemark>
+    <Placemark>
+      <name>Gastown Steam Clock</name>
+      <description>One of the only functioning steam clocks in the world. It was built in 1977
+Area: Gastown
+https://vancouverplanner.com/best-things-to-do-in-vancouver/
+https://www.isango.com/theguidebook/15-must-see-and-do-attractions-in-vancouver-bc-in-2026/</description>
+      <styleUrl>#sight</styleUrl>
+      <Point><coordinates>-123.10889,49.2843841,0</coordinates></Point>
+    </Placemark>
+    <Placemark>
+      <name>49th Parallel Cafe</name>
+      <description>Vancouver's reference-standard specialty coffee — 49th Parallel roasts for half the serious cafes in the city
+Area: Mount Pleasant
+https://vancityguide.ca/best-of/vancouver-2026/coffee
+https://www.localspecialtycoffee.com/cities/good-coffee-shops-in-vancouver</description>
+      <styleUrl>#cafe</styleUrl>
+      <Point><coordinates>-123.1007987,49.2591437,0</coordinates></Point>
+    </Placemark>
+    <Placemark>
+      <name>L'Abattoir</name>
+      <description>Refined West Coast ingredients meet French technique in dishes layered with texture and flavour
+Area: Gastown
+https://www.timeout.com/vancouver/restaurants/best-restaurants-in-vancouver</description>
+      <styleUrl>#restaurant</styleUrl>
+      <Point><coordinates>-123.1044629,49.2831177,0</coordinates></Point>
+    </Placemark>
+    <Placemark>
+      <name>Masayoshi</name>
+      <description>Chef Masayoshi Baba serves pristine nigiri, sashimi and seasonal omakase courses with remarkable precision
+https://www.timeout.com/vancouver/restaurants/best-restaurants-in-vancouver</description>
+      <styleUrl>#restaurant</styleUrl>
+      <Point><coordinates>-123.0900087,49.2458146,0</coordinates></Point>
+    </Placemark>
+    <Placemark>
+      <name>Savio Volpe</name>
+      <description>Menu is packed with wood-fired meats, handmade pasta and vegetables treated with surprising care
+https://www.timeout.com/vancouver/restaurants/best-restaurants-in-vancouver</description>
+      <styleUrl>#restaurant</styleUrl>
+      <Point><coordinates>-123.0909467,49.2574553,0</coordinates></Point>
+    </Placemark>
+    <Placemark>
+      <name>Sushi Hill</name>
+      <description>Meticulous omakase experience with impeccably sourced seafood, beautifully seasoned rice
+https://www.timeout.com/vancouver/restaurants/best-restaurants-in-vancouver</description>
+      <styleUrl>#restaurant</styleUrl>
+      <Point><coordinates>-123.090544,49.2262041,0</coordinates></Point>
+    </Placemark>
+    <Placemark>
+      <name>Barbara</name>
+      <description>Champions local ingredients, fermentation and open-fire cooking, transforming humble produce into deeply complex
+https://www.timeout.com/vancouver/restaurants/best-restaurants-in-vancouver</description>
+      <styleUrl>#restaurant</styleUrl>
+      <Point><coordinates>-123.0969849,49.2804688,0</coordinates></Point>
+    </Placemark>
+    <Placemark>
+      <name>Mackenzie Room</name>
+      <description>The menu bounces effortlessly between global influences, combining bold spices, local ingredients
+https://www.timeout.com/vancouver/restaurants/best-restaurants-in-vancouver</description>
+      <styleUrl>#restaurant</styleUrl>
+      <Point><coordinates>-123.0949154,49.2831953,0</coordinates></Point>
+    </Placemark>
+    <Placemark>
+      <name>Baan Lao</name>
+      <description>one of the highest-ranked Thai restaurants in the country
+Area: Steveston
+https://nomsmagazine.com/canadas-100-best-2026-bc-restaurants/</description>
+      <styleUrl>#restaurant</styleUrl>
+      <Point><coordinates>-123.1785466,49.1230377,0</coordinates></Point>
+    </Placemark>
+    <Placemark>
+      <name>OEB Breakfast Co.</name>
+      <description>比利時鬆餅奶香奶香的，口感外酥內嫩
+Area: Yaletown
+https://joyceinthebay.com/travel/good-food-in-vancouver-canada/</description>
+      <styleUrl>#restaurant</styleUrl>
+      <Point><coordinates>-123.119191,49.2734675,0</coordinates></Point>
+    </Placemark>
+  </Document>
+</kml>
