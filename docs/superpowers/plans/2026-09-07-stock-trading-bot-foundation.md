@@ -115,8 +115,39 @@ knowing about because the same mistake is easy to repeat in later layers.**
 - The accessors keep the predicate in their SQL too, so SQLite can use the `known_at`
   indexes instead of filtering everything in Python.
 
-**When you add an accessor to `PointInTimeView`, you get the guarantee for free.** Do not
-add a method that reaches around `_query`.
+**Round 3** found two more, one of them destructive:
+
+3. `mode=ro` is a per-file open flag on `main` and says nothing about databases attached
+   afterward. `PRAGMA query_only = OFF` then `ATTACH DATABASE '<same file>' AS w` then
+   `DELETE FROM w.price_bar` emptied the store. Closed with
+   `setlimit(SQLITE_LIMIT_ATTACHED, 0)`.
+4. The Python re-check trusted whatever column was *named* `known_at`, and the caller
+   chooses that name. The dangerous case is not hostile:
+   `SELECT close, COALESCE(known_at, '1970-...') AS known_at FROM price_bar` leaks the
+   NULL-vintage row, and "treat missing vintage as ancient" is an ordinary thing to
+   write. Closed by validating the result's column set against the table's declared
+   columns, and by moving the connection into a closure so `view._conn` no longer exists.
+
+Round 3 also changed the *goal*, which matters more than any single fix.
+
+**The containment goal is no longer "a leak is impossible."** That is unachievable inside
+one process, and claiming it produced exactly the false confidence that let rounds 1 and 2
+survive. A caller who lists every column in the correct order while aliasing `known_at`,
+or who `UNION`s a fabricated row, still gets through. Both were confirmed and are accepted
+consciously.
+
+**The goal is that the accidental path disappears:** a good-faith developer cannot leak by
+writing ordinary-looking code. The class docstring states this honestly. Keep it that way -
+an overclaiming docstring here is worse than none.
+
+Other fixes in round 3: `fundamental_fact`'s primary key omitted `observed_at` and `unit`,
+so re-fetching a filing raised `IntegrityError` and the append-only restatement mechanism
+did not work for fundamentals at all; `valid_from` had no CHECK; a `bytes` `known_at`
+passed the CHECK and then vanished silently on read (now raises); `corporate_actions` and
+`fundamental_facts` had no tests.
+
+**When you add an accessor to `PointInTimeView`, you get the guarantee for free by routing
+through `_rows`.** Do not add a method that reaches around it.
 
 **Verify before starting Task 6:**
 
@@ -125,7 +156,7 @@ cd /Users/duochen/Desktop/career/openPaw/stock-trading-bot
 .venv/bin/pytest -q && .venv/bin/ruff check . && .venv/bin/mypy
 ```
 
-Expected: 69 passed, ruff clean, mypy clean.
+Expected: 78 passed, ruff clean, mypy clean.
 
 ---
 
@@ -1371,7 +1402,7 @@ Run manifests record the config hash, data vintages consumed, and cache hit rate
 - [ ] **Step 6: Run the full suite**
 
 Run: `cd /Users/duochen/Desktop/career/openPaw/stock-trading-bot && .venv/bin/pytest -v`
-Expected: PASS, 110 passed (69 from Tasks 1-5 + 10 live-profile + 4 freshness + 6 stooq
+Expected: PASS, 119 passed (78 from Tasks 1-5 + 10 live-profile + 4 freshness + 6 stooq
 + 5 corporate actions + 5 edgar + 2 import graph + 6 config + 3 cli).
 Also run `.venv/bin/ruff check .` and `.venv/bin/mypy`; both must be clean.
 
@@ -1399,7 +1430,7 @@ git commit -m "feat(stock-trading-bot): CLI ingest command and README"
 
 ## Definition of done
 
-- [ ] `.venv/bin/pytest` passes with 110 tests.
+- [ ] `.venv/bin/pytest` passes with 119 tests.
 - [ ] `.venv/bin/ruff check .` and `.venv/bin/mypy` are both clean.
 - [ ] `stock-trading ingest NVDA` writes bars, and a second run writes zero.
 - [ ] The import-graph test has been shown to fail on a deliberate violation.
