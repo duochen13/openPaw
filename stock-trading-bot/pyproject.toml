@@ -27,5 +27,10 @@ packages = ["src/stock_trading_bot"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# Import the package from src/ directly rather than via the editable-install
+# .pth file. uv writes that .pth with the macOS UF_HIDDEN flag set, and
+# CPython's site.py skips hidden .pth files, so an editable install can be
+# present and silently unimportable. This makes the test suite independent of it.
+pythonpath = ["src"]
 markers = ["unit: fast test with no network access"]
 addopts = "-q"

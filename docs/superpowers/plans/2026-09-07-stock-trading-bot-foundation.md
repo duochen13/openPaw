@@ -93,6 +93,9 @@ packages = ["src/stock_trading_bot"]
 testpaths = ["tests"]
 markers = ["unit: fast test with no network access"]
 addopts = "-q"
+# Import the package from src/ directly rather than via the editable-install
+# .pth file. See the environment note under Task 1 Step 5.
+pythonpath = ["src"]
 ```
 
 - [ ] **Step 3: Write `.gitignore`**
@@ -131,6 +134,25 @@ uv pip install -e ".[dev]"
 ```
 
 Expected: installs without error. Do NOT use `pip` directly — it is broken on this machine's Homebrew Python 3.14.
+
+**Known gotcha on this machine.** `uv` writes the editable-install file
+`.venv/lib/python3.13/site-packages/_editable_impl_stock_trading_bot.pth` with the macOS
+`UF_HIDDEN` flag set, and CPython's `site.py` skips hidden `.pth` files.
+The result is a package that is installed and silently unimportable, which presents as
+`ModuleNotFoundError` immediately after a successful install.
+`chflags nohidden` clears it, but `uv` re-applies the flag whenever it rewrites the file,
+so that is a ritual rather than a fix.
+
+The `pythonpath = ["src"]` setting in `[tool.pytest.ini_options]` is the actual fix: it makes
+the test suite import from `src/` directly and not depend on the `.pth` at all.
+Verify this holds by deliberately re-hiding the file and confirming the suite still passes:
+
+```bash
+chflags hidden .venv/lib/python3.13/site-packages/_editable_impl_stock_trading_bot.pth
+.venv/bin/pytest -q
+```
+
+Expected: passes. If it does not, `pythonpath` is missing from `pyproject.toml`.
 
 - [ ] **Step 6: Run the test**
 
@@ -1944,6 +1966,10 @@ def main(argv: list[str] | None = None) -> int:
         parser.print_usage()
         return 2
     return args.func(args)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
 ```
 
 - [ ] **Step 4: Run test to verify it passes**
@@ -1977,8 +2003,14 @@ uv pip install -e ".[dev]"
 ## Usage
 
 ```bash
-.venv/bin/stock-trading ingest NVDA
+PYTHONPATH=src .venv/bin/python -m stock_trading_bot.cli ingest NVDA
 ```
+
+The `stock-trading` console script also exists, but on this machine `uv` writes the
+editable-install `.pth` file with the macOS `UF_HIDDEN` flag, which CPython's `site.py`
+skips — so the package can be installed and silently unimportable. Running the module
+with `PYTHONPATH=src` sidesteps that entirely. The test suite is already immune via
+`pythonpath = ["src"]` in `pyproject.toml`.
 
 ## What this foundation guarantees
 
@@ -2024,8 +2056,12 @@ Expected: PASS, 71 passed (1 scaffold + 14 naming + 4 timestamps + 4 schema + 8 
 
 - [ ] **Step 7: Verify the CLI works end to end against the live network**
 
+The generated `.venv/bin/stock-trading` console script imports the package through the
+editable-install `.pth`, which is subject to the `UF_HIDDEN` problem described in Task 1.
+Invoke the module directly instead:
+
 ```bash
-.venv/bin/stock-trading ingest NVDA
+PYTHONPATH=src .venv/bin/python -m stock_trading_bot.cli ingest NVDA
 ```
 
 Expected: `NVDA: N bar(s) written, 0 already present` with N > 1000.
