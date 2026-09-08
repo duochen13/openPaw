@@ -35,373 +35,54 @@ Each file has one responsibility. `store.py` is the only module with invariants 
 
 ---
 
-### Task 1: Project scaffold
+### Tasks 1-3: COMPLETE
 
-**Files:**
-- Create: `stock-trading-bot/pyproject.toml`
-- Create: `stock-trading-bot/src/stock_trading_bot/__init__.py`
-- Create: `stock-trading-bot/src/stock_trading_bot/ingest/__init__.py`
-- Create: `stock-trading-bot/tests/__init__.py`
-- Create: `stock-trading-bot/tests/test_scaffold.py`
-- Create: `stock-trading-bot/.gitignore`
+Landed in `c2341f2`, `106c4b3`, `5258f32`, `d52d4eb`, and the code-review fix commit.
+Do not re-run them. Read the committed code rather than the original task text, which
+these amendments supersede.
 
-- [ ] **Step 1: Create directories**
+**Divergences from the original tasks, all from the Batch A code review:**
 
-```bash
-cd /Users/duochen/Desktop/career/openPaw
-mkdir -p stock-trading-bot/src/stock_trading_bot/ingest
-mkdir -p stock-trading-bot/tests
-mkdir -p stock-trading-bot/config
-mkdir -p stock-trading-bot/data/{raw,db,cache}
-mkdir -p stock-trading-bot/reports
-touch stock-trading-bot/src/stock_trading_bot/__init__.py
-touch stock-trading-bot/src/stock_trading_bot/ingest/__init__.py
-touch stock-trading-bot/tests/__init__.py
-```
+1. `parse_iso` now raises on naive input. `datetime.fromisoformat` accepts an offset-less
+   string and `.astimezone()` then assumes system local time, so the stored instant
+   depended on which machine read it - and east of UTC that moved `known_at` earlier,
+   which is the leak direction.
+2. `to_iso` emits **microseconds**, not seconds: `2026-09-07T20:15:00.000000+00:00`.
+   Second-truncation was lossy and rounded `known_at` earlier.
+   **This changes every timestamp literal in the tasks below.** The canonical form is
+   fixed-width UTC with microseconds, and nothing else may be written to a timestamp
+   column.
+3. `known_at_for` rejects a negative latency budget.
+4. `safe_ticker_component` validates before uppercasing. `str.upper()` maps some
+   non-ASCII into ASCII, so `snow` and its long-s spelling collapsed to one cache key.
+   It also now rejects a leading or trailing `.`/`-` and uses `fullmatch`.
+5. Dependencies trimmed to `requests` and `pyyaml`. numpy, pandas, scikit-learn and
+   pydantic return with the layers that import them.
+6. `ruff` and `mypy --strict` added and passing. Keep them passing.
+7. `pythonpath = ["src"]` in the pytest config, so the suite does not depend on the
+   editable-install `.pth` file. See the `UF_HIDDEN` note below.
 
-- [ ] **Step 2: Write `pyproject.toml`**
+**Never build a timestamp by string concatenation.** A hand-written
+`...T20:00:00` followed by `+00:00` is the same instant as the canonical
+`...T20:00:00.000000+00:00`, but it sorts *before* it, because `+` (0x2B) precedes
+`.` (0x2E). Mixed spellings in one column
+silently break the ordering the point-in-time gateway depends on. Always route through
+`timestamps.to_iso`.
 
-```toml
-[project]
-name = "stock-trading-bot"
-version = "0.1.0"
-description = "Point-in-time equity research and signal evaluation. Reports and paper evaluation only."
-requires-python = ">=3.13"
-dependencies = [
-    "requests>=2.32",
-    "pydantic>=2.9",
-    "pyyaml>=6.0",
-    "numpy>=2.0",
-    "pandas>=2.2",
-    "scikit-learn>=1.5",
-]
+**Environment note.** `uv` writes
+`.venv/lib/python3.13/site-packages/_editable_impl_stock_trading_bot.pth` with the macOS
+`UF_HIDDEN` flag, and CPython's `site.py` skips hidden `.pth` files, so the package can be
+installed and silently unimportable. `pythonpath = ["src"]` makes the test suite immune.
+For the CLI, use `PYTHONPATH=src .venv/bin/python -m stock_trading_bot.cli`.
 
-[project.optional-dependencies]
-dev = ["pytest>=8.0"]
-
-[project.scripts]
-stock-trading = "stock_trading_bot.cli:main"
-
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
-[tool.hatch.build.targets.wheel]
-packages = ["src/stock_trading_bot"]
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-markers = ["unit: fast test with no network access"]
-addopts = "-q"
-# Import the package from src/ directly rather than via the editable-install
-# .pth file. See the environment note under Task 1 Step 5.
-pythonpath = ["src"]
-```
-
-- [ ] **Step 3: Write `.gitignore`**
-
-```
-data/db/
-data/cache/
-data/raw/
-reports/
-.venv/
-__pycache__/
-*.pyc
-```
-
-- [ ] **Step 4: Write the scaffold test**
-
-Create `stock-trading-bot/tests/test_scaffold.py`:
-
-```python
-import pytest
-
-
-@pytest.mark.unit
-def test_package_imports():
-    import stock_trading_bot
-
-    assert stock_trading_bot is not None
-```
-
-- [ ] **Step 5: Create the venv and install**
+**Verify before starting Task 4:**
 
 ```bash
 cd /Users/duochen/Desktop/career/openPaw/stock-trading-bot
-uv venv -p 3.13
-uv pip install -e ".[dev]"
+.venv/bin/pytest -q && .venv/bin/ruff check . && .venv/bin/mypy
 ```
 
-Expected: installs without error. Do NOT use `pip` directly — it is broken on this machine's Homebrew Python 3.14.
-
-**Known gotcha on this machine.** `uv` writes the editable-install file
-`.venv/lib/python3.13/site-packages/_editable_impl_stock_trading_bot.pth` with the macOS
-`UF_HIDDEN` flag set, and CPython's `site.py` skips hidden `.pth` files.
-The result is a package that is installed and silently unimportable, which presents as
-`ModuleNotFoundError` immediately after a successful install.
-`chflags nohidden` clears it, but `uv` re-applies the flag whenever it rewrites the file,
-so that is a ritual rather than a fix.
-
-The `pythonpath = ["src"]` setting in `[tool.pytest.ini_options]` is the actual fix: it makes
-the test suite import from `src/` directly and not depend on the `.pth` at all.
-Verify this holds by deliberately re-hiding the file and confirming the suite still passes:
-
-```bash
-chflags hidden .venv/lib/python3.13/site-packages/_editable_impl_stock_trading_bot.pth
-.venv/bin/pytest -q
-```
-
-Expected: passes. If it does not, `pythonpath` is missing from `pyproject.toml`.
-
-- [ ] **Step 6: Run the test**
-
-Run: `cd /Users/duochen/Desktop/career/openPaw/stock-trading-bot && .venv/bin/pytest tests/test_scaffold.py -v`
-Expected: PASS, 1 passed
-
-- [ ] **Step 7: Commit**
-
-```bash
-cd /Users/duochen/Desktop/career/openPaw
-git add stock-trading-bot/pyproject.toml stock-trading-bot/.gitignore stock-trading-bot/src stock-trading-bot/tests
-git commit -m "feat(stock-trading-bot): package scaffold with uv and pytest"
-```
-
----
-
-### Task 2: `safe_ticker_component`
-
-Tickers flow into filesystem paths and cache keys. This blocks traversal before it starts.
-
-**Files:**
-- Create: `stock-trading-bot/src/stock_trading_bot/naming.py`
-- Test: `stock-trading-bot/tests/test_naming.py`
-
-- [ ] **Step 1: Write the failing test**
-
-Create `stock-trading-bot/tests/test_naming.py`:
-
-```python
-import pytest
-
-from stock_trading_bot.naming import safe_ticker_component
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize("raw,expected", [
-    ("nvda", "NVDA"),
-    ("NOW", "NOW"),
-    ("BRK.B", "BRK.B"),
-    ("0700.HK", "0700.HK"),
-    ("  aapl  ", "AAPL"),
-])
-def test_valid_tickers_are_normalized(raw, expected):
-    assert safe_ticker_component(raw) == expected
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize("hostile", [
-    "../../etc/passwd",
-    "..",
-    "a/b",
-    "a\\b",
-    "NVDA;rm -rf /",
-    "NVDA\x00",
-    "",
-    "   ",
-    "A" * 13,
-])
-def test_hostile_tickers_are_rejected(hostile):
-    with pytest.raises(ValueError):
-        safe_ticker_component(hostile)
-```
-
-- [ ] **Step 2: Run test to verify it fails**
-
-Run: `.venv/bin/pytest tests/test_naming.py -v`
-Expected: FAIL with `ModuleNotFoundError: No module named 'stock_trading_bot.naming'`
-
-- [ ] **Step 3: Write the implementation**
-
-Create `stock-trading-bot/src/stock_trading_bot/naming.py`:
-
-```python
-"""Ticker sanitization.
-
-Tickers reach filesystem paths (data/raw/{ticker}_*.json) and cache keys, so an
-unsanitized symbol is a path-traversal vector. Every ticker crossing an I/O
-boundary passes through here first.
-"""
-from __future__ import annotations
-
-import re
-
-_ALLOWED = re.compile(r"^[A-Z0-9][A-Z0-9.\-]{0,11}$")
-
-
-def safe_ticker_component(raw: str) -> str:
-    """Normalize a ticker to uppercase and reject anything path-unsafe.
-
-    Raises ValueError rather than sanitizing silently: a ticker we cannot
-    recognize is a bug upstream, not something to paper over.
-    """
-    if not isinstance(raw, str):
-        raise ValueError(f"ticker must be a string, got {type(raw).__name__}")
-    candidate = raw.strip().upper()
-    if ".." in candidate:
-        raise ValueError(f"unsafe ticker component: {raw!r}")
-    if not _ALLOWED.match(candidate):
-        raise ValueError(f"unsafe ticker component: {raw!r}")
-    return candidate
-```
-
-- [ ] **Step 4: Run test to verify it passes**
-
-Run: `.venv/bin/pytest tests/test_naming.py -v`
-Expected: PASS, 14 passed
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add stock-trading-bot/src/stock_trading_bot/naming.py stock-trading-bot/tests/test_naming.py
-git commit -m "feat(stock-trading-bot): safe_ticker_component blocks path traversal"
-```
-
----
-
-### Task 3: Latency budget and `known_at`
-
-**Files:**
-- Create: `stock-trading-bot/src/stock_trading_bot/timestamps.py`
-- Create: `stock-trading-bot/config/run.yaml`
-- Test: `stock-trading-bot/tests/test_timestamps.py`
-
-- [ ] **Step 1: Write `config/run.yaml`**
-
-```yaml
-# Latency budget in seconds from observation to usability, per source.
-# Deliberately pessimistic: covers collection, parsing, extraction, validation.
-# A signal is never available at event_time.
-latency_budget_seconds:
-  stooq: 900
-  yahoo: 900
-  edgar: 1800
-  hackernews: 3600
-  reddit: 3600
-  llm_extraction: 7200
-
-paths:
-  db: data/db/panel.sqlite
-  cache: data/cache
-  raw: data/raw
-  reports: reports
-```
-
-- [ ] **Step 2: Write the failing test**
-
-Create `stock-trading-bot/tests/test_timestamps.py`:
-
-```python
-from datetime import datetime, timezone
-
-import pytest
-
-from stock_trading_bot.timestamps import known_at_for, parse_iso, to_iso
-
-
-@pytest.mark.unit
-def test_known_at_adds_the_source_latency_budget():
-    observed = datetime(2026, 9, 7, 20, 0, 0, tzinfo=timezone.utc)
-    budget = {"stooq": 900}
-    assert known_at_for(observed, "stooq", budget) == datetime(
-        2026, 9, 7, 20, 15, 0, tzinfo=timezone.utc
-    )
-
-
-@pytest.mark.unit
-def test_unknown_source_is_an_error_not_a_zero_default():
-    """A missing budget must not silently mean 'instantly available'."""
-    observed = datetime(2026, 9, 7, 20, 0, 0, tzinfo=timezone.utc)
-    with pytest.raises(KeyError):
-        known_at_for(observed, "mystery_vendor", {"stooq": 900})
-
-
-@pytest.mark.unit
-def test_naive_datetimes_are_rejected():
-    with pytest.raises(ValueError):
-        known_at_for(datetime(2026, 9, 7, 20, 0, 0), "stooq", {"stooq": 900})
-
-
-@pytest.mark.unit
-def test_iso_round_trip_preserves_utc():
-    dt = datetime(2026, 9, 7, 20, 15, 0, tzinfo=timezone.utc)
-    assert parse_iso(to_iso(dt)) == dt
-```
-
-- [ ] **Step 3: Run test to verify it fails**
-
-Run: `.venv/bin/pytest tests/test_timestamps.py -v`
-Expected: FAIL with `ModuleNotFoundError: No module named 'stock_trading_bot.timestamps'`
-
-- [ ] **Step 4: Write the implementation**
-
-Create `stock-trading-bot/src/stock_trading_bot/timestamps.py`:
-
-```python
-"""Timestamp handling for the point-in-time store.
-
-Every fact carries four timestamps (spec §5.1). This module owns the one
-derived from the others: known_at = observed_at + the source's latency budget.
-
-Two deliberate refusals live here:
-  - An unknown source raises rather than defaulting to zero latency, because a
-    zero default silently claims a signal was available the instant it existed.
-  - A naive datetime raises, because a timezone-less comparison against a UTC
-    known_at is a leak waiting to happen.
-"""
-from __future__ import annotations
-
-from datetime import datetime, timedelta, timezone
-from typing import Mapping
-
-
-def known_at_for(
-    observed_at: datetime, source: str, latency_budget_seconds: Mapping[str, int]
-) -> datetime:
-    """Return when a fact observed at `observed_at` from `source` becomes usable."""
-    if observed_at.tzinfo is None:
-        raise ValueError("observed_at must be timezone-aware")
-    if source not in latency_budget_seconds:
-        raise KeyError(
-            f"no latency budget configured for source {source!r}; "
-            "add one to config/run.yaml rather than assuming zero"
-        )
-    return observed_at + timedelta(seconds=latency_budget_seconds[source])
-
-
-def to_iso(dt: datetime) -> str:
-    """Serialize to a UTC ISO-8601 string that sorts lexicographically."""
-    if dt.tzinfo is None:
-        raise ValueError("refusing to serialize a naive datetime")
-    return dt.astimezone(timezone.utc).isoformat(timespec="seconds")
-
-
-def parse_iso(text: str) -> datetime:
-    """Parse an ISO-8601 string back to an aware UTC datetime."""
-    return datetime.fromisoformat(text).astimezone(timezone.utc)
-```
-
-- [ ] **Step 5: Run test to verify it passes**
-
-Run: `.venv/bin/pytest tests/test_timestamps.py -v`
-Expected: PASS, 4 passed
-
-- [ ] **Step 6: Commit**
-
-```bash
-git add stock-trading-bot/src/stock_trading_bot/timestamps.py stock-trading-bot/config/run.yaml stock-trading-bot/tests/test_timestamps.py
-git commit -m "feat(stock-trading-bot): latency budget and known_at derivation"
-```
+Expected: 49 passed, ruff clean, mypy clean.
 
 ---
 
@@ -448,9 +129,9 @@ def test_price_bar_rejects_a_duplicate_observation(tmp_path):
     row = dict(
         ticker="NVDA",
         session_date="2026-09-04",
-        event_time="2026-09-04T20:00:00+00:00",
-        observed_at="2026-09-04T20:05:00+00:00",
-        known_at="2026-09-04T20:20:00+00:00",
+        event_time="2026-09-04T20:00:00.000000+00:00",
+        observed_at="2026-09-04T20:05:00.000000+00:00",
+        known_at="2026-09-04T20:20:00.000000+00:00",
         open=100.0, high=105.0, low=99.0, close=104.0, volume=1000.0,
         source="stooq",
     )
@@ -460,22 +141,44 @@ def test_price_bar_rejects_a_duplicate_observation(tmp_path):
 
 
 @pytest.mark.unit
+@pytest.mark.parametrize("bad_ts", [
+    "2026-09-04T20:20:00+00:00",           # seconds only, no microseconds
+    "2026-09-04T13:20:00.000000-07:00",    # correct instant, non-UTC offset
+    "2026-09-04T20:20:00.000000Z",         # Z instead of +00:00
+    "2026-09-04",                          # date only
+])
+def test_a_noncanonical_timestamp_is_rejected_by_the_database(tmp_path, bad_ts):
+    """Lexicographic ordering must be a property of the column, not of the
+    writer. A non-canonical string is the same instant but sorts differently."""
+    store = Store.open(tmp_path / "panel.sqlite")
+    with pytest.raises(sqlite3.IntegrityError):
+        store.insert_price_bar(
+            ticker="NVDA", session_date="2026-09-04",
+            event_time="2026-09-04T20:00:00.000000+00:00",
+            observed_at="2026-09-04T20:05:00.000000+00:00",
+            known_at=bad_ts,
+            open=100.0, high=105.0, low=99.0, close=104.0, volume=1000.0,
+            source="stooq",
+        )
+
+
+@pytest.mark.unit
 def test_a_restatement_appends_rather_than_overwriting(tmp_path):
     """Append-only: a corrected value is a new row with a later known_at."""
     store = Store.open(tmp_path / "panel.sqlite")
     common = dict(
         ticker="NVDA", session_date="2026-09-04",
-        event_time="2026-09-04T20:00:00+00:00",
+        event_time="2026-09-04T20:00:00.000000+00:00",
         open=100.0, high=105.0, low=99.0, close=104.0, volume=1000.0,
         source="stooq",
     )
     store.insert_price_bar(
-        observed_at="2026-09-04T20:05:00+00:00",
-        known_at="2026-09-04T20:20:00+00:00", **common
+        observed_at="2026-09-04T20:05:00.000000+00:00",
+        known_at="2026-09-04T20:20:00.000000+00:00", **common
     )
     store.insert_price_bar(
-        observed_at="2026-09-05T09:00:00+00:00",
-        known_at="2026-09-05T09:15:00+00:00", **{**common, "close": 104.5}
+        observed_at="2026-09-05T09:00:00.000000+00:00",
+        known_at="2026-09-05T09:15:00.000000+00:00", **{**common, "close": 104.5}
     )
     count = store._conn.execute(
         "SELECT COUNT(*) FROM price_bar WHERE ticker='NVDA'"
@@ -509,13 +212,30 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 
-_SCHEMA = """
+#: The canonical shape produced by timestamps.to_iso: fixed-width UTC with
+#: microseconds. Enforced at the database boundary so that lexicographic
+#: comparison always equals chronological comparison - making that a property
+#: of the COLUMN, not merely of whoever happened to write the row. Without it,
+#: one hand-built string entering by another route (a fixture, a migration, a
+#: notebook INSERT) silently breaks ordering with no error anywhere.
+_CANONICAL_TS = (
+    "[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T"
+    "[0-9][0-9]:[0-9][0-9]:[0-9][0-9].[0-9][0-9][0-9][0-9][0-9][0-9]+00:00"
+)
+
+
+def _ts_check(column: str) -> str:
+    """A CHECK clause pinning `column` to the canonical timestamp shape."""
+    return f"CHECK ({column} IS NULL OR {column} GLOB '{_CANONICAL_TS}')"
+
+
+_SCHEMA = f"""
 CREATE TABLE IF NOT EXISTS price_bar (
     ticker       TEXT NOT NULL,
     session_date TEXT NOT NULL,
-    event_time   TEXT NOT NULL,
-    observed_at  TEXT NOT NULL,
-    known_at     TEXT,
+    event_time   TEXT NOT NULL {_ts_check('event_time')},
+    observed_at  TEXT NOT NULL {_ts_check('observed_at')},
+    known_at     TEXT          {_ts_check('known_at')},
     open         REAL NOT NULL,
     high         REAL NOT NULL,
     low          REAL NOT NULL,
@@ -531,9 +251,9 @@ CREATE TABLE IF NOT EXISTS corporate_action (
     action_type    TEXT NOT NULL CHECK (action_type IN ('split', 'dividend')),
     ratio          REAL,
     amount         REAL,
-    event_time     TEXT NOT NULL,
-    observed_at    TEXT NOT NULL,
-    known_at       TEXT,
+    event_time     TEXT NOT NULL {_ts_check('event_time')},
+    observed_at    TEXT NOT NULL {_ts_check('observed_at')},
+    known_at       TEXT          {_ts_check('known_at')},
     source         TEXT NOT NULL,
     PRIMARY KEY (ticker, effective_date, action_type, observed_at)
 );
@@ -545,9 +265,9 @@ CREATE TABLE IF NOT EXISTS fundamental_fact (
     fiscal_period TEXT NOT NULL,
     value         REAL NOT NULL,
     accession     TEXT NOT NULL,
-    event_time    TEXT NOT NULL,
-    observed_at   TEXT NOT NULL,
-    known_at      TEXT,
+    event_time    TEXT NOT NULL {_ts_check('event_time')},
+    observed_at   TEXT NOT NULL {_ts_check('observed_at')},
+    known_at      TEXT          {_ts_check('known_at')},
     valid_from    TEXT,
     source        TEXT NOT NULL,
     PRIMARY KEY (ticker, concept, fiscal_period, accession)
@@ -598,7 +318,7 @@ class Store:
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `.venv/bin/pytest tests/test_store_schema.py -v`
-Expected: PASS, 4 passed
+Expected: PASS, 8 passed
 
 - [ ] **Step 5: Commit**
 
@@ -635,8 +355,8 @@ def _bar(store, session_date, known_at, close=100.0):
     store.insert_price_bar(
         ticker="NVDA",
         session_date=session_date,
-        event_time=f"{session_date}T20:00:00+00:00",
-        observed_at=f"{session_date}T20:05:00+00:00",
+        event_time=f"{session_date}T20:00:00.000000+00:00",
+        observed_at=f"{session_date}T20:05:00.000000+00:00",
         known_at=known_at,
         open=99.0, high=101.0, low=98.0, close=close, volume=1000.0,
         source="stooq",
@@ -650,14 +370,14 @@ def store(tmp_path):
 
 @pytest.mark.unit
 def test_view_returns_rows_known_before_t(store):
-    _bar(store, "2026-09-01", "2026-09-01T20:20:00+00:00")
+    _bar(store, "2026-09-01", "2026-09-01T20:20:00.000000+00:00")
     assert len(store.as_of(T).price_bars("NVDA")) == 1
 
 
 @pytest.mark.unit
 def test_view_refuses_a_row_known_after_t(store):
     """The single most important test in the codebase."""
-    _bar(store, "2026-09-08", "2026-09-08T20:20:00+00:00")
+    _bar(store, "2026-09-08", "2026-09-08T20:20:00.000000+00:00")
     assert store.as_of(T).price_bars("NVDA") == []
 
 
@@ -670,18 +390,18 @@ def test_null_known_at_is_invisible_not_visible(store):
 
 @pytest.mark.unit
 def test_boundary_is_inclusive(store):
-    _bar(store, "2026-09-07", "2026-09-07T12:00:00+00:00")
+    _bar(store, "2026-09-07", "2026-09-07T12:00:00.000000+00:00")
     assert len(store.as_of(T).price_bars("NVDA")) == 1
 
 
 @pytest.mark.unit
 def test_latest_observation_wins_for_a_restated_session(store):
-    _bar(store, "2026-09-01", "2026-09-01T20:20:00+00:00", close=100.0)
+    _bar(store, "2026-09-01", "2026-09-01T20:20:00.000000+00:00", close=100.0)
     store.insert_price_bar(
         ticker="NVDA", session_date="2026-09-01",
-        event_time="2026-09-01T20:00:00+00:00",
-        observed_at="2026-09-02T09:00:00+00:00",
-        known_at="2026-09-02T09:15:00+00:00",
+        event_time="2026-09-01T20:00:00.000000+00:00",
+        observed_at="2026-09-02T09:00:00.000000+00:00",
+        known_at="2026-09-02T09:15:00.000000+00:00",
         open=99.0, high=101.0, low=98.0, close=100.5, volume=1000.0,
         source="stooq",
     )
@@ -693,12 +413,12 @@ def test_latest_observation_wins_for_a_restated_session(store):
 @pytest.mark.unit
 def test_restatement_is_invisible_before_it_was_known(store):
     """As-of 2026-09-01T21:00 we must still see the original value."""
-    _bar(store, "2026-09-01", "2026-09-01T20:20:00+00:00", close=100.0)
+    _bar(store, "2026-09-01", "2026-09-01T20:20:00.000000+00:00", close=100.0)
     store.insert_price_bar(
         ticker="NVDA", session_date="2026-09-01",
-        event_time="2026-09-01T20:00:00+00:00",
-        observed_at="2026-09-02T09:00:00+00:00",
-        known_at="2026-09-02T09:15:00+00:00",
+        event_time="2026-09-01T20:00:00.000000+00:00",
+        observed_at="2026-09-02T09:00:00.000000+00:00",
+        known_at="2026-09-02T09:15:00.000000+00:00",
         open=99.0, high=101.0, low=98.0, close=100.5, volume=1000.0,
         source="stooq",
     )
@@ -831,7 +551,7 @@ Expected: PASS, 8 passed
 - [ ] **Step 5: Run the whole suite**
 
 Run: `.venv/bin/pytest -v`
-Expected: PASS, 31 passed
+Expected: PASS, 65 passed (49 from Tasks 1-3, plus 4 schema and 12 point-in-time)
 
 - [ ] **Step 6: Commit**
 
@@ -1114,14 +834,14 @@ def test_parses_bars_into_the_four_timestamp_shape():
 def test_known_at_is_observed_at_plus_the_budget():
     with _fetch():
         bars = prices.fetch_stooq("NVDA", observed_at=OBSERVED, latency_budget=BUDGET)
-    assert bars[0]["known_at"] == "2026-09-04T21:15:00+00:00"
+    assert bars[0]["known_at"] == "2026-09-04T21:15:00.000000+00:00"
 
 
 @pytest.mark.unit
 def test_event_time_is_the_session_close_not_the_fetch_time():
     with _fetch():
         bars = prices.fetch_stooq("NVDA", observed_at=OBSERVED, latency_budget=BUDGET)
-    assert bars[0]["event_time"] == "2026-09-03T20:00:00+00:00"
+    assert bars[0]["event_time"] == "2026-09-03T20:00:00.000000+00:00"
 
 
 @pytest.mark.unit
@@ -1167,8 +887,8 @@ from __future__ import annotations
 
 import csv
 import io
-from datetime import datetime
-from typing import Mapping
+from collections.abc import Mapping
+from datetime import datetime, timezone
 
 import requests
 
@@ -1179,9 +899,21 @@ _STOOQ_URL = "https://stooq.com/q/d/l/?s={symbol}.us&i=d"
 _UA = "stock-trading-bot/0.1 (research)"
 
 # US equity sessions close at 16:00 ET, which is 20:00 UTC during EDT.
-# Stored as the session's event_time; the latency budget, not this value,
-# governs availability.
-_SESSION_CLOSE_UTC = "T20:00:00+00:00"
+# The latency budget, not this value, governs availability.
+_SESSION_CLOSE_HOUR_UTC = 20
+
+
+def _session_close(session_date: str) -> str:
+    """Canonical event_time for a session.
+
+    Built through to_iso rather than by string concatenation: a hand-assembled
+    timestamp is the same instant as the canonical form but sorts differently,
+    which silently breaks the ordering the point-in-time gateway relies on.
+    """
+    year, month, day = (int(part) for part in session_date.split("-"))
+    return to_iso(
+        datetime(year, month, day, _SESSION_CLOSE_HOUR_UTC, tzinfo=timezone.utc)
+    )
 
 
 def _http_get(url: str) -> str:
@@ -1207,7 +939,7 @@ def fetch_stooq(
         bars.append({
             "ticker": symbol,
             "session_date": session,
-            "event_time": f"{session}{_SESSION_CLOSE_UTC}",
+            "event_time": _session_close(session),
             "observed_at": observed_iso,
             "known_at": known_at,
             "open": float(row["Open"]),
@@ -1260,8 +992,8 @@ def _split(store, effective_date, ratio, known_at):
         action_type="split",
         ratio=ratio,
         amount=None,
-        event_time=f"{effective_date}T13:30:00+00:00",
-        observed_at=f"{effective_date}T14:00:00+00:00",
+        event_time=f"{effective_date}T13:30:00.000000+00:00",
+        observed_at=f"{effective_date}T14:00:00.000000+00:00",
         known_at=known_at,
         source="stooq",
     )
@@ -1281,14 +1013,14 @@ def test_no_splits_means_a_factor_of_one(store):
 @pytest.mark.unit
 def test_a_later_split_divides_earlier_prices(store):
     """A 5-for-1 split on 2025-12-17 makes a 2025-06-01 price 5x too high."""
-    _split(store, "2025-12-17", 5.0, "2025-12-17T14:15:00+00:00")
+    _split(store, "2025-12-17", 5.0, "2025-12-17T14:15:00.000000+00:00")
     view = store.as_of(datetime(2026, 9, 7, tzinfo=timezone.utc))
     assert split_factor_as_of(view, "NOW", "2025-06-01") == 5.0
 
 
 @pytest.mark.unit
 def test_a_split_does_not_affect_sessions_after_it(store):
-    _split(store, "2025-12-17", 5.0, "2025-12-17T14:15:00+00:00")
+    _split(store, "2025-12-17", 5.0, "2025-12-17T14:15:00.000000+00:00")
     view = store.as_of(datetime(2026, 9, 7, tzinfo=timezone.utc))
     assert split_factor_as_of(view, "NOW", "2026-01-05") == 1.0
 
@@ -1298,15 +1030,15 @@ def test_the_factor_is_as_of_t_not_as_of_today(store):
     """The critical case: standing at 2025-06-02, the December split has not
     happened and must not be applied. This is what using a vendor's adjusted
     series gets wrong."""
-    _split(store, "2025-12-17", 5.0, "2025-12-17T14:15:00+00:00")
+    _split(store, "2025-12-17", 5.0, "2025-12-17T14:15:00.000000+00:00")
     view = store.as_of(datetime(2025, 6, 2, tzinfo=timezone.utc))
     assert split_factor_as_of(view, "NOW", "2025-06-01") == 1.0
 
 
 @pytest.mark.unit
 def test_multiple_splits_compound(store):
-    _split(store, "2025-12-17", 5.0, "2025-12-17T14:15:00+00:00")
-    _split(store, "2026-06-01", 2.0, "2026-06-01T14:15:00+00:00")
+    _split(store, "2025-12-17", 5.0, "2025-12-17T14:15:00.000000+00:00")
+    _split(store, "2026-06-01", 2.0, "2026-06-01T14:15:00.000000+00:00")
     view = store.as_of(datetime(2026, 9, 7, tzinfo=timezone.utc))
     assert split_factor_as_of(view, "NOW", "2025-01-01") == 10.0
 ```
@@ -1432,7 +1164,7 @@ def test_known_at_derives_from_the_filing_date_not_the_fetch_time():
         rows = edgar.fetch_facts("NOW", cik=1373715, concepts=["Revenues"],
                                  observed_at=OBSERVED, latency_budget=BUDGET)
     q1 = next(r for r in rows if r["accession"] == "0001373715-26-000045")
-    assert q1["known_at"] == "2026-04-23T00:30:00+00:00"
+    assert q1["known_at"] == "2026-04-23T00:30:00.000000+00:00"
 
 
 @pytest.mark.unit
@@ -2050,9 +1782,9 @@ Run manifests record the config hash, data vintages consumed, and cache hit rate
 - [ ] **Step 6: Run the full suite**
 
 Run: `cd /Users/duochen/Desktop/career/openPaw/stock-trading-bot && .venv/bin/pytest -v`
-Expected: PASS, 71 passed (1 scaffold + 14 naming + 4 timestamps + 4 schema + 8 point-in-time
-+ 10 live-profile + 4 freshness + 6 stooq + 5 corporate actions + 5 edgar + 2 import graph
-+ 5 config + 3 cli)
+Expected: PASS, 109 passed (49 from Tasks 1-3 + 8 schema + 12 point-in-time + 10 live-profile
++ 4 freshness + 6 stooq + 5 corporate actions + 5 edgar + 2 import graph + 5 config + 3 cli).
+Also run `.venv/bin/ruff check .` and `.venv/bin/mypy`; both must be clean.
 
 - [ ] **Step 7: Verify the CLI works end to end against the live network**
 
@@ -2078,7 +1810,8 @@ git commit -m "feat(stock-trading-bot): CLI ingest command and README"
 
 ## Definition of done
 
-- [ ] `.venv/bin/pytest` passes with 71 tests.
+- [ ] `.venv/bin/pytest` passes with 109 tests.
+- [ ] `.venv/bin/ruff check .` and `.venv/bin/mypy` are both clean.
 - [ ] `stock-trading ingest NVDA` writes bars, and a second run writes zero.
 - [ ] The import-graph test has been shown to fail on a deliberate violation.
 - [ ] No `pip` was used anywhere.
