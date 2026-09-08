@@ -12,7 +12,6 @@ Design rules enforced here:
 from __future__ import annotations
 
 import sqlite3
-from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
 
@@ -88,8 +87,10 @@ CREATE INDEX IF NOT EXISTS ix_fact_known   ON fundamental_fact (ticker, known_at
 class Store:
     """Owns the connection. Callers wanting to read facts use `as_of`."""
 
-    def __init__(self, conn: sqlite3.Connection) -> None:
+    def __init__(self, conn: sqlite3.Connection, path: Path) -> None:
         self._conn = conn
+        self._path = path
+        self._ro_conn: sqlite3.Connection | None = None
 
     @classmethod
     def open(cls, path: str | Path) -> Store:
@@ -100,9 +101,21 @@ class Store:
         conn.execute("PRAGMA foreign_keys = ON")
         conn.executescript(_SCHEMA)
         conn.commit()
-        return cls(conn)
+        return cls(conn, path)
+
+    def _readonly_conn(self) -> sqlite3.Connection:
+        """A second connection that SQLite itself refuses to write through."""
+        if self._ro_conn is None:
+            ro = sqlite3.connect(self._path)
+            ro.row_factory = sqlite3.Row
+            ro.execute("PRAGMA query_only = ON")
+            self._ro_conn = ro
+        return self._ro_conn
 
     def close(self) -> None:
+        if self._ro_conn is not None:
+            self._ro_conn.close()
+            self._ro_conn = None
         self._conn.close()
 
     def as_of(self, t: datetime) -> PointInTimeView:
@@ -112,7 +125,7 @@ class Store:
         """
         if t.tzinfo is None:
             raise ValueError("as_of requires a timezone-aware datetime")
-        return PointInTimeView(self._conn, to_iso(t))
+        return PointInTimeView(self._readonly_conn(), to_iso(t))
 
     def insert_price_bar(self, **row: object) -> None:
         self._insert("price_bar", row)
@@ -133,30 +146,44 @@ class Store:
 class PointInTimeView:
     """A read-only window on the store as it was visible at `t`.
 
-    Feature builders receive only this object. It holds no attribute named
-    `execute` or `_conn`, so there is no handle to bypass the filter with; the
-    connection is captured in a closure instead. Every query this class issues
-    appends `known_at IS NOT NULL AND known_at <= :t`.
+    Two independent mechanisms, because the first one alone proved to be a
+    convention rather than a guarantee:
 
-    That NULL check is load-bearing: a fact whose vintage we do not know must
-    be invisible, never assumed available.
+      1. The connection is opened with `PRAGMA query_only = ON`, so the view
+         cannot mutate the append-only store even through a hand-written query.
+      2. Every row is re-checked here before it is returned. An accessor whose
+         SQL forgets the predicate still cannot emit a future-dated row, and a
+         row whose `known_at` is NULL is dropped.
+
+    An earlier version stored a generic query callable and relied on each
+    accessor's SQL to carry the predicate. That made the guarantee a property
+    of every call site rather than of the view, which is exactly the failure
+    this class exists to prevent.
     """
 
-    __slots__ = ("_query", "_t")
-
-    _query: Callable[[str, dict[str, object]], list[dict[str, object]]]
-    _t: str
+    __slots__ = ("_conn", "_t")
 
     def __init__(self, conn: sqlite3.Connection, t: str) -> None:
-        def query(sql: str, params: dict[str, object]) -> list[dict[str, object]]:
-            return [dict(r) for r in conn.execute(sql, {**params, "t": t})]
-
-        object.__setattr__(self, "_query", query)
-        object.__setattr__(self, "_t", t)
+        self._conn = conn
+        self._t = t
 
     @property
     def t(self) -> str:
         return self._t
+
+    def _query(self, sql: str, params: dict[str, object]) -> list[dict[str, object]]:
+        rows = [dict(r) for r in self._conn.execute(sql, {**params, "t": self._t})]
+        visible: list[dict[str, object]] = []
+        for row in rows:
+            if "known_at" not in row:
+                raise ValueError(
+                    "a point-in-time view may only return rows carrying known_at; "
+                    "got columns: " + ", ".join(sorted(row))
+                )
+            known_at = row["known_at"]
+            if isinstance(known_at, str) and known_at <= self._t:
+                visible.append(row)
+        return visible
 
     def price_bars(self, ticker: str) -> list[dict[str, object]]:
         """Visible bars, one row per session, latest visible observation wins."""

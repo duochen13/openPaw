@@ -1,3 +1,4 @@
+import sqlite3
 from datetime import UTC, datetime
 
 import pytest
@@ -85,14 +86,43 @@ def test_restatement_is_invisible_before_it_was_known(store):
 
 
 @pytest.mark.unit
-def test_view_exposes_no_raw_connection(store):
-    """Feature builders must have no way to bypass the filter."""
-    view = store.as_of(T)
-    assert not hasattr(view, "execute")
-    assert not hasattr(view, "_conn")
-
-
-@pytest.mark.unit
 def test_as_of_rejects_a_naive_datetime(store):
     with pytest.raises(ValueError):
         store.as_of(datetime(2026, 9, 7, 12, 0, 0))
+
+
+@pytest.mark.unit
+def test_a_hand_written_query_missing_the_predicate_still_cannot_leak(store):
+    """The guarantee must belong to the view, not to each accessor's SQL."""
+    _bar(store, "2026-09-08", "2026-09-08T20:20:00.000000+00:00")
+    view = store.as_of(T)
+    rows = view._query("SELECT * FROM price_bar WHERE ticker = :ticker", {"ticker": "NVDA"})
+    assert rows == []
+
+
+@pytest.mark.unit
+def test_the_view_cannot_mutate_the_store(store):
+    _bar(store, "2026-09-01", "2026-09-01T20:20:00.000000+00:00")
+    view = store.as_of(T)
+    for statement in ("DELETE FROM price_bar", "UPDATE price_bar SET close = 0",
+                      "DROP TABLE price_bar"):
+        with pytest.raises(sqlite3.OperationalError, match="readonly"):
+            view._query(statement, {})
+    assert len(store.as_of(T).price_bars("NVDA")) == 1
+
+
+@pytest.mark.unit
+def test_a_query_that_omits_known_at_is_refused(store):
+    """Fail loudly on misuse rather than silently returning unfiltered rows."""
+    _bar(store, "2026-09-01", "2026-09-01T20:20:00.000000+00:00")
+    with pytest.raises(ValueError, match="known_at"):
+        store.as_of(T)._query("SELECT ticker FROM price_bar", {})
+
+
+@pytest.mark.unit
+def test_writes_after_a_view_was_taken_are_visible_to_a_later_view(store):
+    """The read-only connection is cached, so it must still see new commits."""
+    view_before = store.as_of(T)
+    assert view_before.price_bars("NVDA") == []
+    _bar(store, "2026-09-01", "2026-09-01T20:20:00.000000+00:00")
+    assert len(store.as_of(T).price_bars("NVDA")) == 1
