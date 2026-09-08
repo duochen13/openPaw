@@ -12,7 +12,11 @@ Design rules enforced here:
 from __future__ import annotations
 
 import sqlite3
+from collections.abc import Callable
+from datetime import datetime
 from pathlib import Path
+
+from stock_trading_bot.timestamps import to_iso
 
 #: The canonical shape produced by timestamps.to_iso: fixed-width UTC with
 #: microseconds. Enforced at the database boundary so that lexicographic
@@ -101,6 +105,15 @@ class Store:
     def close(self) -> None:
         self._conn.close()
 
+    def as_of(self, t: datetime) -> PointInTimeView:
+        """The only supported way to read facts.
+
+        Anything reachable through the returned view was knowable at `t`.
+        """
+        if t.tzinfo is None:
+            raise ValueError("as_of requires a timezone-aware datetime")
+        return PointInTimeView(self._conn, to_iso(t))
+
     def insert_price_bar(self, **row: object) -> None:
         self._insert("price_bar", row)
 
@@ -115,3 +128,78 @@ class Store:
         marks = ", ".join(f":{c}" for c in row)
         self._conn.execute(f"INSERT INTO {table} ({cols}) VALUES ({marks})", row)
         self._conn.commit()
+
+
+class PointInTimeView:
+    """A read-only window on the store as it was visible at `t`.
+
+    Feature builders receive only this object. It holds no attribute named
+    `execute` or `_conn`, so there is no handle to bypass the filter with; the
+    connection is captured in a closure instead. Every query this class issues
+    appends `known_at IS NOT NULL AND known_at <= :t`.
+
+    That NULL check is load-bearing: a fact whose vintage we do not know must
+    be invisible, never assumed available.
+    """
+
+    __slots__ = ("_query", "_t")
+
+    _query: Callable[[str, dict[str, object]], list[dict[str, object]]]
+    _t: str
+
+    def __init__(self, conn: sqlite3.Connection, t: str) -> None:
+        def query(sql: str, params: dict[str, object]) -> list[dict[str, object]]:
+            return [dict(r) for r in conn.execute(sql, {**params, "t": t})]
+
+        object.__setattr__(self, "_query", query)
+        object.__setattr__(self, "_t", t)
+
+    @property
+    def t(self) -> str:
+        return self._t
+
+    def price_bars(self, ticker: str) -> list[dict[str, object]]:
+        """Visible bars, one row per session, latest visible observation wins."""
+        return self._query(
+            """
+            SELECT p.* FROM price_bar p
+            JOIN (
+                SELECT session_date, MAX(observed_at) AS observed_at
+                FROM price_bar
+                WHERE ticker = :ticker
+                  AND known_at IS NOT NULL AND known_at <= :t
+                GROUP BY session_date
+            ) latest
+              ON p.session_date = latest.session_date
+             AND p.observed_at  = latest.observed_at
+            WHERE p.ticker = :ticker
+              AND p.known_at IS NOT NULL AND p.known_at <= :t
+            ORDER BY p.session_date
+            """,
+            {"ticker": ticker},
+        )
+
+    def corporate_actions(self, ticker: str) -> list[dict[str, object]]:
+        return self._query(
+            """
+            SELECT * FROM corporate_action
+            WHERE ticker = :ticker
+              AND known_at IS NOT NULL AND known_at <= :t
+            ORDER BY effective_date
+            """,
+            {"ticker": ticker},
+        )
+
+    def fundamental_facts(
+        self, ticker: str, concept: str | None = None
+    ) -> list[dict[str, object]]:
+        clause = "AND concept = :concept" if concept else ""
+        return self._query(
+            f"""
+            SELECT * FROM fundamental_fact
+            WHERE ticker = :ticker {clause}
+              AND known_at IS NOT NULL AND known_at <= :t
+            ORDER BY fiscal_period, accession
+            """,
+            {"ticker": ticker, "concept": concept},
+        )
