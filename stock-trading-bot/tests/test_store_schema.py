@@ -85,3 +85,30 @@ def test_a_restatement_appends_rather_than_overwriting(tmp_path):
         "SELECT COUNT(*) FROM price_bar WHERE ticker='NVDA'"
     ).fetchone()[0]
     assert count == 2
+
+
+@pytest.mark.unit
+def test_a_fundamental_fact_reobservation_appends_rather_than_colliding(tmp_path):
+    """observed_at is part of the primary key so re-fetching a filing you
+    already have appends instead of raising IntegrityError - the same
+    restatement mechanism price_bar relies on must work here too."""
+    store = Store.open(tmp_path / "panel.sqlite")
+    common = dict(
+        ticker="NOW", concept="Revenues", unit="USD", fiscal_period="2026Q1",
+        value=3_700_000_000.0, accession="0001373715-26-000045",
+        event_time="2026-04-23T00:00:00.000000+00:00",
+        valid_from="2026-04-23T00:00:00.000000+00:00",
+        source="edgar",
+    )
+    store.insert_fundamental_fact(
+        observed_at="2026-09-07T12:00:00.000000+00:00",
+        known_at="2026-09-07T12:30:00.000000+00:00", **common
+    )
+    store.insert_fundamental_fact(
+        observed_at="2026-09-08T09:00:00.000000+00:00",
+        known_at="2026-09-08T09:30:00.000000+00:00", **common
+    )
+    count = store._conn.execute(
+        "SELECT COUNT(*) FROM fundamental_fact WHERE ticker='NOW'"
+    ).fetchone()[0]
+    assert count == 2
