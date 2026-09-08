@@ -1,0 +1,16 @@
+{
+  "domain": "servicenow_stock_reddit",
+  "sub_tasks": [
+    {"label": "r/ServiceNow practitioners", "subreddit": "ServiceNow", "n": 10, "t": "year"}
+  ],
+  "search_tasks": [
+    {"label": "NOW stock discussion", "query": "ServiceNow stock", "keywords": ["servicenow"], "n": 8},
+    {"label": "NOW earnings reaction", "query": "ServiceNow NOW earnings drop", "keywords": ["servicenow"], "n": 5},
+    {"label": "SaaS AI disruption thesis", "query": "SaaS stocks AI disruption dead", "keywords": ["saas", "software"], "n": 6},
+    {"label": "ServiceNow layoffs / morale", "query": "ServiceNow layoffs", "keywords": ["servicenow"], "n": 4},
+    {"label": "ServiceNow licensing cost", "query": "ServiceNow licensing cost expensive", "keywords": ["servicenow"], "n": 5},
+    {"label": "ServiceNow vs competitors", "query": "ServiceNow alternative replace Jira", "keywords": ["servicenow"], "n": 4}
+  ],
+  "min_score": 3,
+  "max_comments": 35
+}
