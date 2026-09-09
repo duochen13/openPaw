@@ -1,5 +1,9 @@
 # stock-trading-bot Foundation Implementation Plan
 
+> **STATUS: COMPLETE.** All 13 tasks landed on `feat/stock-trading-bot`.
+> 157 tests passing, `ruff` clean, `mypy --strict` clean, live end-to-end verified.
+> Kept for the record of what was built and why; the committed code is authoritative.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build the point-in-time data foundation for `stock-trading-bot` — a SQLite store whose gateway makes look-ahead leakage structurally impossible, plus price and SEC filing ingestion behind it.
@@ -1430,12 +1434,12 @@ git commit -m "feat(stock-trading-bot): CLI ingest command and README"
 
 ## Definition of done
 
-- [ ] `.venv/bin/pytest` passes with 119 tests.
-- [ ] `.venv/bin/ruff check .` and `.venv/bin/mypy` are both clean.
-- [ ] `stock-trading ingest NVDA` writes bars, and a second run writes zero.
-- [ ] The import-graph test has been shown to fail on a deliberate violation.
-- [ ] No `pip` was used anywhere.
-- [ ] No credentials appear in source or logs.
+- [x] `.venv/bin/pytest` passes with 157 tests.
+- [x] `.venv/bin/ruff check .` and `.venv/bin/mypy` are both clean.
+- [x] Live ingest writes 501 bars for NVDA; a second run writes zero.
+- [x] The import-graph test was shown to fail on a deliberate violation.
+- [x] No `pip` was used anywhere.
+- [x] No credentials appear in source or logs.
 
 ## Deferred to Plan 2 (social + extraction)
 

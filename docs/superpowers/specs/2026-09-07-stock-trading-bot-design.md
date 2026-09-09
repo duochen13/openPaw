@@ -76,7 +76,9 @@ Effective n is reported alongside raw n everywhere a sample size appears.
 
 ### 3.4 Financial data: free stack, consensus features declared unavailable
 
-- Prices: stooq primary, Yahoo fallback. **Raw OHLCV only**, plus a separate corporate-actions table.
+- Prices: stooq primary, Yahoo fallback (in practice Yahoo, see §4.1). **Raw OHLCV only**,
+  plus a separate corporate-actions table. Yahoo is read via `indicators.quote`, which is
+  unadjusted; `indicators.adjclose` is deliberately ignored.
 - Fundamentals: SEC EDGAR XBRL `companyfacts`. One row per fact per accession.
 - Consensus estimates: **not available**.
 
@@ -148,7 +150,14 @@ embed a value from the future.
 
 - Homebrew Python 3.14's `pip` is broken on this machine (`pyexpat` symbol error).
   Use `uv` (present at `~/.local/bin/uv`, verified working against PyPI).
-- stooq, the Yahoo chart API, and HN Algolia are all reachable through the sandbox proxy.
+- **stooq is NOT usable.** It sits behind a JavaScript proof-of-work anti-bot challenge and
+  serves that challenge with HTTP 200 and an HTML body.
+  An initial reachability check recorded it as working on the strength of the status code
+  alone, without inspecting the payload; that error survived into the plan and was only
+  caught by a live end-to-end run.
+  Yahoo is therefore the live price path, with stooq kept first in the chain in case the
+  challenge lifts.
+- The Yahoo chart API and HN Algolia are reachable and return real data.
 - No market-data or LLM API keys are set in the environment.
 - The `claude` CLI is installed and authenticated.
 - `gh` requires running outside the sandbox; keyring access is blocked inside it, which
