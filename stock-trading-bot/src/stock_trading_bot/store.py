@@ -186,6 +186,24 @@ class Store:
             raise ValueError("as_of requires a timezone-aware datetime")
         return PointInTimeView(self._readonly_conn(), to_iso(t))
 
+    def latest_price_bar(
+        self, ticker: str, session_date: str
+    ) -> dict[str, object] | None:
+        """The most recently observed bar for a session, ignoring visibility.
+
+        For the WRITER only, so ingestion can tell whether newly fetched data
+        actually differs from what is already held. Append-only means a new row
+        records new information; re-observing identical values is not a
+        restatement and should not grow the table. Readers must go through
+        `as_of` - this method deliberately ignores `known_at`.
+        """
+        row = self._conn.execute(
+            "SELECT * FROM price_bar WHERE ticker = ? AND session_date = ? "
+            "ORDER BY observed_at DESC LIMIT 1",
+            (ticker, session_date),
+        ).fetchone()
+        return dict(row) if row is not None else None
+
     def insert_price_bar(self, **row: object) -> None:
         self._insert("price_bar", row)
 
