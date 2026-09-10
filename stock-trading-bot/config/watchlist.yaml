@@ -1,0 +1,35 @@
+# Deliberately narrow: 5-15 names, deep coverage (spec §3.2).
+# The consequence is accepted openly - at this sample size the evaluation
+# harness will usually report "underpowered to distinguish tier 3 from tier 1"
+# rather than a verdict. That is the honest answer, not a failure.
+#
+# require_cashtag marks symbols that are also common English words. Those match
+# only on $TICKER or a full company-name mention, never the bare token.
+tickers:
+  - symbol: NOW
+    cik: 1373715
+    name: ServiceNow, Inc.
+    aliases: ["ServiceNow", "Service Now"]
+    require_cashtag: true
+  - symbol: NVDA
+    cik: 1045810
+    name: NVIDIA Corporation
+    aliases: ["NVIDIA", "Nvidia"]
+    require_cashtag: false
+  - symbol: CRM
+    cik: 1108524
+    name: Salesforce, Inc.
+    aliases: ["Salesforce"]
+    require_cashtag: false
+  - symbol: WDAY
+    cik: 1327811
+    name: Workday, Inc.
+    aliases: ["Workday"]
+    require_cashtag: false
+  - symbol: SNOW
+    cik: 1640147
+    name: Snowflake Inc.
+    aliases: ["Snowflake"]
+    require_cashtag: true
+
+benchmark: QQQ

@@ -1,0 +1,16 @@
+# Latency budget in seconds from observation to usability, per source.
+# Deliberately pessimistic: covers collection, parsing, extraction, validation.
+# A signal is never available at event_time.
+latency_budget_seconds:
+  stooq: 900
+  yahoo: 900
+  edgar: 1800
+  hackernews: 3600
+  reddit: 3600
+  llm_extraction: 7200
+
+paths:
+  db: data/db/panel.sqlite
+  cache: data/cache
+  raw: data/raw
+  reports: reports

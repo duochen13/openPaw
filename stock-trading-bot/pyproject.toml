@@ -1,0 +1,47 @@
+[project]
+name = "stock-trading-bot"
+version = "0.1.0"
+description = "Point-in-time equity research and signal evaluation. Reports and paper evaluation only."
+requires-python = ">=3.13"
+# Only what code in this repo actually imports today. numpy, pandas,
+# scikit-learn and pydantic arrive with the modelling and extraction layers;
+# declaring them now would make the lockfile lie about what is needed.
+dependencies = [
+    "requests>=2.32",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "ruff>=0.6", "mypy>=1.11", "types-requests", "types-PyYAML"]
+
+[project.scripts]
+stock-trading = "stock_trading_bot.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/stock_trading_bot"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# Import the package from src/ directly rather than via the editable-install
+# .pth file. uv writes that .pth with the macOS UF_HIDDEN flag set, and
+# CPython's site.py skips hidden .pth files, so an editable install can be
+# present and silently unimportable. This makes the test suite independent of it.
+pythonpath = ["src"]
+markers = ["unit: fast test with no network access"]
+addopts = "-q --strict-markers"
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.mypy]
+files = ["src"]
+strict = true
+warn_unreachable = true
