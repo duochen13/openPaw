@@ -8,7 +8,7 @@
 
 **Tech Stack:** Python 3.13, `uv`, stdlib `sqlite3`, `requests`, `pytest`. No new dependencies: shingling, Jaccard, and TF-IDF cosine are ~60 lines of pure Python and adding scikit-learn here would make the lockfile lie about what the ingestion layer needs.
 
-**Spec:** `docs/superpowers/specs/2026-09-07-stock-trading-bot-design.md` (§6, §7 partial)
+**Spec:** `../specs/2026-09-07-stock-trading-bot-design.md` (§6, §7 partial)
 
 **Branch:** `feat/stock-trading-bot` (continues from the foundation)
 

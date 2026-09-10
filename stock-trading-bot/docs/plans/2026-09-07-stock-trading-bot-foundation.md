@@ -12,7 +12,7 @@
 
 **Tech Stack:** Python 3.13, `uv` for dependency management (Homebrew `pip` is broken on this machine), stdlib `sqlite3`, `requests`, `pydantic` v2, `pyyaml`, `pytest`.
 
-**Spec:** `docs/superpowers/specs/2026-09-07-stock-trading-bot-design.md` (§4, §5, §6.1, §12)
+**Spec:** `../specs/2026-09-07-stock-trading-bot-design.md` (§4, §5, §6.1, §12)
 
 **Branch:** `feat/stock-trading-bot`
 
@@ -1344,7 +1344,7 @@ Point-in-time equity research and signal evaluation.
 
 **Reports and paper evaluation only. No brokerage integration, no live execution.**
 
-Design spec: `../docs/superpowers/specs/2026-09-07-stock-trading-bot-design.md`
+Design spec: `../../specs/2026-09-07-stock-trading-bot-design.md`
 
 ## Setup
 

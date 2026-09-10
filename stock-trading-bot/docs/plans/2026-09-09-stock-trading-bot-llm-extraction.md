@@ -8,7 +8,7 @@
 
 **Tech Stack:** Python 3.13, `uv`, `pydantic` v2 (re-added here, where it is first used), `requests`, stdlib `sqlite3`, `pytest`.
 
-**Spec:** `docs/superpowers/specs/2026-09-07-stock-trading-bot-design.md` (§7), plus [issue #6](https://github.com/duochen13/openPaw/issues/6)
+**Spec:** `../specs/2026-09-07-stock-trading-bot-design.md` (§7), plus [issue #6](https://github.com/duochen13/openPaw/issues/6)
 
 **Branch:** `feat/stock-trading-bot`
 

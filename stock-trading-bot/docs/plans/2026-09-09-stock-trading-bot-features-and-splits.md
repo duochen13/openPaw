@@ -8,7 +8,7 @@
 
 **Tech Stack:** Python 3.13, `uv`, `numpy` (added here), stdlib. **No pandas** — the panel is ~7,500 rows, numpy handles it, and pandas 3.0.5 ships no `py.typed` so it would force a mypy stub workaround for no benefit. scikit-learn arrives in Plan 5, where Ridge is first used.
 
-**Spec:** `docs/superpowers/specs/2026-09-07-stock-trading-bot-design.md` (§8, §9.1–9.2)
+**Spec:** `../specs/2026-09-07-stock-trading-bot-design.md` (§8, §9.1–9.2)
 
 **Branch:** `feat/stock-trading-bot`
 

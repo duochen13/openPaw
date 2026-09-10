@@ -4,7 +4,7 @@ Point-in-time equity research and signal evaluation.
 
 **Reports and paper evaluation only. No brokerage integration, no live execution.**
 
-Design spec: [`../docs/superpowers/specs/2026-09-07-stock-trading-bot-design.md`](../docs/superpowers/specs/2026-09-07-stock-trading-bot-design.md)
+Design spec: [`docs/specs/2026-09-07-stock-trading-bot-design.md`](docs/specs/2026-09-07-stock-trading-bot-design.md)
 
 ## Setup
 
