@@ -7,8 +7,11 @@ from __future__ import annotations
 
 import argparse
 import sys
+from pathlib import Path
 
+from portfolio_analysis import moves as moves_module
 from portfolio_analysis import prices
+from portfolio_analysis.artifacts import MovesArtifact, write_moves
 from portfolio_analysis.config import Portfolio, load_portfolio
 from portfolio_analysis.store import Store
 
@@ -49,6 +52,65 @@ def _ingest_prices(args: argparse.Namespace) -> int:
     return 0
 
 
+def _detect_moves(args: argparse.Namespace) -> int:
+    portfolio = load_portfolio()
+    symbols = _selected_symbols(portfolio, args.ticker)
+    if symbols is None:
+        print(
+            f"{args.ticker!r} is not in the portfolio; add it to config/portfolio.yaml",
+            file=sys.stderr,
+        )
+        return 2
+
+    moves_dir = Path(args.moves_dir) if args.moves_dir else portfolio.path("moves")
+    store = Store.open(args.db or portfolio.path("db"))
+    try:
+        benchmark_series = store.adjusted_series(portfolio.benchmark)
+        if not benchmark_series:
+            print(
+                f"no prices for benchmark {portfolio.benchmark}; "
+                "run `ingest-prices` first - beta cannot be computed without it",
+                file=sys.stderr,
+            )
+            return 1
+
+        for symbol in symbols:
+            asset_series = store.adjusted_series(symbol)
+            if not asset_series:
+                print(f"no prices for {symbol}; run `ingest-prices` first", file=sys.stderr)
+                return 1
+
+            found, coverage = moves_module.compute_moves(
+                symbol,
+                portfolio.benchmark,
+                asset_series,
+                benchmark_series,
+                portfolio.move_params,
+            )
+            store.upsert_moves([m.as_row() for m in found])
+            path = write_moves(
+                moves_dir,
+                MovesArtifact(
+                    ticker=symbol,
+                    benchmark=portfolio.benchmark,
+                    params=portfolio.move_params,
+                    coverage=coverage,
+                    moves=found,
+                ),
+            )
+            evaluated = (
+                f"{coverage.evaluated[0]} .. {coverage.evaluated[1]}"
+                if coverage.evaluated else "none (series shorter than the beta window)"
+            )
+            print(
+                f"{symbol}: {coverage.flagged_days} flagged of "
+                f"{coverage.evaluated_days} evaluated ({evaluated}) -> {path}"
+            )
+    finally:
+        store.close()
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="portfolio-analysis",
@@ -63,6 +125,17 @@ def main(argv: list[str] | None = None) -> int:
     )
     ingest.add_argument("--db", default=None, help="override the configured database")
     ingest.set_defaults(func=_ingest_prices)
+
+    detect = sub.add_parser("detect-moves", help="flag days whose abnormal return is large")
+    detect.add_argument(
+        "ticker", nargs="?", default=None,
+        help="ticker, company name, or alias; omit for the whole portfolio",
+    )
+    detect.add_argument("--db", default=None, help="override the configured database")
+    detect.add_argument(
+        "--moves-dir", default=None, help="override the configured artifact directory"
+    )
+    detect.set_defaults(func=_detect_moves)
 
     args = parser.parse_args(argv)
     if not getattr(args, "func", None):

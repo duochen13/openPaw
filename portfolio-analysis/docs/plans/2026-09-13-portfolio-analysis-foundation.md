@@ -2164,8 +2164,8 @@ def read_moves(path: Path) -> MovesArtifact:
             z_threshold=float(raw["params"]["z_threshold"]),
         ),
         coverage=Coverage(
-            price_series=tuple(cov["price_series"]) if cov["price_series"] else None,  # type: ignore[arg-type]
-            evaluated=tuple(cov["evaluated"]) if cov["evaluated"] else None,  # type: ignore[arg-type]
+            price_series=tuple(cov["price_series"]) if cov["price_series"] else None,
+            evaluated=tuple(cov["evaluated"]) if cov["evaluated"] else None,
             evaluated_days=int(cov["evaluated_days"]),
             flagged_days=int(cov["flagged_days"]),
         ),
@@ -2470,7 +2470,7 @@ def test_six_fetched_years_yield_about_five_evaluable_ones(computed):
 def test_the_flagged_rate_is_in_the_expected_band(computed):
     """Measured 30 of 1255, or 2.39%. Under a normal distribution |z| >= 2.5
     is 1.24%; return distributions have fatter tails, so 2-3% is expected."""
-    moves, coverage = computed
+    _, coverage = computed
     rate = coverage.flagged_days / coverage.evaluated_days
     assert 0.015 <= rate <= 0.035, f"flagged {coverage.flagged_days} ({rate:.2%})"
 
