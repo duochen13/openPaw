@@ -215,9 +215,14 @@ def test_rejects_non_string():
 def test_validates_before_uppercasing():
     """U+017F uppercases to 'S', so 'snow' and its long-s spelling would
     otherwise collapse to the same cache key and serve one company's data
-    for another's. Validating first means upper() only ever runs on ASCII."""
+    for another's. Validating first means upper() only ever runs on ASCII.
+
+    Written as an escape, not as the literal glyph: ruff's RUF001 flags
+    ambiguous unicode in string literals, and the ambiguity is the whole
+    point of this test. The escape is the same string to Python and names
+    the codepoint under test instead of hiding it in a homoglyph."""
     with pytest.raises(ValueError):
-        safe_ticker_component("ſnow")
+        safe_ticker_component("\u017fnow")
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -271,7 +276,7 @@ def safe_ticker_component(raw: str) -> str:
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `.venv/bin/pytest tests/test_naming.py -v`
-Expected: `10 passed`
+Expected: `11 passed` (four standalone tests plus the seven `parametrize` cases)
 
 - [ ] **Step 5: Commit**
 
