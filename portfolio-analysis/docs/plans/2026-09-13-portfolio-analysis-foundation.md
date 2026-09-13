@@ -1117,9 +1117,9 @@ def test_the_epoch_window_spans_six_years_including_the_leap_day():
 def test_an_empty_result_raises_rather_than_returning_no_bars():
     """'This ticker has no history' and 'the vendor did not answer' must not
     look the same to the caller."""
-    with _patch({"chart": {"result": None, "error": "Not Found"}}):
-        with pytest.raises(prices.VendorResponseError):
-            prices.fetch_yahoo("META", years=6, now=NOW)
+    payload = {"chart": {"result": None, "error": "Not Found"}}
+    with _patch(payload), pytest.raises(prices.VendorResponseError):
+        prices.fetch_yahoo("META", years=6, now=NOW)
 
 
 @pytest.mark.unit
@@ -2499,8 +2499,8 @@ If `test_meta_2024_04_25_is_flagged_with_the_measured_statistics` fails on the s
 - [ ] **Step 3: Run the real pipeline end to end**
 
 ```bash
-.venv/bin/portfolio-analysis ingest-prices
-.venv/bin/portfolio-analysis detect-moves
+PYTHONPATH=src .venv/bin/python -m portfolio_analysis.cli ingest-prices
+PYTHONPATH=src .venv/bin/python -m portfolio_analysis.cli detect-moves
 ```
 
 Expected output, approximately:
@@ -2552,9 +2552,17 @@ Network-dependent tests are excluded by default. Run them with `.venv/bin/pytest
 ## Usage
 
 ```bash
-.venv/bin/portfolio-analysis ingest-prices
-.venv/bin/portfolio-analysis detect-moves
+PYTHONPATH=src .venv/bin/python -m portfolio_analysis.cli ingest-prices
+PYTHONPATH=src .venv/bin/python -m portfolio_analysis.cli detect-moves
 ```
+
+A `portfolio-analysis` console script is declared, but **prefer the module form above**.
+`uv` writes its editable-install file
+`.venv/lib/python3.13/site-packages/_editable_impl_portfolio_analysis.pth`
+with the macOS `UF_HIDDEN` flag set, and CPython's `site.py` skips hidden `.pth` files.
+The install is therefore present and silently unimportable, and the console script fails with `ModuleNotFoundError: No module named 'portfolio_analysis'`.
+The same note appears in the sibling project's README for the same reason.
+`pythonpath = ["src"]` in `pyproject.toml` is what keeps the test suite independent of this.
 
 ## What this foundation does
 
