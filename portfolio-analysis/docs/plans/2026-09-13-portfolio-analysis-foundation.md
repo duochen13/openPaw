@@ -1549,6 +1549,7 @@ from __future__ import annotations
 
 import statistics as st
 from collections.abc import Mapping
+from itertools import pairwise
 
 #: Halts and one-off listing gaps are tolerated; a systematic calendar
 #: disagreement is not, because every return spanning a gap is fabricated.
@@ -1578,7 +1579,9 @@ def aligned_returns(
     dates: list[str] = []
     asset_returns: list[float] = []
     benchmark_returns: list[float] = []
-    for previous, current in zip(common, common[1:], strict=True):
+    # pairwise, not zip(common, common[1:]): the two arms are deliberately
+    # different lengths, so strict=True rejects it and a bare zip trips B905.
+    for previous, current in pairwise(common):
         for series, name in ((asset, "asset"), (benchmark, "benchmark")):
             if series[previous] <= 0:
                 raise ValueError(
@@ -1728,6 +1731,7 @@ git commit -m "feat(portfolio-analysis): OLS beta over a trailing window"
 - [ ] **Step 1: Write the failing test**
 
 ```python
+import random
 from datetime import date, timedelta
 
 import pytest
@@ -1739,9 +1743,22 @@ PARAMS = MoveParams(beta_window=250, sigma_window=60, z_threshold=2.5)
 
 
 def _series(n=252, spike_at=None, spike=0.20):
-    """Build a synthetic pair whose true beta is 2.0 with alternating +/-0.1%
-    idiosyncratic noise, so sigma is nonzero and every AR except the spike is
-    well inside the threshold."""
+    """A synthetic pair whose true beta is 2.0, plus bounded pseudo-random
+    idiosyncratic noise so the abnormal return has real, nonzero variance.
+
+    The noise must NOT be a fixed function of the benchmark return. Noise
+    collinear with the benchmark loads onto beta instead of the residual: an
+    earlier version of this fixture used `+/-0.001` keyed to the same parity
+    as `br`, which made the true beta 2.1, drove every abnormal return to
+    floating-point dust, and left sigma at ~1e-17 and z at ~1e16. The flagging
+    assertions still passed, for entirely the wrong reason.
+
+    Seeded, so the series is identical on every run. The noise is bounded at
+    +/-0.002 against a sigma of roughly 0.00115, so no ordinary day can reach
+    the 2.5-sigma threshold by chance and `test_a_clean_series_flags_nothing`
+    cannot flake.
+    """
+    rng = random.Random(20240425)
     asset, bench = {}, {}
     asset_px, bench_px = 100.0, 100.0
     start = date(2020, 1, 1)
@@ -1749,7 +1766,7 @@ def _series(n=252, spike_at=None, spike=0.20):
     asset[dates[0]], bench[dates[0]] = asset_px, bench_px
     for i in range(1, n + 1):
         br = 0.01 if i % 2 else -0.01
-        noise = 0.001 if i % 2 else -0.001
+        noise = (rng.random() - 0.5) * 0.004
         ar = 2 * br + noise
         if spike_at is not None and i == spike_at:
             ar = 2 * br + spike
