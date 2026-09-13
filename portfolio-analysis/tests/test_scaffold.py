@@ -1,4 +1,3 @@
-# tests/test_scaffold.py
 import pytest
 
 

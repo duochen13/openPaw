@@ -1,4 +1,3 @@
-# src/portfolio_analysis/naming.py
 """Ticker sanitization.
 
 Tickers reach URL path segments and filesystem paths (data/moves/{ticker}.json),

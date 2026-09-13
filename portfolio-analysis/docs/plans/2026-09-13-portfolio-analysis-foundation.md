@@ -142,7 +142,6 @@ touch tests/__init__.py
 - [ ] **Step 4: Write the failing test**
 
 ```python
-# tests/test_scaffold.py
 import pytest
 
 
@@ -182,7 +181,6 @@ Tickers reach both a URL path segment and a filesystem path (`data/moves/<TICKER
 - [ ] **Step 1: Write the failing test**
 
 ```python
-# tests/test_naming.py
 import pytest
 
 from portfolio_analysis.naming import safe_ticker_component
@@ -223,6 +221,49 @@ def test_validates_before_uppercasing():
     the codepoint under test instead of hiding it in a homoglyph."""
     with pytest.raises(ValueError):
         safe_ticker_component("\u017fnow")
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("raw", ["meta", "BRK.B", "0700.HK", "A" * 12, "  aapl  "])
+def test_output_is_always_a_single_safe_path_component(tmp_path, raw):
+    """The real contract, asserted directly rather than by enumerating attacks:
+    whatever comes out cannot escape its parent directory."""
+    base = tmp_path.resolve()
+    resolved = (base / safe_ticker_component(raw)).resolve()
+    assert resolved.parent == base
+    assert base in resolved.parents
+
+
+@pytest.mark.unit
+def test_output_is_stable_under_repeated_application():
+    for raw in ("meta", "BRK.B", "  aapl  "):
+        once = safe_ticker_component(raw)
+        assert safe_ticker_component(once) == once
+
+
+@pytest.mark.unit
+def test_rejects_an_interior_newline():
+    """fullmatch, not strip, is what rejects this: strip only removes
+    leading/trailing whitespace and would let 'NV\\nDA' straight through."""
+    with pytest.raises(ValueError):
+        safe_ticker_component("NV\nDA")
+
+
+@pytest.mark.unit
+def test_accepts_the_maximum_length_of_twelve_characters():
+    ticker = "A" * 12
+    assert safe_ticker_component(ticker) == ticker
+
+
+@pytest.mark.unit
+def test_rejects_the_ff_ligature_homoglyph():
+    """Distinct from the long-s case: uppercasing this ligature EXPANDS its
+    length to 'FF' rather than substituting one character for another.
+    Written as an escape for the same reason as the long-s test above."""
+    ligature_ticker = "\ufb00ord"
+    assert ligature_ticker.upper() == "FFORD"
+    with pytest.raises(ValueError):
+        safe_ticker_component(ligature_ticker)
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -233,7 +274,6 @@ Expected: FAIL with `ModuleNotFoundError: No module named 'portfolio_analysis.na
 - [ ] **Step 3: Write the implementation**
 
 ```python
-# src/portfolio_analysis/naming.py
 """Ticker sanitization.
 
 Tickers reach URL path segments and filesystem paths (data/moves/{ticker}.json),
@@ -276,7 +316,11 @@ def safe_ticker_component(raw: str) -> str:
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `.venv/bin/pytest tests/test_naming.py -v`
-Expected: `11 passed` (four standalone tests plus the seven `parametrize` cases)
+Expected: `20 passed` (four original standalone tests, the seven `parametrize` cases for
+`test_rejects_path_unsafe_input`, and five more test functions ported from the
+sibling's naming suite - path containment (parametrized x5), idempotence, an
+interior newline, the twelve-character upper boundary, and the `ff` ligature
+homoglyph - contributing nine more test cases)
 
 - [ ] **Step 5: Commit**
 
@@ -334,64 +378,180 @@ paths:
 - [ ] **Step 2: Write the failing test**
 
 ```python
-# tests/test_config.py
-import pytest
+from datetime import date
 
-from portfolio_analysis.config import PROJECT_ROOT, load_portfolio, resolve_path
+import pytest
+import yaml
+
+from portfolio_analysis.config import (
+    PROJECT_ROOT,
+    MoveParams,
+    load_portfolio,
+    resolve_path,
+)
+
+#: A small two-ticker portfolio, independent of the shipped config. The shipped
+#: config explicitly invites adding tickers, so behavioral tests dump this to a
+#: tmp_path fixture instead - only the "shipped config is valid" test below
+#: touches the real file.
+_BASE_CONFIG = {
+    "tickers": [
+        {
+            "symbol": "META",
+            "cik": 1326801,
+            "name": "Meta Platforms, Inc.",
+            "aliases": ["Meta", "Facebook", "Meta Platforms"],
+        },
+        {
+            # Deliberately messy: the I7 regression guard below asserts this
+            # comes back sanitized rather than making entry() raise.
+            "symbol": "brk.b",
+            "cik": 1067983,
+            "name": "Berkshire Hathaway Inc.",
+            "aliases": ["Berkshire", "Berkshire Hathaway"],
+        },
+    ],
+    "benchmark": "QQQ",
+    "price_years": 6,
+    "moves": {"beta_window": 250, "sigma_window": 60, "z_threshold": 2.5},
+    "news_coverage_start": "2022-03-01",
+    "paths": {
+        "db": "data/prices.sqlite",
+        "moves": "data/moves",
+        "events": "data/events",
+        "reasons": "data/reasons",
+        "cache": "data/cache",
+        "out": "out",
+    },
+}
+
+
+def _write_portfolio(tmp_path, **overrides):
+    """Dump a small two-ticker portfolio YAML to tmp_path and return its path."""
+    config = {**_BASE_CONFIG, **overrides}
+    path = tmp_path / "portfolio.yaml"
+    path.write_text(yaml.safe_dump(config))
+    return path
 
 
 @pytest.mark.unit
-def test_loads_the_default_portfolio():
+def test_the_shipped_config_loads_and_is_valid():
     portfolio = load_portfolio()
     assert portfolio.symbols == ("META",)
     assert portfolio.benchmark == "QQQ"
     assert portfolio.price_years == 6
+    assert portfolio.move_params.beta_window == 250
+    assert portfolio.move_params.sigma_window == 60
+    assert portfolio.move_params.z_threshold == 2.5
 
 
 @pytest.mark.unit
-def test_move_params_come_from_config():
-    params = load_portfolio().move_params
-    assert params.beta_window == 250
-    assert params.sigma_window == 60
-    assert params.z_threshold == 2.5
-
-
-@pytest.mark.unit
-def test_entry_lookup_is_case_insensitive():
-    entry = load_portfolio().entry("meta")
+def test_entry_lookup_is_case_insensitive(tmp_path):
+    portfolio = load_portfolio(_write_portfolio(tmp_path))
+    entry = portfolio.entry("meta")
     assert entry.cik == 1326801
     assert entry.name == "Meta Platforms, Inc."
 
 
 @pytest.mark.unit
-def test_entry_lookup_raises_on_unknown_symbol():
+def test_entry_lookup_raises_on_unknown_symbol(tmp_path):
+    portfolio = load_portfolio(_write_portfolio(tmp_path))
     with pytest.raises(KeyError):
-        load_portfolio().entry("TSLA")
+        portfolio.entry("TSLA")
 
 
 @pytest.mark.unit
-def test_resolve_maps_names_and_aliases_to_symbols():
-    portfolio = load_portfolio()
+def test_resolve_maps_symbol_name_and_alias_to_symbol(tmp_path):
+    portfolio = load_portfolio(_write_portfolio(tmp_path))
+    assert portfolio.resolve("META") == "META"
     assert portfolio.resolve("Facebook") == "META"
     assert portfolio.resolve("meta platforms, inc.") == "META"
     assert portfolio.resolve("TSLA") is None
 
 
 @pytest.mark.unit
-def test_paths_resolve_against_the_project_root_not_the_cwd():
+def test_path_resolves_against_the_project_root(tmp_path):
+    portfolio = load_portfolio(_write_portfolio(tmp_path))
+    assert portfolio.path("db") == PROJECT_ROOT / "data" / "prices.sqlite"
+
+
+@pytest.mark.unit
+def test_path_on_an_unknown_key_raises_with_known_keys_listed(tmp_path):
+    portfolio = load_portfolio(_write_portfolio(tmp_path))
+    with pytest.raises(KeyError) as excinfo:
+        portfolio.path("nope")
+    message = str(excinfo.value)
+    assert "nope" in message
+    for key in portfolio.paths:
+        assert key in message
+
+
+@pytest.mark.unit
+def test_a_messy_symbol_is_sanitized_and_findable(tmp_path):
+    """I7 regression guard: a lowercase symbol in the YAML must not make
+    entry() raise or write a lowercase path - naming.py's promise is that
+    every ticker crossing an I/O boundary is sanitized, and config loading
+    is one such boundary."""
+    portfolio = load_portfolio(_write_portfolio(tmp_path))
+    assert "BRK.B" in portfolio.symbols
+    assert portfolio.entry("BRK.B").name == "Berkshire Hathaway Inc."
+
+
+@pytest.mark.unit
+def test_an_unparseable_news_coverage_start_raises_at_load(tmp_path):
+    path = _write_portfolio(tmp_path, news_coverage_start="not-a-date")
+    with pytest.raises(ValueError):
+        load_portfolio(path)
+
+
+@pytest.mark.unit
+def test_news_coverage_start_round_trips_to_an_iso_string(tmp_path):
+    """PyYAML parses an unquoted date-looking scalar into a datetime.date;
+    this pins the coercion back to the str the rest of the codebase expects."""
+    path = _write_portfolio(tmp_path, news_coverage_start=date(2022, 3, 1))
+    portfolio = load_portfolio(path)
+    assert portfolio.news_coverage_start == "2022-03-01"
+
+
+@pytest.mark.unit
+def test_config_paths_resolve_against_the_project_root_not_the_cwd(tmp_path, monkeypatch):
     """The CLI must write to the same database regardless of invocation dir."""
-    assert resolve_path("data/prices.sqlite") == PROJECT_ROOT / "data" / "prices.sqlite"
-    assert (PROJECT_ROOT / "pyproject.toml").exists()
+    config_path = _write_portfolio(tmp_path)
+    monkeypatch.chdir(tmp_path)
+    portfolio = load_portfolio(config_path)
+    resolved = resolve_path(portfolio.paths["db"])
+    assert resolved.is_absolute()
+    assert resolved == PROJECT_ROOT / "data" / "prices.sqlite"
 
 
 @pytest.mark.unit
 def test_sigma_window_must_be_smaller_than_beta_window():
     """compute_moves derives sigma inside the beta window, so a sigma window
     at least as large as the beta window would index before the series start."""
-    from portfolio_analysis.config import MoveParams
-
     with pytest.raises(ValueError):
         MoveParams(beta_window=60, sigma_window=60, z_threshold=2.5)
+
+
+@pytest.mark.unit
+def test_a_window_below_two_raises():
+    with pytest.raises(ValueError):
+        MoveParams(beta_window=1, sigma_window=1, z_threshold=2.5)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("threshold", [0, -2.5])
+def test_a_non_positive_z_threshold_raises(threshold):
+    with pytest.raises(ValueError):
+        MoveParams(beta_window=250, sigma_window=60, z_threshold=threshold)
+
+
+@pytest.mark.unit
+def test_a_nan_z_threshold_raises():
+    """Without the isfinite guard this constructs cleanly: abs(z) >= nan is
+    False for every z, so a NaN threshold would silently suppress every move
+    rather than raising - indistinguishable from a quiet market."""
+    with pytest.raises(ValueError):
+        MoveParams(beta_window=250, sigma_window=60, z_threshold=float("nan"))
 ```
 
 - [ ] **Step 3: Run test to verify it fails**
@@ -402,7 +562,6 @@ Expected: FAIL with `ModuleNotFoundError: No module named 'portfolio_analysis.co
 - [ ] **Step 4: Write the implementation**
 
 ```python
-# src/portfolio_analysis/config.py
 """Configuration loading.
 
 The universe is config, never hardcoded, so it can be widened without touching
@@ -410,22 +569,39 @@ code (spec §3).
 """
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
+from datetime import date
 from pathlib import Path
 from typing import Any
 
 import yaml
 
+from portfolio_analysis.naming import safe_ticker_component
+
 #: The package lives at <root>/src/portfolio_analysis/, so the project root is
 #: two levels up. Paths resolve against this rather than the process cwd, so
 #: the CLI writes to the same database regardless of which directory it was
 #: invoked from.
+#:
+#: This assumes a source checkout or an editable install. Under a real wheel
+#: install parents[2] lands in site-packages; load_portfolio checks for that and
+#: says so, rather than silently creating data directories inside the venv. A
+#: wheel is not a supported distribution mode here anyway - the hatch wheel
+#: target ships src/portfolio_analysis and not config/.
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 _CONFIG_DIR = PROJECT_ROOT / "config"
 
+#: The smallest window that has a variance at all.
+_MIN_WINDOW = 2
+
 
 def resolve_path(relative: str) -> Path:
-    """Resolve a configured relative path against the project root."""
+    """Resolve a configured relative path against the project root.
+
+    An absolute value is returned unchanged, per pathlib's `/` semantics. Config
+    is author-controlled, so that is a convenience rather than a hole.
+    """
     return PROJECT_ROOT / relative
 
 
@@ -438,13 +614,23 @@ class MoveParams:
     z_threshold: float
 
     def __post_init__(self) -> None:
+        if self.beta_window < _MIN_WINDOW or self.sigma_window < _MIN_WINDOW:
+            raise ValueError(
+                f"windows need at least {_MIN_WINDOW} observations, got "
+                f"beta_window={self.beta_window}, sigma_window={self.sigma_window}"
+            )
         if self.sigma_window >= self.beta_window:
             raise ValueError(
                 "sigma_window must be smaller than beta_window: sigma is derived "
                 f"inside the beta window, got {self.sigma_window} >= {self.beta_window}"
             )
-        if self.z_threshold <= 0:
-            raise ValueError(f"z_threshold must be positive, got {self.z_threshold}")
+        # NaN is the dangerous case here, not a negative. Every `abs(z) >= nan`
+        # comparison is False, so a NaN threshold does not raise - it reports
+        # zero large moves, which is indistinguishable from a quiet market.
+        if not math.isfinite(self.z_threshold) or self.z_threshold <= 0:
+            raise ValueError(
+                f"z_threshold must be finite and positive, got {self.z_threshold}"
+            )
 
 
 @dataclass(frozen=True)
@@ -486,16 +672,29 @@ class Portfolio:
         return None
 
     def path(self, key: str) -> Path:
+        if key not in self.paths:
+            raise KeyError(
+                f"{key!r} is not a configured path; known: {sorted(self.paths)}"
+            )
         return resolve_path(self.paths[key])
 
 
 def load_portfolio(path: Path | None = None) -> Portfolio:
-    raw: dict[str, Any] = yaml.safe_load(
-        (path or _CONFIG_DIR / "portfolio.yaml").read_text()
-    )
+    if path is None and not (PROJECT_ROOT / "pyproject.toml").is_file():
+        raise RuntimeError(
+            f"expected the project root at {PROJECT_ROOT}, but there is no "
+            "pyproject.toml there. This tool resolves config and data paths "
+            "against the source checkout and does not support a wheel install."
+        )
+    source = path or _CONFIG_DIR / "portfolio.yaml"
+    raw: dict[str, Any] = yaml.safe_load(source.read_text())
     entries = tuple(
         PortfolioEntry(
-            symbol=t["symbol"],
+            # Sanitized at the boundary so naming.py's promise - every ticker
+            # crossing an I/O boundary passes through here first - holds by
+            # construction rather than by convention. entry() compares against
+            # symbol.upper() and silently depends on it.
+            symbol=safe_ticker_component(t["symbol"]),
             cik=int(t["cik"]),
             name=t["name"],
             aliases=tuple(t.get("aliases", ())),
@@ -505,14 +704,20 @@ def load_portfolio(path: Path | None = None) -> Portfolio:
     moves = raw["moves"]
     return Portfolio(
         entries=entries,
-        benchmark=raw["benchmark"],
+        benchmark=safe_ticker_component(raw["benchmark"]),
         price_years=int(raw["price_years"]),
         move_params=MoveParams(
             beta_window=int(moves["beta_window"]),
             sigma_window=int(moves["sigma_window"]),
             z_threshold=float(moves["z_threshold"]),
         ),
-        news_coverage_start=str(raw["news_coverage_start"]),
+        # Parsed, then re-emitted in canonical ISO form. Parsing makes an
+        # unreadable date fail here instead of in Plan 2 wherever it is first
+        # compared; keeping the field a str means it compares directly against
+        # the ISO dates the store guarantees.
+        news_coverage_start=date.fromisoformat(
+            str(raw["news_coverage_start"])
+        ).isoformat(),
         paths=dict(raw["paths"]),
     )
 ```
@@ -520,7 +725,7 @@ def load_portfolio(path: Path | None = None) -> Portfolio:
 - [ ] **Step 5: Run test to verify it passes**
 
 Run: `.venv/bin/pytest tests/test_config.py -v`
-Expected: `7 passed`
+Expected: `15 passed`
 
 - [ ] **Step 6: Commit**
 
