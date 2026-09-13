@@ -1,0 +1,49 @@
+[project]
+name = "portfolio-analysis"
+version = "0.1.0"
+description = "Retrospective attribution of large single-day equity moves to dated, cited events."
+requires-python = ">=3.13"
+# Only what code in this repo actually imports today. The Muse Spark client
+# arrives in Plan 3; declaring openai now would make the lockfile lie.
+dependencies = [
+    "requests>=2.32",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "ruff>=0.6", "mypy>=1.11", "types-requests", "types-PyYAML"]
+
+[project.scripts]
+portfolio-analysis = "portfolio_analysis.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/portfolio_analysis"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# Import the package from src/ directly rather than via the editable-install
+# .pth file. uv writes that .pth with the macOS UF_HIDDEN flag set, and
+# CPython's site.py skips hidden .pth files, so an editable install can be
+# present and silently unimportable.
+pythonpath = ["src"]
+markers = [
+    "unit: fast test with no network access",
+    "network: hits a live vendor API; excluded from the default run",
+]
+addopts = "-q --strict-markers -m 'not network'"
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.mypy]
+files = ["src"]
+strict = true
+warn_unreachable = true
