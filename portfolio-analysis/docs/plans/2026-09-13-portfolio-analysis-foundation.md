@@ -752,7 +752,6 @@ Note also that spec §11 named the return column `return`, which is a reserved w
 - [ ] **Step 1: Write the failing test**
 
 ```python
-# tests/test_store.py
 import pytest
 
 from portfolio_analysis.store import Store
@@ -864,7 +863,6 @@ Expected: FAIL with `ModuleNotFoundError: No module named 'portfolio_analysis.st
 - [ ] **Step 3: Write the implementation**
 
 ```python
-# src/portfolio_analysis/store.py
 """SQLite store for prices and detected moves (spec §11).
 
 Deliberately NOT a point-in-time store. The sibling project stock-trading-bot
@@ -1028,7 +1026,6 @@ Three findings this adapter is built on, each already established:
 - [ ] **Step 1: Write the failing test**
 
 ```python
-# tests/test_prices.py
 from datetime import UTC, datetime
 from unittest import mock
 
@@ -1155,7 +1152,6 @@ Expected: FAIL with `ModuleNotFoundError: No module named 'portfolio_analysis.pr
 - [ ] **Step 3: Write the implementation**
 
 ```python
-# src/portfolio_analysis/prices.py
 """Adjusted daily price ingestion from Yahoo's chart API (spec §4.1).
 
 Reads BOTH indicators.quote (raw OHLCV) and indicators.adjclose. The sibling
@@ -1291,7 +1287,6 @@ The benchmark is fetched alongside the universe, not separately. Beta cannot be 
 - [ ] **Step 1: Write the failing test**
 
 ```python
-# tests/test_cli_ingest.py
 from unittest import mock
 
 import pytest
@@ -1366,7 +1361,6 @@ Expected: FAIL with `ModuleNotFoundError: No module named 'portfolio_analysis.cl
 - [ ] **Step 3: Write the implementation**
 
 ```python
-# src/portfolio_analysis/cli.py
 """Command-line entry point.
 
 This tool explains past price moves. It has no brokerage integration, places
@@ -1475,7 +1469,6 @@ Up to five dropped dates are tolerated as halts; more than that means the two se
 - [ ] **Step 1: Write the failing test**
 
 ```python
-# tests/test_moves_alignment.py
 import pytest
 
 from portfolio_analysis.moves import aligned_returns
@@ -1533,7 +1526,6 @@ Expected: FAIL with `ModuleNotFoundError: No module named 'portfolio_analysis.mo
 - [ ] **Step 3: Write the implementation**
 
 ```python
-# src/portfolio_analysis/moves.py
 """Move detection (spec §5). Pure statistics - no I/O, no network, no database.
 
     r_t      = adj_close_t / adj_close_{t-1} - 1
@@ -1624,7 +1616,6 @@ one would otherwise produce a two-day return labelled as one day."
 - [ ] **Step 1: Write the failing test**
 
 ```python
-# tests/test_moves_beta.py
 import pytest
 
 from portfolio_analysis.moves import ols_beta
@@ -1737,7 +1728,6 @@ git commit -m "feat(portfolio-analysis): OLS beta over a trailing window"
 - [ ] **Step 1: Write the failing test**
 
 ```python
-# tests/test_moves_compute.py
 from datetime import date, timedelta
 
 import pytest
@@ -2010,7 +2000,6 @@ The artifact is the contract with Plan 2. It carries the parameters and the cove
 - [ ] **Step 1: Write the failing test for the artifact**
 
 ```python
-# tests/test_artifacts.py
 import json
 
 import pytest
@@ -2069,7 +2058,6 @@ Expected: FAIL with `ModuleNotFoundError: No module named 'portfolio_analysis.ar
 - [ ] **Step 3: Write `artifacts.py`**
 
 ```python
-# src/portfolio_analysis/artifacts.py
 """The data/moves/<TICKER>.json artifact (spec §12).
 
 This file is the contract between `detect-moves` and Plan 2's
@@ -2189,7 +2177,6 @@ Expected: `3 passed`
 - [ ] **Step 5: Write the failing test for the command**
 
 ```python
-# tests/test_cli_detect.py
 from datetime import date, timedelta
 
 import pytest
@@ -2420,7 +2407,6 @@ The test is marked `network` and excluded from the default run, because a test t
 - [ ] **Step 1: Write the network test**
 
 ```python
-# tests/test_live_meta.py
 """End-to-end verification against live Yahoo data.
 
 Every expected value here was measured on 2026-09-13 and is recorded in
