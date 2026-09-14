@@ -1,0 +1,32 @@
+# The universe. v1 is META only (spec §3): one name end-to-end beats five
+# names half-done. Adding an entry here is the only change needed to widen it.
+tickers:
+  - symbol: META
+    cik: 1326801
+    name: Meta Platforms, Inc.
+    aliases: ["Meta", "Facebook", "Meta Platforms"]
+
+# Beta is measured against this. QQQ matches the sibling repo's watchlist.
+benchmark: QQQ
+
+# Six years, not five. A 250-day beta window consumes the first trading year,
+# so five years of fetched prices would yield only four years of evaluable
+# days (spec §5).
+price_years: 6
+
+moves:
+  beta_window: 250
+  sigma_window: 60
+  z_threshold: 2.5
+
+# Alpha Vantage news coverage begins around here. Moves before this date are
+# flagged news_coverage_known_thin in Plan 2 (spec §7).
+news_coverage_start: "2022-03-01"
+
+paths:
+  db: data/prices.sqlite
+  moves: data/moves
+  events: data/events
+  reasons: data/reasons
+  cache: data/cache
+  out: out
