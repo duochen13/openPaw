@@ -35,7 +35,9 @@ Probed live on 2026-09-14. These are measurements, not assumptions, and Task 11 
 | AV news volume, 2024-04-25 window | **7 articles** |
 | AV news volume, 2022-02-03 window | **14 articles** |
 | AV reliability | 12 x `502 Bad Gateway` across 3 requests - retry is mandatory |
-| yfinance `get_earnings_dates(limit=40)` | 50 quarters, 2014-07 .. 2026-10, **with time of day** |
+| AV `EARNINGS` | **58 quarters, 2012-05 .. 2026-07**, with `reportTime`, `estimatedEPS`, `surprisePercentage` |
+| yfinance | **Rejected.** 115 MB of transitive deps (pandas 48M, numpy 24M, lxml 19M, curl_cffi 7M) for 1.3 MB of library, and AV `EARNINGS` already returns strictly more |
+| Yahoo `quoteSummary` direct | `429` to a plain `requests` call - this is why yfinance carries curl_cffi |
 | Finnhub free tier | 1 year of news - covers 8 of 30 moves, misses all 3 largest. Rejected |
 | GDELT Doc 2.0 | Rejected. Four requests in quick succession earned a `429` lasting **over 18 minutes**, through two cooldowns. Not evaluable, and not a foundation for a 30-request backfill |
 
@@ -1029,7 +1031,13 @@ Form 4 and 144 excluded: 918 of them in two years, none a catalyst."
 
 These follow the pattern Task 4 establishes — a recorded fixture, a pure translation, no network in tests — and each needs the same level of detail written out before implementation. Their contracts and the specific trap in each:
 
-**Task 5 — `events/earnings.py`.** Alpha Vantage `EARNINGS`, reading `quarterlyEarnings[].reportedDate`. One request per ticker, cached permanently. Emits one `earnings_reported` VerifiedFact when a reported date falls inside the window. *Trap:* Alpha Vantage emits the string `"None"` for a missing `reportedDate`; treat it as absent rather than letting it reach a date parser.
+**Task 5 — `events/earnings.py`.** Alpha Vantage `EARNINGS`, reading `quarterlyEarnings[]`. One request per ticker, cached permanently. Emits an `earnings_reported` VerifiedFact when a `reportedDate` falls inside the window, carrying `reportTime` (`pre-market` / `post-market`) and the EPS figures.
+
+*Trap:* Alpha Vantage emits the string `"None"` for a missing `reportedDate`; treat it as absent rather than letting it reach a date parser.
+
+*On `estimatedEPS`:* the response includes consensus EPS and a surprise percentage, which spec §4.4 says is unavailable. That claim is inherited from the sibling project, where the binding requirement is a consensus figure timestamped *before* disclosure; Alpha Vantage serves today's stored value and its vintage cannot be verified. Emit it as a VerifiedFact whose `detail` records the unknown vintage, and never let it become a plain checkmark.
+
+*And a caution that belongs in the prompt, not just the code:* on 2024-04-24 META beat EPS by **+9.03%** and fell 10.6% the next session; on 2022-02-02 it missed by **-4.18%** and fell 26.4%. A beat and a miss, both followed by large declines. EPS surprise is a verifiable fact that routinely fails to explain the move, so the attribution stage must never treat a beat as bullish evidence.
 
 **Task 6 — `events/news.py`.** Alpha Vantage `NEWS_SENTIMENT` with `time_from`/`time_to`, `limit=1000`. One request per move — this is the only source that spends meaningful quota. Emits Documents. *Trap:* `ticker_sentiment` is a list covering every ticker mentioned; the relevance score must be read for the *requested* ticker, not `[0]`, or a story about NVDA that mentions META inherits NVDA's relevance.
 

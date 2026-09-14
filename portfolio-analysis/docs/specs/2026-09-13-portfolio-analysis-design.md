@@ -101,12 +101,22 @@ A "Reddit discussions: 214" count for a 2024 move requires a bulk archive (Arcti
 HackerNews via the free Algolia API is used instead: real history, no auth, already proven.
 Reddit becomes a v2 `EventSource` adapter. Until then the card shows no Reddit row rather than a misleading one.
 
-### 4.4 Excluded: consensus estimates
+### 4.4 Consensus estimates: partially available, and less useful than it sounds
 
 `stock-trading-bot` established that no free source provides consensus estimates timestamped before disclosure with a matching accounting definition.
-That finding carries over unchanged.
 
-This is why "revenue beat" cannot be a verified fact in this system. See §8.
+That finding needs qualifying here.
+Alpha Vantage's `EARNINGS` response does carry `estimatedEPS`, `surprise` and `surprisePercentage`, measured on 2026-09-14 across 58 quarters back to 2012.
+The sibling project's objection - that the vintage is unverifiable - still holds, but it binds less tightly on a project built to use hindsight.
+So EPS surprise is available, with an unknown vintage that must be recorded alongside it.
+
+Two limits remain:
+
+1. It is **EPS, not revenue**. "Revenue beat" still cannot be a verified fact, which is exactly the line the original card crossed.
+2. **It routinely fails to explain the move.** On 2024-04-24 META beat EPS by +9.03% and fell 10.6% the next session. On 2022-02-02 it missed by -4.18% and fell 26.4%. A beat and a miss, both followed by large declines.
+
+The second point is the more important one, and it is the strongest available argument for the split in §8: a fact can be perfectly verifiable and still carry no explanatory weight.
+Anything that reads a beat as bullish gets 2024-04-25 exactly backwards.
 
 ## 5. Move detection
 
