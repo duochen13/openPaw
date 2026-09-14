@@ -561,6 +561,8 @@ Keeping them as different types means the model in Plan 3 is handed `Document`s 
 - [ ] **Step 1: Write the failing test**
 
 ```python
+from dataclasses import FrozenInstanceError
+
 import pytest
 
 from portfolio_analysis.events.base import Document, VerifiedFact
@@ -584,7 +586,10 @@ def test_doc_ids_are_namespaced_by_source():
 
 @pytest.mark.unit
 def test_a_document_is_frozen():
-    with pytest.raises(Exception):
+    # FrozenInstanceError specifically, not a blind Exception: ruff's B017
+    # rejects the latter, and rightly - it would also pass if the attribute
+    # simply did not exist.
+    with pytest.raises(FrozenInstanceError):
         _doc().title = "changed"  # type: ignore[misc]
 
 
@@ -681,21 +686,29 @@ _EASTERN_OFFSET = timedelta(hours=-4)
 _TIMESTAMP_FORMATS = ("%Y%m%dT%H%M%S", "%Y%m%dT%H%M", "%Y-%m-%d")
 
 
+def _parse_datetime(text: str) -> datetime:
+    """First format that parses wins; nothing parsing is an error.
+
+    Split out from parse_timestamp so the return type is a plain datetime.
+    Folding this into the caller forces a `datetime | None` annotation that
+    mypy --strict cannot narrow back across the try/except boundary, which
+    costs three union-attr errors for no benefit.
+    """
+    try:
+        return datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        pass
+    for fmt in _TIMESTAMP_FORMATS:
+        try:
+            return datetime.strptime(text, fmt)
+        except ValueError:
+            continue
+    raise ValueError(f"unparseable timestamp: {text!r}")
+
+
 def parse_timestamp(raw: str) -> str:
     """Normalize a vendor timestamp to canonical UTC ISO-8601."""
-    text = raw.strip()
-    try:
-        parsed: datetime | None = datetime.fromisoformat(text.replace("Z", "+00:00"))
-    except ValueError:
-        parsed = None
-        for fmt in _TIMESTAMP_FORMATS:
-            try:
-                parsed = datetime.strptime(text, fmt)
-                break
-            except ValueError:
-                continue
-        if parsed is None:
-            raise ValueError(f"unparseable timestamp: {raw!r}") from None
+    parsed = _parse_datetime(raw.strip())
     if parsed.tzinfo is None:
         parsed = parsed.replace(tzinfo=UTC)
     return parsed.astimezone(UTC).isoformat()
