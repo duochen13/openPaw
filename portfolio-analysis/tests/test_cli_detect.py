@@ -1,10 +1,9 @@
-from datetime import date, timedelta
-
 import pytest
 
 from portfolio_analysis import cli
 from portfolio_analysis.artifacts import read_moves
 from portfolio_analysis.store import Store
+from tests.test_moves_compute import _series
 
 
 def _bars(ticker, series):
@@ -15,21 +14,15 @@ def _bars(ticker, series):
 
 
 def _seed(db, n=252, spike_at=251, spike=0.20):
-    asset, bench = {}, {}
-    ap, bp = 100.0, 100.0
-    # Strictly increasing ISO dates, one per day. Calendar realism does not
-    # matter here - aligned_returns only requires that the order is total.
-    start = date(2020, 1, 1)
-    dates = [(start + timedelta(days=i)).isoformat() for i in range(n + 1)]
-    asset[dates[0]], bench[dates[0]] = ap, bp
-    for i in range(1, n + 1):
-        br = 0.01 if i % 2 else -0.01
-        ar = 2 * br + (0.001 if i % 2 else -0.001)
-        if i == spike_at:
-            ar = 2 * br + spike
-        bp *= 1 + br
-        ap *= 1 + ar
-        bench[dates[i]], asset[dates[i]] = bp, ap
+    """Seed the store from the SHARED fixture in test_moves_compute.
+
+    This file used to carry its own copy, and the copy drifted back into the
+    collinear-noise bug that fixture documents removing: noise keyed to the
+    benchmark's parity loads onto beta, leaving sigma at ~1e-16 and z at
+    ~2e15, so `assert z > 2.5` passed on floating-point dust. One fixture,
+    imported, cannot drift twice.
+    """
+    asset, bench, dates = _series(n=n, spike_at=spike_at, spike=spike)
     store = Store.open(db)
     try:
         store.upsert_price_bars(_bars("META", asset))

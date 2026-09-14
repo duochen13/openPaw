@@ -87,7 +87,7 @@ def _detect_moves(args: argparse.Namespace) -> int:
                 benchmark_series,
                 portfolio.move_params,
             )
-            store.upsert_moves([m.as_row() for m in found])
+            store.replace_moves(symbol, [m.as_row() for m in found])
             path = write_moves(
                 moves_dir,
                 MovesArtifact(

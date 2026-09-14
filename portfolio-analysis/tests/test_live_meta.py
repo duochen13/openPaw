@@ -49,8 +49,28 @@ def test_the_flagged_rate_is_in_the_expected_band(computed):
     assert 0.015 <= rate <= 0.035, f"flagged {coverage.flagged_days} ({rate:.2%})"
 
 
+def _require_evaluable(coverage, date):
+    """Skip, rather than fail, once a date slides out of the window.
+
+    The fetch window is `now - 6*365.25 days`, so it moves forward about 252
+    trading days a year. A date needs 250 returns before it inside the window
+    to be evaluated at all. 2022-02-03 has roughly 99 trading days of margin
+    as of 2026-09-14, so it drops out of the evaluable span around February
+    2027; 2024-04-25 around 2029. These are `network` tests nothing runs by
+    default, so a deterministic expiry would surface later as a mystery
+    regression. Skipping with the reason keeps the signal honest.
+    """
+    if coverage.evaluated is None or date < coverage.evaluated[0]:
+        pytest.skip(
+            f"{date} is no longer inside the evaluable span "
+            f"{coverage.evaluated}; the six-year fetch window has slid past it. "
+            "This is expected with time, not a regression."
+        )
+
+
 def test_meta_2024_04_25_is_flagged_with_the_measured_statistics(computed):
-    moves, _ = computed
+    moves, coverage = computed
+    _require_evaluable(coverage, "2024-04-25")
     by_date = {m.date: m for m in moves}
     assert "2024-04-25" in by_date, f"flagged dates: {sorted(by_date)}"
     move = by_date["2024-04-25"]
@@ -65,6 +85,7 @@ def test_meta_2024_04_25_is_flagged_with_the_measured_statistics(computed):
 def test_beta_correction_is_not_cosmetic(computed):
     """Naive subtraction gives -10.08%; beta-adjusted gives -9.84%. If beta
     were 1.0 these would coincide and the whole rule would be decoration."""
+    _require_evaluable(computed[1], "2024-04-25")
     move = {m.date: m for m in computed[0]}["2024-04-25"]
     naive = move.ret - move.benchmark_return
     assert abs(naive - move.abnormal_return) > 0.002
@@ -72,7 +93,8 @@ def test_beta_correction_is_not_cosmetic(computed):
 
 def test_meta_2022_02_03_is_the_largest_flagged_move(computed):
     """The -26.4% earnings crash. Measured z -16.30."""
-    moves, _ = computed
+    moves, coverage = computed
+    _require_evaluable(coverage, "2022-02-03")
     largest = min(moves, key=lambda m: m.z)
     assert largest.date == "2022-02-03"
     assert largest.z == pytest.approx(-16.30, abs=0.05)

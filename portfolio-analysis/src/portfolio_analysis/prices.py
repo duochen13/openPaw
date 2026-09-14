@@ -70,7 +70,11 @@ def fetch_yahoo(
     result = results[0]
     timestamps: Sequence[int] = result.get("timestamp") or []
     indicators = result.get("indicators", {})
-    quote: dict[str, Sequence[float | None]] = indicators["quote"][0]
+
+    quote_block = indicators.get("quote")
+    if not quote_block:
+        raise VendorResponseError(f"yahoo returned no quote block for {symbol}")
+    quote: dict[str, Sequence[float | None]] = quote_block[0]
 
     adjclose_block = indicators.get("adjclose")
     if not adjclose_block:
@@ -80,9 +84,31 @@ def fetch_yahoo(
         )
     adjusted: Sequence[float | None] = adjclose_block[0]["adjclose"]
 
+    # A truncated vendor array must not escape as a bare IndexError from the
+    # indexing below - that is indistinguishable from a bug in this module and
+    # defeats the VendorResponseError boundary the rest of the function keeps.
+    for name, column in (("adjclose", adjusted), *((f, quote[f]) for f in _QUOTE_FIELDS)):
+        if len(column) != len(timestamps):
+            raise VendorResponseError(
+                f"yahoo returned {len(column)} {name} values for {len(timestamps)} "
+                f"timestamps on {symbol}; the response is truncated"
+            )
+
     # The exchange's UTC offset, so a timestamp maps to the local trading date
     # rather than to whatever date it happens to be in UTC.
-    gmtoffset = int(result.get("meta", {}).get("gmtoffset", 0))
+    # `or 0` as well as a default: Yahoo emits explicit nulls in this payload,
+    # and .get(k, 0) only defends against an absent key, not a present null.
+    meta = result.get("meta") or {}
+    gmtoffset = int(meta.get("gmtoffset") or 0)
+
+    # The last bar is live and partial during market hours: every field is
+    # non-None, so the null filter below keeps it, and a 30-minute return gets
+    # written as a full day. detect-moves would then evaluate it and can
+    # publish a spurious Move. A retrospective tool never needs today's bar -
+    # and today's is the only one that can be partial - so it is dropped.
+    today_eastern = (
+        datetime.now(UTC) + timedelta(seconds=gmtoffset)
+    ).strftime("%Y-%m-%d")
 
     bars: list[dict[str, object]] = []
     for index, epoch in enumerate(timestamps):
@@ -95,6 +121,8 @@ def fetch_yahoo(
         date = (
             datetime.fromtimestamp(epoch, UTC) + timedelta(seconds=gmtoffset)
         ).strftime("%Y-%m-%d")
+        if date >= today_eastern:
+            continue
         bars.append({
             "ticker": symbol,
             "date": date,

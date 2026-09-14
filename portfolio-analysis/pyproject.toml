@@ -39,6 +39,10 @@ addopts = "-q --strict-markers -m 'not network'"
 [tool.ruff]
 line-length = 100
 src = ["src", "tests"]
+# scratch/ holds documented throwaway spikes, not shipped code. Holding a
+# one-off generator to the same line-length and import rules as the package
+# buys nothing and discourages writing spikes at all.
+extend-exclude = ["scratch"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]

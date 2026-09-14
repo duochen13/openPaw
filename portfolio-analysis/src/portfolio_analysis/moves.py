@@ -42,27 +42,43 @@ def aligned_returns(
     was realized on.
     """
     common = sorted(set(asset) & set(benchmark))
-    dropped = (len(asset) - len(common)) + (len(benchmark) - len(common))
+    if len(common) < 2:
+        raise ValueError(f"need at least two common dates, got {len(common)}")
+
+    # Count disagreement only INSIDE the overlapping span. Counting the whole
+    # symmetric difference makes a short series an error: the benchmark is
+    # always fetched at full depth, so a newly listed ticker would score every
+    # non-overlapping benchmark date as a "dropped" date and raise - which
+    # contradicts compute_moves' contract that a short history is a coverage
+    # fact, not a failure. What this guard is actually for is two series that
+    # disagree about the calendar where they overlap.
+    lo, hi = common[0], common[-1]
+    inside = sum(1 for d in asset if lo <= d <= hi)
+    inside += sum(1 for d in benchmark if lo <= d <= hi)
+    dropped = inside - 2 * len(common)
     if dropped > _MAX_DROPPED_DATES:
         raise ValueError(
             f"{dropped} dates are missing from one series or the other; the two "
             "series disagree about the trading calendar, so every return "
             "spanning a gap would be fabricated"
         )
-    if len(common) < 2:
-        raise ValueError(f"need at least two common dates, got {len(common)}")
 
     dates: list[str] = []
     asset_returns: list[float] = []
     benchmark_returns: list[float] = []
     # pairwise, not zip(common, common[1:]): the two arms are deliberately
     # different lengths, so strict=True rejects it and a bare zip trips B905.
-    for previous, current in pairwise(common):
-        for series, name in ((asset, "asset"), (benchmark, "benchmark")):
-            if series[previous] <= 0:
+    for series, name in ((asset, "asset"), (benchmark, "benchmark")):
+        # Every common date, not just the `previous` of each pair: pairwise
+        # never visits the last date, which is the one most likely to carry a
+        # bad live partial print.
+        for day in common:
+            if series[day] <= 0:
                 raise ValueError(
-                    f"non-positive {name} price {series[previous]!r} on {previous}"
+                    f"non-positive {name} price {series[day]!r} on {day}"
                 )
+
+    for previous, current in pairwise(common):
         dates.append(current)
         asset_returns.append(asset[current] / asset[previous] - 1)
         benchmark_returns.append(benchmark[current] / benchmark[previous] - 1)

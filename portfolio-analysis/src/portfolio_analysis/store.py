@@ -107,6 +107,18 @@ class Store:
     def upsert_moves(self, moves: Iterable[Mapping[str, object]]) -> int:
         return self._upsert("move", _MOVE_COLUMNS, moves)
 
+    def replace_moves(self, ticker: str, moves: Iterable[Mapping[str, object]]) -> int:
+        """Make the move table match a freshly computed set, exactly.
+
+        write_moves rewrites the JSON artifact wholesale, so a plain upsert
+        leaves the database holding days that no longer flag after a price
+        restatement or a threshold change - the two outputs silently diverge
+        and the JSON is the one that is right.
+        """
+        with self._conn:
+            self._conn.execute("DELETE FROM move WHERE ticker = ?", (ticker.upper(),))
+        return self.upsert_moves(moves)
+
     def adjusted_series(self, ticker: str) -> dict[str, float]:
         """Date -> adjusted close, ordered by date."""
         cursor = self._conn.execute(

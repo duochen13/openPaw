@@ -102,6 +102,10 @@ addopts = "-q --strict-markers -m 'not network'"
 [tool.ruff]
 line-length = 100
 src = ["src", "tests"]
+# scratch/ holds documented throwaway spikes, not shipped code. Holding a
+# one-off generator to the same line-length and import rules as the package
+# buys nothing and discourages writing spikes at all.
+extend-exclude = ["scratch"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
@@ -972,6 +976,18 @@ class Store:
     def upsert_moves(self, moves: Iterable[Mapping[str, object]]) -> int:
         return self._upsert("move", _MOVE_COLUMNS, moves)
 
+    def replace_moves(self, ticker: str, moves: Iterable[Mapping[str, object]]) -> int:
+        """Make the move table match a freshly computed set, exactly.
+
+        write_moves rewrites the JSON artifact wholesale, so a plain upsert
+        leaves the database holding days that no longer flag after a price
+        restatement or a threshold change - the two outputs silently diverge
+        and the JSON is the one that is right.
+        """
+        with self._conn:
+            self._conn.execute("DELETE FROM move WHERE ticker = ?", (ticker.upper(),))
+        return self.upsert_moves(moves)
+
     def adjusted_series(self, ticker: str) -> dict[str, float]:
         """Date -> adjusted close, ordered by date."""
         cursor = self._conn.execute(
@@ -1224,7 +1240,11 @@ def fetch_yahoo(
     result = results[0]
     timestamps: Sequence[int] = result.get("timestamp") or []
     indicators = result.get("indicators", {})
-    quote: dict[str, Sequence[float | None]] = indicators["quote"][0]
+
+    quote_block = indicators.get("quote")
+    if not quote_block:
+        raise VendorResponseError(f"yahoo returned no quote block for {symbol}")
+    quote: dict[str, Sequence[float | None]] = quote_block[0]
 
     adjclose_block = indicators.get("adjclose")
     if not adjclose_block:
@@ -1234,9 +1254,31 @@ def fetch_yahoo(
         )
     adjusted: Sequence[float | None] = adjclose_block[0]["adjclose"]
 
+    # A truncated vendor array must not escape as a bare IndexError from the
+    # indexing below - that is indistinguishable from a bug in this module and
+    # defeats the VendorResponseError boundary the rest of the function keeps.
+    for name, column in (("adjclose", adjusted), *((f, quote[f]) for f in _QUOTE_FIELDS)):
+        if len(column) != len(timestamps):
+            raise VendorResponseError(
+                f"yahoo returned {len(column)} {name} values for {len(timestamps)} "
+                f"timestamps on {symbol}; the response is truncated"
+            )
+
     # The exchange's UTC offset, so a timestamp maps to the local trading date
     # rather than to whatever date it happens to be in UTC.
-    gmtoffset = int(result.get("meta", {}).get("gmtoffset", 0))
+    # `or 0` as well as a default: Yahoo emits explicit nulls in this payload,
+    # and .get(k, 0) only defends against an absent key, not a present null.
+    meta = result.get("meta") or {}
+    gmtoffset = int(meta.get("gmtoffset") or 0)
+
+    # The last bar is live and partial during market hours: every field is
+    # non-None, so the null filter below keeps it, and a 30-minute return gets
+    # written as a full day. detect-moves would then evaluate it and can
+    # publish a spurious Move. A retrospective tool never needs today's bar -
+    # and today's is the only one that can be partial - so it is dropped.
+    today_eastern = (
+        datetime.now(UTC) + timedelta(seconds=gmtoffset)
+    ).strftime("%Y-%m-%d")
 
     bars: list[dict[str, object]] = []
     for index, epoch in enumerate(timestamps):
@@ -1249,6 +1291,8 @@ def fetch_yahoo(
         date = (
             datetime.fromtimestamp(epoch, UTC) + timedelta(seconds=gmtoffset)
         ).strftime("%Y-%m-%d")
+        if date >= today_eastern:
+            continue
         bars.append({
             "ticker": symbol,
             "date": date,
@@ -1566,27 +1610,43 @@ def aligned_returns(
     was realized on.
     """
     common = sorted(set(asset) & set(benchmark))
-    dropped = (len(asset) - len(common)) + (len(benchmark) - len(common))
+    if len(common) < 2:
+        raise ValueError(f"need at least two common dates, got {len(common)}")
+
+    # Count disagreement only INSIDE the overlapping span. Counting the whole
+    # symmetric difference makes a short series an error: the benchmark is
+    # always fetched at full depth, so a newly listed ticker would score every
+    # non-overlapping benchmark date as a "dropped" date and raise - which
+    # contradicts compute_moves' contract that a short history is a coverage
+    # fact, not a failure. What this guard is actually for is two series that
+    # disagree about the calendar where they overlap.
+    lo, hi = common[0], common[-1]
+    inside = sum(1 for d in asset if lo <= d <= hi)
+    inside += sum(1 for d in benchmark if lo <= d <= hi)
+    dropped = inside - 2 * len(common)
     if dropped > _MAX_DROPPED_DATES:
         raise ValueError(
             f"{dropped} dates are missing from one series or the other; the two "
             "series disagree about the trading calendar, so every return "
             "spanning a gap would be fabricated"
         )
-    if len(common) < 2:
-        raise ValueError(f"need at least two common dates, got {len(common)}")
 
     dates: list[str] = []
     asset_returns: list[float] = []
     benchmark_returns: list[float] = []
     # pairwise, not zip(common, common[1:]): the two arms are deliberately
     # different lengths, so strict=True rejects it and a bare zip trips B905.
-    for previous, current in pairwise(common):
-        for series, name in ((asset, "asset"), (benchmark, "benchmark")):
-            if series[previous] <= 0:
+    for series, name in ((asset, "asset"), (benchmark, "benchmark")):
+        # Every common date, not just the `previous` of each pair: pairwise
+        # never visits the last date, which is the one most likely to carry a
+        # bad live partial print.
+        for day in common:
+            if series[day] <= 0:
                 raise ValueError(
-                    f"non-positive {name} price {series[previous]!r} on {previous}"
+                    f"non-positive {name} price {series[day]!r} on {day}"
                 )
+
+    for previous, current in pairwise(common):
         dates.append(current)
         asset_returns.append(asset[current] / asset[previous] - 1)
         benchmark_returns.append(benchmark[current] / benchmark[previous] - 1)
@@ -1733,11 +1793,12 @@ git commit -m "feat(portfolio-analysis): OLS beta over a trailing window"
 ```python
 import random
 from datetime import date, timedelta
+from statistics import stdev
 
 import pytest
 
 from portfolio_analysis.config import MoveParams
-from portfolio_analysis.moves import compute_moves
+from portfolio_analysis.moves import aligned_returns, compute_moves
 
 PARAMS = MoveParams(beta_window=250, sigma_window=60, z_threshold=2.5)
 
@@ -1787,7 +1848,9 @@ def test_the_warm_up_period_is_not_evaluated():
 
 @pytest.mark.unit
 def test_a_clean_series_flags_nothing():
-    asset, bench, _ = _series(n=252)
+    # n=400, not 252: with a 250-day warm-up, n=252 leaves two evaluable days,
+    # and "no false positives" over a sample of two is not a claim.
+    asset, bench, _ = _series(n=400)
     moves, coverage = compute_moves("TEST", "BENCH", asset, bench, PARAMS)
     assert moves == []
     assert coverage.flagged_days == 0
@@ -1830,6 +1893,45 @@ def test_z_equals_abnormal_return_over_sigma():
     asset, bench, _ = _series(n=252, spike_at=251, spike=0.20)
     move = compute_moves("TEST", "BENCH", asset, bench, PARAMS)[0][0]
     assert move.z == pytest.approx(move.abnormal_return / move.sigma_60)
+
+
+@pytest.mark.unit
+def test_sigma_uses_exactly_the_60_abnormal_returns_before_the_day():
+    """Pins the sigma window offline.
+
+    The beta window's exclusion of day t is pinned by the beta assertion
+    above. The sigma window's was not: including day t would take sigma from
+    ~0.0011 to ~0.026 and z from ~180 to ~8, which is still over the 2.5
+    threshold, so every other test in this file still passes. Until this
+    test existed the only thing holding that boundary was a network test
+    that the default suite does not run.
+    """
+    asset, bench, _ = _series(n=252, spike_at=251, spike=0.20)
+    moves, _ = compute_moves("TEST", "BENCH", asset, bench, PARAMS)
+    move = moves[0]
+
+    dates, ar, br = aligned_returns(asset, bench)
+    i = dates.index(move.date)
+    abnormal = [ar[j] - move.beta * br[j] for j in range(i - 60, i)]
+    assert len(abnormal) == 60
+    assert move.sigma_60 == pytest.approx(stdev(abnormal), rel=1e-12)
+
+
+@pytest.mark.unit
+def test_a_ticker_shorter_than_the_benchmark_reports_coverage_not_an_error():
+    """A newly listed ticker is a coverage fact, not a failure.
+
+    The benchmark is always fetched at full depth, so counting the whole
+    symmetric difference made every short ticker raise 'the two series
+    disagree about the trading calendar'.
+    """
+    _, bench, dates = _series(n=400)
+    asset_full, _, _ = _series(n=400)
+    asset = {d: asset_full[d] for d in dates[-120:]}
+    moves, coverage = compute_moves("TEST", "BENCH", asset, bench, PARAMS)
+    assert moves == []
+    assert coverage.evaluated_days == 0
+    assert coverage.evaluated is None
 
 
 @pytest.mark.unit
@@ -2194,13 +2296,12 @@ Expected: `3 passed`
 - [ ] **Step 5: Write the failing test for the command**
 
 ```python
-from datetime import date, timedelta
-
 import pytest
 
 from portfolio_analysis import cli
 from portfolio_analysis.artifacts import read_moves
 from portfolio_analysis.store import Store
+from tests.test_moves_compute import _series
 
 
 def _bars(ticker, series):
@@ -2211,21 +2312,15 @@ def _bars(ticker, series):
 
 
 def _seed(db, n=252, spike_at=251, spike=0.20):
-    asset, bench = {}, {}
-    ap, bp = 100.0, 100.0
-    # Strictly increasing ISO dates, one per day. Calendar realism does not
-    # matter here - aligned_returns only requires that the order is total.
-    start = date(2020, 1, 1)
-    dates = [(start + timedelta(days=i)).isoformat() for i in range(n + 1)]
-    asset[dates[0]], bench[dates[0]] = ap, bp
-    for i in range(1, n + 1):
-        br = 0.01 if i % 2 else -0.01
-        ar = 2 * br + (0.001 if i % 2 else -0.001)
-        if i == spike_at:
-            ar = 2 * br + spike
-        bp *= 1 + br
-        ap *= 1 + ar
-        bench[dates[i]], asset[dates[i]] = bp, ap
+    """Seed the store from the SHARED fixture in test_moves_compute.
+
+    This file used to carry its own copy, and the copy drifted back into the
+    collinear-noise bug that fixture documents removing: noise keyed to the
+    benchmark's parity loads onto beta, leaving sigma at ~1e-16 and z at
+    ~2e15, so `assert z > 2.5` passed on floating-point dust. One fixture,
+    imported, cannot drift twice.
+    """
+    asset, bench, dates = _series(n=n, spike_at=spike_at, spike=spike)
     store = Store.open(db)
     try:
         store.upsert_price_bars(_bars("META", asset))
@@ -2344,7 +2439,7 @@ def _detect_moves(args: argparse.Namespace) -> int:
                 benchmark_series,
                 portfolio.move_params,
             )
-            store.upsert_moves([m.as_row() for m in found])
+            store.replace_moves(symbol, [m.as_row() for m in found])
             path = write_moves(
                 moves_dir,
                 MovesArtifact(
@@ -2475,8 +2570,28 @@ def test_the_flagged_rate_is_in_the_expected_band(computed):
     assert 0.015 <= rate <= 0.035, f"flagged {coverage.flagged_days} ({rate:.2%})"
 
 
+def _require_evaluable(coverage, date):
+    """Skip, rather than fail, once a date slides out of the window.
+
+    The fetch window is `now - 6*365.25 days`, so it moves forward about 252
+    trading days a year. A date needs 250 returns before it inside the window
+    to be evaluated at all. 2022-02-03 has roughly 99 trading days of margin
+    as of 2026-09-14, so it drops out of the evaluable span around February
+    2027; 2024-04-25 around 2029. These are `network` tests nothing runs by
+    default, so a deterministic expiry would surface later as a mystery
+    regression. Skipping with the reason keeps the signal honest.
+    """
+    if coverage.evaluated is None or date < coverage.evaluated[0]:
+        pytest.skip(
+            f"{date} is no longer inside the evaluable span "
+            f"{coverage.evaluated}; the six-year fetch window has slid past it. "
+            "This is expected with time, not a regression."
+        )
+
+
 def test_meta_2024_04_25_is_flagged_with_the_measured_statistics(computed):
-    moves, _ = computed
+    moves, coverage = computed
+    _require_evaluable(coverage, "2024-04-25")
     by_date = {m.date: m for m in moves}
     assert "2024-04-25" in by_date, f"flagged dates: {sorted(by_date)}"
     move = by_date["2024-04-25"]
@@ -2491,6 +2606,7 @@ def test_meta_2024_04_25_is_flagged_with_the_measured_statistics(computed):
 def test_beta_correction_is_not_cosmetic(computed):
     """Naive subtraction gives -10.08%; beta-adjusted gives -9.84%. If beta
     were 1.0 these would coincide and the whole rule would be decoration."""
+    _require_evaluable(computed[1], "2024-04-25")
     move = {m.date: m for m in computed[0]}["2024-04-25"]
     naive = move.ret - move.benchmark_return
     assert abs(naive - move.abnormal_return) > 0.002
@@ -2498,7 +2614,8 @@ def test_beta_correction_is_not_cosmetic(computed):
 
 def test_meta_2022_02_03_is_the_largest_flagged_move(computed):
     """The -26.4% earnings crash. Measured z -16.30."""
-    moves, _ = computed
+    moves, coverage = computed
+    _require_evaluable(coverage, "2022-02-03")
     largest = min(moves, key=lambda m: m.z)
     assert largest.date == "2022-02-03"
     assert largest.z == pytest.approx(-16.30, abs=0.05)
