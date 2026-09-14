@@ -37,6 +37,7 @@ Probed live on 2026-09-14. These are measurements, not assumptions, and Task 11 
 | AV reliability | 12 x `502 Bad Gateway` across 3 requests - retry is mandatory |
 | yfinance `get_earnings_dates(limit=40)` | 50 quarters, 2014-07 .. 2026-10, **with time of day** |
 | Finnhub free tier | 1 year of news - covers 8 of 30 moves, misses all 3 largest. Rejected |
+| GDELT Doc 2.0 | Rejected. Four requests in quick succession earned a `429` lasting **over 18 minutes**, through two cooldowns. Not evaluable, and not a foundation for a 30-request backfill |
 
 ### The EDGAR trap, stated up front
 
