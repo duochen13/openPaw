@@ -49,23 +49,41 @@ All probed on 2026-09-13. Reachability and response shape verified, not assumed.
 | Prices | Yahoo chart v8, `period1`/`period2` epoch window | free | Daily OHLCV + `adjclose`. Confirmed for META. **Six years are fetched, not five** — see §5. |
 | Filings | SEC EDGAR submissions + full-text | free | Full 5y, authoritative, dated. Client exists in sibling repo. |
 | Earnings dates | Alpha Vantage `EARNINGS` | free | Full history of `fiscalDateEnding` + `reportedDate`. Confirmed on the demo key. |
-| News | Alpha Vantage `NEWS_SENTIMENT` | free, 25 req/day | **~2022 onward.** See §4.2. |
+| News | Alpha Vantage `NEWS_SENTIMENT` | free, 25 req/day | **2020-01 onward - measured.** Volume is the limit, not depth. See §4.2. |
 | Macro calendar | FRED releases | free, needs key | FOMC / CPI / PCE release dates. |
 | Forum discussion | HN Algolia search | free | Full history. Already proven working in the sibling repo. |
 
 **Stooq is not usable.** It sits behind a JavaScript proof-of-work anti-bot challenge.
 This was established in `stock-trading-bot` and is not re-litigated here; Yahoo is the price path.
 
-### 4.2 The coverage limitation, stated plainly
+### 4.2 The coverage limitation, measured
 
-Prices go back five years.
-News does not.
+An earlier draft of this spec said news coverage began around 2022, and that years four and five would be thin to empty.
+**That was wrong. It came from documentation and aggregator write-ups rather than from measurement.**
 
-Alpha Vantage `NEWS_SENTIMENT` coverage begins around 2022, so news-backed attribution realistically spans about three and a half years, and years four and five are thin to empty.
+Probed on 2026-09-14 with a real key: the earliest META article Alpha Vantage returns is `20200121T221400`.
+Coverage begins in **January 2020**, before the evaluated window starts at 2021-09-13, so all 30 flagged moves sit inside covered territory.
+
+**The real limitation is volume, not depth.**
+Measured document counts for a `[-2, +1]` window:
+
+| Window | Articles |
+|---|---|
+| 2024-04-25, the -10.6% move | 7 |
+| 2022-02-03, the -26.4% crash | 14 |
+
+Roughly 7-14 documents per move, not the 30-40 an attribution of this kind would ideally rest on.
+The highly relevant items are present - *"Meta earnings: Stock decline could wipe out about $200B"* scores relevance 1.00 on the anchor date - but a seven-document evidence base caps how much confidence any explanation can honestly carry, and the rendered card must show that count rather than bury it.
+
 The free tier is 25 requests per day, which shapes the architecture (§6.1).
 
-The consequence is not hidden. Every move record carries a `coverage` block, and every HTML page prints per-year document counts.
-A 2021 move showing `documents: 2` is visibly weak rather than silently weak.
+The consequence is not hidden. Every move record carries a `coverage` block, and every HTML page prints per-move document counts.
+A move showing `documents: 2` is visibly weak rather than silently weak.
+
+Two operational facts, both learned by probing rather than reading:
+
+- Alpha Vantage returns intermittent `502 Bad Gateway` - twelve across three requests. Retry with backoff is required, not optional.
+- A 111KB response truncated under `urllib` with `IncompleteRead`. The `requests` library handles it, which is what `http.py` uses.
 
 Optional accelerant: Alpha Vantage's paid tier (~$50/month) raises the limit to 75 requests/minute.
 Because every response is cached to disk permanently, buying one month, backfilling, and cancelling is a coherent strategy.
@@ -403,7 +421,7 @@ Every network response is cached content-addressed on disk, so re-runs are free.
 
 These belong in the README, in the sibling repo's register.
 
-1. **News coverage begins around 2022.** Years four and five of the price series have little or no news backing. Surfaced per-move and per-year, never hidden.
+1. **News volume is thin - 7 to 14 documents per move**, measured. Depth is not the problem: coverage reaches back to January 2020, before the evaluated window begins. But a seven-document evidence base limits how much confidence any explanation can carry. Surfaced per-move, never hidden.
 2. **Consensus estimates are unavailable**, so "beat" and "miss" are reported claims rather than verified facts.
 3. **No analyst ratings changes.** No free source carries dated history.
 4. **No Reddit.** Historical recall is not achievable without a bulk archive.

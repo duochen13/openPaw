@@ -31,6 +31,12 @@ Probed live on 2026-09-14. These are measurements, not assumptions, and Task 11 
 | HN Algolia, "Meta earnings", 2024-04-23..26 | `nbHits: 9`, incl. *"Meta stock has lost $137B in market cap on weak Q2 revenue guidance"* |
 | META Form 4 / Form 144 volume | 547 and 371 in ~2 years — noise that must be excluded |
 | Alpha Vantage free tier | 25 requests/day |
+| AV news, earliest META article | **`20200121T221400`** - before the evaluated window begins |
+| AV news volume, 2024-04-25 window | **7 articles** |
+| AV news volume, 2022-02-03 window | **14 articles** |
+| AV reliability | 12 x `502 Bad Gateway` across 3 requests - retry is mandatory |
+| yfinance `get_earnings_dates(limit=40)` | 50 quarters, 2014-07 .. 2026-10, **with time of day** |
+| Finnhub free tier | 1 year of news - covers 8 of 30 moves, misses all 3 largest. Rejected |
 
 ### The EDGAR trap, stated up front
 
