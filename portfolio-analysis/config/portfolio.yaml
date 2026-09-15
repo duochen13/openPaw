@@ -13,6 +13,10 @@ tickers:
     cik: 1652044
     name: Alphabet Inc.
     aliases: ["Google", "Alphabet", "Alphabet Inc"]
+  - symbol: TSLA
+    cik: 1318605
+    name: Tesla, Inc.
+    aliases: ["Tesla", "Tesla Inc"]
 
 # Beta is measured against this. QQQ matches the sibling repo's watchlist.
 benchmark: QQQ
