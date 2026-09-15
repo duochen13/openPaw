@@ -25,6 +25,10 @@ tickers:
     cik: 1108524
     name: Salesforce, Inc.
     aliases: ["Salesforce", "Salesforce Inc"]
+  - symbol: ORCL
+    cik: 1341439
+    name: Oracle Corporation
+    aliases: ["Oracle", "Oracle Corporation"]
 
 # Beta is measured against this. QQQ matches the sibling repo's watchlist.
 benchmark: QQQ
