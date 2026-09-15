@@ -9,6 +9,10 @@ tickers:
     cik: 1373715
     name: ServiceNow, Inc.
     aliases: ["ServiceNow", "ServiceNow Inc"]
+  - symbol: GOOGL
+    cik: 1652044
+    name: Alphabet Inc.
+    aliases: ["Google", "Alphabet", "Alphabet Inc"]
 
 # Beta is measured against this. QQQ matches the sibling repo's watchlist.
 benchmark: QQQ
