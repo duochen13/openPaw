@@ -15,6 +15,7 @@ from portfolio_analysis import prices
 from portfolio_analysis.artifacts import MovesArtifact, write_moves
 from portfolio_analysis.collection import collect_events
 from portfolio_analysis.config import PROJECT_ROOT, Portfolio, load_portfolio
+from portfolio_analysis.dashboard import render_dashboard
 from portfolio_analysis.events.macro import MacroSource
 from portfolio_analysis.http import CachedHttp, ProviderError, RateLimitLedger
 from portfolio_analysis.render import render_chart
@@ -172,6 +173,19 @@ def _render(args: argparse.Namespace) -> int:
     return 0
 
 
+def _dashboard(args: argparse.Namespace) -> int:
+    portfolio = load_portfolio()
+    try:
+        target = render_dashboard(
+            portfolio, Path(args.out_dir) if args.out_dir else portfolio.path("out")
+        )
+    except OSError as exc:
+        print(f"dashboard: {exc}", file=sys.stderr)
+        return 1
+    print(f"dashboard written -> {target}")
+    return 0
+
+
 def _chart(args: argparse.Namespace) -> int:
     """The user-facing trigger: prices -> moves -> events -> HTML, no model calls."""
     portfolio = load_portfolio()
@@ -255,6 +269,11 @@ def main(argv: list[str] | None = None) -> int:
     collect.set_defaults(func=_collect_events)
 
     render = sub.add_parser("render", help="build a self-contained price and event chart offline")
+    dashboard = sub.add_parser(
+        "dashboard", help="build an offline dashboard linking all configured stock charts"
+    )
+    dashboard.add_argument("--out-dir", default=None)
+    dashboard.set_defaults(func=_dashboard)
     chart = sub.add_parser("chart", help="run the pipeline and generate a price/event HTML chart")
     for command in (render, chart):
         command.add_argument("ticker", nargs="?", default=None)
