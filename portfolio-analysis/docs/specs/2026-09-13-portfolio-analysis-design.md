@@ -50,7 +50,7 @@ All probed on 2026-09-13. Reachability and response shape verified, not assumed.
 | Filings | SEC EDGAR submissions + full-text | free | Full 5y, authoritative, dated. Client exists in sibling repo. |
 | Earnings dates | Alpha Vantage `EARNINGS` | free | Full history of `fiscalDateEnding` + `reportedDate`. Confirmed on the demo key. |
 | News | Alpha Vantage `NEWS_SENTIMENT` | free, 25 req/day | **2020-01 onward - measured.** Volume is the limit, not depth. See §4.2. |
-| Macro calendar | FRED releases | free, needs key | FOMC / CPI / PCE release dates. |
+| Macro calendar | Checked-in YAML | free, no key | FOMC / CPI / PCE release dates with source URLs and explicit coverage. |
 | Forum discussion | HN Algolia search | free | Full history. Already proven working in the sibling repo. |
 
 **Stooq is not usable.** It sits behind a JavaScript proof-of-work anti-bot challenge.
@@ -173,7 +173,9 @@ Collection is serial behind a rate limiter that persists its own request-count l
 ```python
 class EventSource(Protocol):
     name: str
-    def fetch(self, ticker: str, start: date, end: date) -> list[Document] | list[VerifiedFact]: ...
+    def collect(
+        self, ticker: str, start: str, end: str
+    ) -> tuple[list[Document], list[VerifiedFact]]: ...
 ```
 
 Adapters: `edgar`, `earnings`, `news`, `macro`, `hn`.
@@ -182,6 +184,15 @@ Each writes raw responses to a content-addressed disk cache before parsing, so a
 ## 7. Evidence bundle
 
 One JSON artifact per flagged move. This is the sole input to the LLM.
+
+Implementation amendment: `verified` is a list of sourced
+`{key, value, source, detail}` records, rather than the grouped object in the
+original illustrative example below. This preserves provenance for multiple
+filings and macro releases. The actual artifact also includes schema and
+collector versions, a collection-input hash, per-source status, and per-series
+macro coverage. The LLM still cannot construct verified facts. See
+[`../PLAN-2-IMPLEMENTATION.md`](../PLAN-2-IMPLEMENTATION.md) for the implemented contract.
+The example below is the original conceptual mockup, not measured output.
 
 ```json
 {
@@ -232,7 +243,7 @@ One JSON artifact per flagged move. This is the sole input to the LLM.
 
 `bundle_sha256` is computed over a canonical serialization with documents sorted by `doc_id`, so an upstream reordering does not invalidate the LLM cache.
 
-`news_coverage_known_thin` is `true` when either condition holds: the move date precedes the news source's configured coverage start (`news_coverage_start`, default `2022-03-01`), or fewer than five documents were collected.
+`news_coverage_known_thin` is `true` when either condition holds: the move date precedes the news source's configured coverage start (`news_coverage_start`, default `2020-01-21`), or fewer than five Alpha Vantage news documents were collected. Forum volume cannot mask thin news.
 It is computed in code, and when `true` the rendered card carries a coverage warning above the reason.
 
 ## 8. The verified / reported split
@@ -248,7 +259,7 @@ The structural defense is that **facts and narrative never share a checkbox**, a
 
 - Earnings reported (Alpha Vantage `reportedDate`)
 - Filings on or adjacent to the date (EDGAR, with accession number)
-- Whether the date was an FOMC / CPI / PCE release day (FRED)
+- Whether the date was an FOMC / CPI / PCE release day (checked-in calendar, with source URLs)
 - Benchmark move, beta, abnormal return, z (Yahoo + §5)
 
 **Reported** — a claim asserted in sources, carried with citations and a support count. Written by the LLM, grounded in `documents`.
@@ -366,7 +377,8 @@ Plain SQLite at `data/prices.sqlite`. Tables:
 1. **No `known_at` / `observed_at` / `valid_from` columns and no `PointInTimeView`.**
    That machinery exists to prevent a forward-looking model from seeing the future.
    This project's entire purpose is to look backward with full hindsight, so the machinery would be dead weight that implies a guarantee the project does not make.
-   Rows are still append-only and carry `fetched_at`, so a run is reproducible and a restatement is visible.
+   Price rows are upserted with `fetched_at`, matching the implemented retrospective store.
+   Event response objects are immutable and content-addressed; request manifests may be refreshed.
 
 2. **Yahoo `adj_close` is used directly, rather than storing raw prices and reconstructing split adjustment from dated corporate actions.**
    The sibling repo reconstructs because a vendor's adjusted series is retroactively revised, which corrupts a point-in-time backtest.
@@ -419,7 +431,7 @@ Chart construction follows the `dataviz` skill, which is to be loaded before any
 
 | Item | Cost |
 |---|---|
-| Prices, EDGAR, earnings dates, FRED, HN | $0 |
+| Prices, EDGAR, earnings dates, macro calendar, HN | $0 |
 | Alpha Vantage news, free tier | $0, ~1.5 days of drip per ticker |
 | Alpha Vantage news, optional accelerant | ~$50 for one month, then cancel |
 | Muse Spark, ~40 moves, 5y META | ~$1-2 |
@@ -432,7 +444,7 @@ Every network response is cached content-addressed on disk, so re-runs are free.
 These belong in the README, in the sibling repo's register.
 
 1. **News volume is thin - 7 to 14 documents per move**, measured. Depth is not the problem: coverage reaches back to January 2020, before the evaluated window begins. But a seven-document evidence base limits how much confidence any explanation can carry. Surfaced per-move, never hidden.
-2. **Consensus estimates are unavailable**, so "beat" and "miss" are reported claims rather than verified facts.
+2. **EPS consensus vintage is unknown.** Vendor-stored EPS estimates and surprise values carry that caveat. Revenue beats/misses remain reported claims (section 4.4).
 3. **No analyst ratings changes.** No free source carries dated history.
 4. **No Reddit.** Historical recall is not achievable without a bulk archive.
 5. **Attribution is not causal identification.** A dated event in the window that the market discussed is not proof it caused the move. The controls layer measures how badly the model over-claims; it does not make the claims causal.

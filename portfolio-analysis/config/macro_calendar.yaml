@@ -1,0 +1,770 @@
+# JSON syntax is valid YAML; each release retains its authoritative source.
+{
+  "schema_version": 1,
+  "as_of": "2026-09-13",
+  "notes": [
+    "Release dates, not reference periods. FOMC dates are statement days, not minutes.",
+    "Historical schedules can be revised. Coverage ends at the checked as-of date.",
+    "2025 CPI October reference month was not published; PCE includes December 23 data-only update."
+  ],
+  "series": {
+    "CPI": {
+      "coverage": [
+        [
+          "2021-01-01",
+          "2026-09-13"
+        ]
+      ],
+      "events": [
+        {
+          "date": "2021-01-13",
+          "url": "https://www.bls.gov/schedule/2021/home.htm"
+        },
+        {
+          "date": "2021-02-10",
+          "url": "https://www.bls.gov/schedule/2021/home.htm"
+        },
+        {
+          "date": "2021-03-10",
+          "url": "https://www.bls.gov/schedule/2021/home.htm"
+        },
+        {
+          "date": "2021-04-13",
+          "url": "https://www.bls.gov/schedule/2021/home.htm"
+        },
+        {
+          "date": "2021-05-12",
+          "url": "https://www.bls.gov/schedule/2021/home.htm"
+        },
+        {
+          "date": "2021-06-10",
+          "url": "https://www.bls.gov/schedule/2021/home.htm"
+        },
+        {
+          "date": "2021-07-13",
+          "url": "https://www.bls.gov/schedule/2021/home.htm"
+        },
+        {
+          "date": "2021-08-11",
+          "url": "https://www.bls.gov/schedule/2021/home.htm"
+        },
+        {
+          "date": "2021-09-14",
+          "url": "https://www.bls.gov/schedule/2021/home.htm"
+        },
+        {
+          "date": "2021-10-13",
+          "url": "https://www.bls.gov/schedule/2021/home.htm"
+        },
+        {
+          "date": "2021-11-10",
+          "url": "https://www.bls.gov/schedule/2021/home.htm"
+        },
+        {
+          "date": "2021-12-10",
+          "url": "https://www.bls.gov/schedule/2021/home.htm"
+        },
+        {
+          "date": "2022-01-12",
+          "url": "https://www.bls.gov/schedule/2022/home.htm"
+        },
+        {
+          "date": "2022-02-10",
+          "url": "https://www.bls.gov/schedule/2022/home.htm"
+        },
+        {
+          "date": "2022-03-10",
+          "url": "https://www.bls.gov/schedule/2022/home.htm"
+        },
+        {
+          "date": "2022-04-12",
+          "url": "https://www.bls.gov/schedule/2022/home.htm"
+        },
+        {
+          "date": "2022-05-11",
+          "url": "https://www.bls.gov/schedule/2022/home.htm"
+        },
+        {
+          "date": "2022-06-10",
+          "url": "https://www.bls.gov/schedule/2022/home.htm"
+        },
+        {
+          "date": "2022-07-13",
+          "url": "https://www.bls.gov/schedule/2022/home.htm"
+        },
+        {
+          "date": "2022-08-10",
+          "url": "https://www.bls.gov/schedule/2022/home.htm"
+        },
+        {
+          "date": "2022-09-13",
+          "url": "https://www.bls.gov/schedule/2022/home.htm"
+        },
+        {
+          "date": "2022-10-13",
+          "url": "https://www.bls.gov/schedule/2022/home.htm"
+        },
+        {
+          "date": "2022-11-10",
+          "url": "https://www.bls.gov/schedule/2022/home.htm"
+        },
+        {
+          "date": "2022-12-13",
+          "url": "https://www.bls.gov/schedule/2022/home.htm"
+        },
+        {
+          "date": "2023-01-12",
+          "url": "https://www.bls.gov/schedule/2023/home.htm"
+        },
+        {
+          "date": "2023-02-14",
+          "url": "https://www.bls.gov/schedule/2023/home.htm"
+        },
+        {
+          "date": "2023-03-14",
+          "url": "https://www.bls.gov/schedule/2023/home.htm"
+        },
+        {
+          "date": "2023-04-12",
+          "url": "https://www.bls.gov/schedule/2023/home.htm"
+        },
+        {
+          "date": "2023-05-10",
+          "url": "https://www.bls.gov/schedule/2023/home.htm"
+        },
+        {
+          "date": "2023-06-13",
+          "url": "https://www.bls.gov/schedule/2023/home.htm"
+        },
+        {
+          "date": "2023-07-12",
+          "url": "https://www.bls.gov/schedule/2023/home.htm"
+        },
+        {
+          "date": "2023-08-10",
+          "url": "https://www.bls.gov/schedule/2023/home.htm"
+        },
+        {
+          "date": "2023-09-13",
+          "url": "https://www.bls.gov/schedule/2023/home.htm"
+        },
+        {
+          "date": "2023-10-12",
+          "url": "https://www.bls.gov/schedule/2023/home.htm"
+        },
+        {
+          "date": "2023-11-14",
+          "url": "https://www.bls.gov/schedule/2023/home.htm"
+        },
+        {
+          "date": "2023-12-12",
+          "url": "https://www.bls.gov/schedule/2023/home.htm"
+        },
+        {
+          "date": "2024-01-11",
+          "url": "https://www.bls.gov/schedule/2024/home.htm"
+        },
+        {
+          "date": "2024-02-13",
+          "url": "https://www.bls.gov/schedule/2024/home.htm"
+        },
+        {
+          "date": "2024-03-12",
+          "url": "https://www.bls.gov/schedule/2024/home.htm"
+        },
+        {
+          "date": "2024-04-10",
+          "url": "https://www.bls.gov/schedule/2024/home.htm"
+        },
+        {
+          "date": "2024-05-15",
+          "url": "https://www.bls.gov/schedule/2024/home.htm"
+        },
+        {
+          "date": "2024-06-12",
+          "url": "https://www.bls.gov/schedule/2024/home.htm"
+        },
+        {
+          "date": "2024-07-11",
+          "url": "https://www.bls.gov/schedule/2024/home.htm"
+        },
+        {
+          "date": "2024-08-14",
+          "url": "https://www.bls.gov/schedule/2024/home.htm"
+        },
+        {
+          "date": "2024-09-11",
+          "url": "https://www.bls.gov/schedule/2024/home.htm"
+        },
+        {
+          "date": "2024-10-10",
+          "url": "https://www.bls.gov/schedule/2024/home.htm"
+        },
+        {
+          "date": "2024-11-13",
+          "url": "https://www.bls.gov/schedule/2024/home.htm"
+        },
+        {
+          "date": "2024-12-11",
+          "url": "https://www.bls.gov/schedule/2024/home.htm"
+        },
+        {
+          "date": "2025-01-15",
+          "url": "https://www.bls.gov/schedule/2025/home.htm"
+        },
+        {
+          "date": "2025-02-12",
+          "url": "https://www.bls.gov/schedule/2025/home.htm"
+        },
+        {
+          "date": "2025-03-12",
+          "url": "https://www.bls.gov/schedule/2025/home.htm"
+        },
+        {
+          "date": "2025-04-10",
+          "url": "https://www.bls.gov/schedule/2025/home.htm"
+        },
+        {
+          "date": "2025-05-13",
+          "url": "https://www.bls.gov/schedule/2025/home.htm"
+        },
+        {
+          "date": "2025-06-11",
+          "url": "https://www.bls.gov/schedule/2025/home.htm"
+        },
+        {
+          "date": "2025-07-15",
+          "url": "https://www.bls.gov/schedule/2025/home.htm"
+        },
+        {
+          "date": "2025-08-12",
+          "url": "https://www.bls.gov/schedule/2025/home.htm"
+        },
+        {
+          "date": "2025-09-11",
+          "url": "https://www.bls.gov/schedule/2025/home.htm"
+        },
+        {
+          "date": "2025-10-24",
+          "url": "https://www.bls.gov/schedule/2025/home.htm"
+        },
+        {
+          "date": "2025-12-18",
+          "url": "https://www.bls.gov/schedule/2025/home.htm"
+        },
+        {
+          "date": "2026-01-13",
+          "url": "https://www.bls.gov/schedule/2026/home.htm"
+        },
+        {
+          "date": "2026-02-13",
+          "url": "https://www.bls.gov/schedule/2026/home.htm"
+        },
+        {
+          "date": "2026-03-11",
+          "url": "https://www.bls.gov/schedule/2026/home.htm"
+        },
+        {
+          "date": "2026-04-10",
+          "url": "https://www.bls.gov/schedule/2026/home.htm"
+        },
+        {
+          "date": "2026-05-12",
+          "url": "https://www.bls.gov/schedule/2026/home.htm"
+        },
+        {
+          "date": "2026-06-10",
+          "url": "https://www.bls.gov/schedule/2026/home.htm"
+        },
+        {
+          "date": "2026-07-14",
+          "url": "https://www.bls.gov/schedule/2026/home.htm"
+        },
+        {
+          "date": "2026-08-12",
+          "url": "https://www.bls.gov/schedule/2026/home.htm"
+        },
+        {
+          "date": "2026-09-11",
+          "url": "https://www.bls.gov/schedule/2026/home.htm"
+        }
+      ]
+    },
+    "PCE": {
+      "coverage": [
+        [
+          "2021-01-01",
+          "2026-09-13"
+        ]
+      ],
+      "events": [
+        {
+          "date": "2021-01-29",
+          "url": "https://apps.bea.gov/scb/issues/2020/12-december/1220-news-releases-2021.htm"
+        },
+        {
+          "date": "2021-02-26",
+          "url": "https://apps.bea.gov/scb/issues/2020/12-december/1220-news-releases-2021.htm"
+        },
+        {
+          "date": "2021-03-26",
+          "url": "https://apps.bea.gov/scb/issues/2020/12-december/1220-news-releases-2021.htm"
+        },
+        {
+          "date": "2021-04-30",
+          "url": "https://apps.bea.gov/scb/issues/2020/12-december/1220-news-releases-2021.htm"
+        },
+        {
+          "date": "2021-05-28",
+          "url": "https://apps.bea.gov/scb/issues/2020/12-december/1220-news-releases-2021.htm"
+        },
+        {
+          "date": "2021-06-25",
+          "url": "https://apps.bea.gov/scb/issues/2020/12-december/1220-news-releases-2021.htm"
+        },
+        {
+          "date": "2021-07-30",
+          "url": "https://apps.bea.gov/scb/issues/2020/12-december/1220-news-releases-2021.htm"
+        },
+        {
+          "date": "2021-08-27",
+          "url": "https://apps.bea.gov/scb/issues/2020/12-december/1220-news-releases-2021.htm"
+        },
+        {
+          "date": "2021-10-01",
+          "url": "https://apps.bea.gov/scb/issues/2020/12-december/1220-news-releases-2021.htm"
+        },
+        {
+          "date": "2021-10-29",
+          "url": "https://apps.bea.gov/scb/issues/2020/12-december/1220-news-releases-2021.htm"
+        },
+        {
+          "date": "2021-11-24",
+          "url": "https://apps.bea.gov/scb/issues/2020/12-december/1220-news-releases-2021.htm"
+        },
+        {
+          "date": "2021-12-23",
+          "url": "https://apps.bea.gov/scb/issues/2020/12-december/1220-news-releases-2021.htm"
+        },
+        {
+          "date": "2022-01-28",
+          "url": "https://apps.bea.gov/scb/issues/2021/12-december/1221-news-releases-2022.htm"
+        },
+        {
+          "date": "2022-02-25",
+          "url": "https://apps.bea.gov/scb/issues/2021/12-december/1221-news-releases-2022.htm"
+        },
+        {
+          "date": "2022-03-31",
+          "url": "https://apps.bea.gov/scb/issues/2021/12-december/1221-news-releases-2022.htm"
+        },
+        {
+          "date": "2022-04-29",
+          "url": "https://apps.bea.gov/scb/issues/2021/12-december/1221-news-releases-2022.htm"
+        },
+        {
+          "date": "2022-05-27",
+          "url": "https://apps.bea.gov/scb/issues/2021/12-december/1221-news-releases-2022.htm"
+        },
+        {
+          "date": "2022-06-30",
+          "url": "https://apps.bea.gov/scb/issues/2021/12-december/1221-news-releases-2022.htm"
+        },
+        {
+          "date": "2022-07-29",
+          "url": "https://apps.bea.gov/scb/issues/2021/12-december/1221-news-releases-2022.htm"
+        },
+        {
+          "date": "2022-08-26",
+          "url": "https://apps.bea.gov/scb/issues/2021/12-december/1221-news-releases-2022.htm"
+        },
+        {
+          "date": "2022-09-30",
+          "url": "https://apps.bea.gov/scb/issues/2021/12-december/1221-news-releases-2022.htm"
+        },
+        {
+          "date": "2022-10-28",
+          "url": "https://apps.bea.gov/scb/issues/2021/12-december/1221-news-releases-2022.htm"
+        },
+        {
+          "date": "2022-12-01",
+          "url": "https://apps.bea.gov/scb/issues/2021/12-december/1221-news-releases-2022.htm"
+        },
+        {
+          "date": "2022-12-23",
+          "url": "https://apps.bea.gov/scb/issues/2021/12-december/1221-news-releases-2022.htm"
+        },
+        {
+          "date": "2023-01-27",
+          "url": "https://apps.bea.gov/scb/issues/2022/12-december/1222-news-releases-2023.htm"
+        },
+        {
+          "date": "2023-02-24",
+          "url": "https://apps.bea.gov/scb/issues/2022/12-december/1222-news-releases-2023.htm"
+        },
+        {
+          "date": "2023-03-31",
+          "url": "https://apps.bea.gov/scb/issues/2022/12-december/1222-news-releases-2023.htm"
+        },
+        {
+          "date": "2023-04-28",
+          "url": "https://apps.bea.gov/scb/issues/2022/12-december/1222-news-releases-2023.htm"
+        },
+        {
+          "date": "2023-05-26",
+          "url": "https://apps.bea.gov/scb/issues/2022/12-december/1222-news-releases-2023.htm"
+        },
+        {
+          "date": "2023-06-30",
+          "url": "https://apps.bea.gov/scb/issues/2022/12-december/1222-news-releases-2023.htm"
+        },
+        {
+          "date": "2023-07-28",
+          "url": "https://apps.bea.gov/scb/issues/2022/12-december/1222-news-releases-2023.htm"
+        },
+        {
+          "date": "2023-08-31",
+          "url": "https://apps.bea.gov/scb/issues/2022/12-december/1222-news-releases-2023.htm"
+        },
+        {
+          "date": "2023-09-29",
+          "url": "https://apps.bea.gov/scb/issues/2022/12-december/1222-news-releases-2023.htm"
+        },
+        {
+          "date": "2023-10-27",
+          "url": "https://apps.bea.gov/scb/issues/2022/12-december/1222-news-releases-2023.htm"
+        },
+        {
+          "date": "2023-11-30",
+          "url": "https://apps.bea.gov/scb/issues/2022/12-december/1222-news-releases-2023.htm"
+        },
+        {
+          "date": "2023-12-22",
+          "url": "https://apps.bea.gov/scb/issues/2022/12-december/1222-news-releases-2023.htm"
+        },
+        {
+          "date": "2024-01-26",
+          "url": "https://apps.bea.gov/scb/issues/2023/12-december/1223-news-releases-2024.htm"
+        },
+        {
+          "date": "2024-02-29",
+          "url": "https://apps.bea.gov/scb/issues/2023/12-december/1223-news-releases-2024.htm"
+        },
+        {
+          "date": "2024-03-29",
+          "url": "https://apps.bea.gov/scb/issues/2023/12-december/1223-news-releases-2024.htm"
+        },
+        {
+          "date": "2024-04-26",
+          "url": "https://apps.bea.gov/scb/issues/2023/12-december/1223-news-releases-2024.htm"
+        },
+        {
+          "date": "2024-05-31",
+          "url": "https://apps.bea.gov/scb/issues/2023/12-december/1223-news-releases-2024.htm"
+        },
+        {
+          "date": "2024-06-28",
+          "url": "https://apps.bea.gov/scb/issues/2023/12-december/1223-news-releases-2024.htm"
+        },
+        {
+          "date": "2024-07-26",
+          "url": "https://apps.bea.gov/scb/issues/2023/12-december/1223-news-releases-2024.htm"
+        },
+        {
+          "date": "2024-08-30",
+          "url": "https://apps.bea.gov/scb/issues/2023/12-december/1223-news-releases-2024.htm"
+        },
+        {
+          "date": "2024-09-27",
+          "url": "https://apps.bea.gov/scb/issues/2023/12-december/1223-news-releases-2024.htm"
+        },
+        {
+          "date": "2024-10-31",
+          "url": "https://apps.bea.gov/scb/issues/2023/12-december/1223-news-releases-2024.htm"
+        },
+        {
+          "date": "2024-11-27",
+          "url": "https://apps.bea.gov/scb/issues/2023/12-december/1223-news-releases-2024.htm"
+        },
+        {
+          "date": "2024-12-20",
+          "url": "https://apps.bea.gov/scb/issues/2023/12-december/1223-news-releases-2024.htm"
+        },
+        {
+          "date": "2025-01-31",
+          "url": "https://www.bea.gov/news/schedule/full-2025"
+        },
+        {
+          "date": "2025-02-28",
+          "url": "https://www.bea.gov/news/schedule/full-2025"
+        },
+        {
+          "date": "2025-03-28",
+          "url": "https://www.bea.gov/news/schedule/full-2025"
+        },
+        {
+          "date": "2025-04-30",
+          "url": "https://www.bea.gov/news/schedule/full-2025"
+        },
+        {
+          "date": "2025-05-30",
+          "url": "https://www.bea.gov/news/schedule/full-2025"
+        },
+        {
+          "date": "2025-06-27",
+          "url": "https://www.bea.gov/news/schedule/full-2025"
+        },
+        {
+          "date": "2025-07-31",
+          "url": "https://www.bea.gov/news/schedule/full-2025"
+        },
+        {
+          "date": "2025-08-29",
+          "url": "https://www.bea.gov/news/schedule/full-2025"
+        },
+        {
+          "date": "2025-09-26",
+          "url": "https://www.bea.gov/news/schedule/full-2025"
+        },
+        {
+          "date": "2025-12-05",
+          "url": "https://www.bea.gov/news/schedule/full-2025"
+        },
+        {
+          "date": "2025-12-23",
+          "url": "https://bea.gov/index.php/news/blog/2025-12-18/economic-release-update-personal-income-and-outlays-september-2025"
+        },
+        {
+          "date": "2026-01-22",
+          "url": "https://www.bea.gov/news/schedule/full"
+        },
+        {
+          "date": "2026-02-20",
+          "url": "https://www.bea.gov/news/schedule/full"
+        },
+        {
+          "date": "2026-03-13",
+          "url": "https://www.bea.gov/news/schedule/full"
+        },
+        {
+          "date": "2026-04-09",
+          "url": "https://www.bea.gov/news/schedule/full"
+        },
+        {
+          "date": "2026-04-30",
+          "url": "https://www.bea.gov/news/schedule/full"
+        },
+        {
+          "date": "2026-05-28",
+          "url": "https://www.bea.gov/news/schedule/full"
+        },
+        {
+          "date": "2026-06-25",
+          "url": "https://www.bea.gov/news/schedule/full"
+        },
+        {
+          "date": "2026-07-30",
+          "url": "https://www.bea.gov/news/schedule/full"
+        },
+        {
+          "date": "2026-08-26",
+          "url": "https://www.bea.gov/news/schedule/full"
+        }
+      ]
+    },
+    "FOMC": {
+      "coverage": [
+        [
+          "2021-01-01",
+          "2026-09-13"
+        ]
+      ],
+      "events": [
+        {
+          "date": "2021-01-27",
+          "url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+        },
+        {
+          "date": "2021-03-17",
+          "url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+        },
+        {
+          "date": "2021-04-28",
+          "url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+        },
+        {
+          "date": "2021-06-16",
+          "url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+        },
+        {
+          "date": "2021-07-28",
+          "url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+        },
+        {
+          "date": "2021-09-22",
+          "url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+        },
+        {
+          "date": "2021-11-03",
+          "url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+        },
+        {
+          "date": "2021-12-15",
+          "url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+        },
+        {
+          "date": "2022-01-26",
+          "url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+        },
+        {
+          "date": "2022-03-16",
+          "url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+        },
+        {
+          "date": "2022-05-04",
+          "url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+        },
+        {
+          "date": "2022-06-15",
+          "url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+        },
+        {
+          "date": "2022-07-27",
+          "url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+        },
+        {
+          "date": "2022-09-21",
+          "url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+        },
+        {
+          "date": "2022-11-02",
+          "url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+        },
+        {
+          "date": "2022-12-14",
+          "url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+        },
+        {
+          "date": "2023-02-01",
+          "url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+        },
+        {
+          "date": "2023-03-22",
+          "url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+        },
+        {
+          "date": "2023-05-03",
+          "url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+        },
+        {
+          "date": "2023-06-14",
+          "url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+        },
+        {
+          "date": "2023-07-26",
+          "url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+        },
+        {
+          "date": "2023-09-20",
+          "url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+        },
+        {
+          "date": "2023-11-01",
+          "url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+        },
+        {
+          "date": "2023-12-13",
+          "url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+        },
+        {
+          "date": "2024-01-31",
+          "url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+        },
+        {
+          "date": "2024-03-20",
+          "url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+        },
+        {
+          "date": "2024-05-01",
+          "url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+        },
+        {
+          "date": "2024-06-12",
+          "url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+        },
+        {
+          "date": "2024-07-31",
+          "url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+        },
+        {
+          "date": "2024-09-18",
+          "url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+        },
+        {
+          "date": "2024-11-07",
+          "url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+        },
+        {
+          "date": "2024-12-18",
+          "url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+        },
+        {
+          "date": "2025-01-29",
+          "url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+        },
+        {
+          "date": "2025-03-19",
+          "url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+        },
+        {
+          "date": "2025-05-07",
+          "url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+        },
+        {
+          "date": "2025-06-18",
+          "url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+        },
+        {
+          "date": "2025-07-30",
+          "url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+        },
+        {
+          "date": "2025-08-22",
+          "url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+        },
+        {
+          "date": "2025-09-17",
+          "url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+        },
+        {
+          "date": "2025-10-29",
+          "url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+        },
+        {
+          "date": "2025-12-10",
+          "url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+        },
+        {
+          "date": "2026-01-28",
+          "url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+        },
+        {
+          "date": "2026-03-18",
+          "url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+        },
+        {
+          "date": "2026-04-29",
+          "url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+        },
+        {
+          "date": "2026-06-17",
+          "url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+        },
+        {
+          "date": "2026-07-29",
+          "url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+        }
+      ]
+    }
+  }
+}
