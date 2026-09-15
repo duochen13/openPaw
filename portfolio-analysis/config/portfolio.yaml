@@ -1,10 +1,14 @@
-# The universe. v1 is META only (spec §3): one name end-to-end beats five
-# names half-done. Adding an entry here is the only change needed to widen it.
+# The configured universe. Adding an entry here is the only change needed to
+# widen it.
 tickers:
   - symbol: META
     cik: 1326801
     name: Meta Platforms, Inc.
     aliases: ["Meta", "Facebook", "Meta Platforms"]
+  - symbol: NOW
+    cik: 1373715
+    name: ServiceNow, Inc.
+    aliases: ["ServiceNow", "ServiceNow Inc"]
 
 # Beta is measured against this. QQQ matches the sibling repo's watchlist.
 benchmark: QQQ
