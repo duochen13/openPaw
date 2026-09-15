@@ -21,6 +21,10 @@ tickers:
     cik: 1045810
     name: NVIDIA Corporation
     aliases: ["NVIDIA", "Nvidia", "NVIDIA Corporation"]
+  - symbol: CRM
+    cik: 1108524
+    name: Salesforce, Inc.
+    aliases: ["Salesforce", "Salesforce Inc"]
 
 # Beta is measured against this. QQQ matches the sibling repo's watchlist.
 benchmark: QQQ
