@@ -17,6 +17,10 @@ tickers:
     cik: 1318605
     name: Tesla, Inc.
     aliases: ["Tesla", "Tesla Inc"]
+  - symbol: NVDA
+    cik: 1045810
+    name: NVIDIA Corporation
+    aliases: ["NVIDIA", "Nvidia", "NVIDIA Corporation"]
 
 # Beta is measured against this. QQQ matches the sibling repo's watchlist.
 benchmark: QQQ
