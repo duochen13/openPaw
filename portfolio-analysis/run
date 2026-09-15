@@ -1,0 +1,10 @@
+#!/bin/sh
+# Use the checkout directly; avoids the editable-install .pth issue on macOS.
+set -eu
+project_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+if [ ! -x "$project_dir/.venv/bin/python" ]; then
+  echo 'Set up the environment first; see portfolio-analysis/README.md.' >&2
+  exit 1
+fi
+export PYTHONPATH="$project_dir/src${PYTHONPATH:+:$PYTHONPATH}"
+exec "$project_dir/.venv/bin/python" -m portfolio_analysis.cli "$@"

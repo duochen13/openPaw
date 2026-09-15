@@ -3,6 +3,7 @@
 This tool explains past price moves. It has no brokerage integration, places
 no orders, and produces no forward-looking signal (spec §2).
 """
+
 from __future__ import annotations
 
 import argparse
@@ -12,7 +13,11 @@ from pathlib import Path
 from portfolio_analysis import moves as moves_module
 from portfolio_analysis import prices
 from portfolio_analysis.artifacts import MovesArtifact, write_moves
-from portfolio_analysis.config import Portfolio, load_portfolio
+from portfolio_analysis.collection import collect_events
+from portfolio_analysis.config import PROJECT_ROOT, Portfolio, load_portfolio
+from portfolio_analysis.events.macro import MacroSource
+from portfolio_analysis.http import CachedHttp, ProviderError, RateLimitLedger
+from portfolio_analysis.render import render_chart
 from portfolio_analysis.store import Store
 
 
@@ -100,7 +105,8 @@ def _detect_moves(args: argparse.Namespace) -> int:
             )
             evaluated = (
                 f"{coverage.evaluated[0]} .. {coverage.evaluated[1]}"
-                if coverage.evaluated else "none (series shorter than the beta window)"
+                if coverage.evaluated
+                else "none (series shorter than the beta window)"
             )
             print(
                 f"{symbol}: {coverage.flagged_days} flagged of "
@@ -109,6 +115,97 @@ def _detect_moves(args: argparse.Namespace) -> int:
     finally:
         store.close()
     return 0
+
+
+def _collect_events(args: argparse.Namespace) -> int:
+    portfolio = load_portfolio()
+    symbols = _selected_symbols(portfolio, args.ticker)
+    if symbols is None:
+        print(f"{args.ticker!r} is not in the portfolio", file=sys.stderr)
+        return 2
+    cache = Path(args.cache_dir) if args.cache_dir else portfolio.path("cache")
+    http = CachedHttp(cache, ledger=RateLimitLedger(cache / "quota.json"))
+    try:
+        result = collect_events(
+            portfolio,
+            symbols,
+            db=Path(args.db) if args.db else portfolio.path("db"),
+            moves_dir=Path(args.moves_dir) if args.moves_dir else portfolio.path("moves"),
+            events_dir=Path(args.events_dir) if args.events_dir else portfolio.path("events"),
+            http=http,
+            macro=MacroSource(Path(args.macro_calendar)),
+            only_date=args.date,
+            rebuild=args.rebuild,
+            keyless=args.keyless,
+        )
+    except (OSError, ValueError, ProviderError) as exc:
+        print(f"collect-events: {exc}", file=sys.stderr)
+        return 1
+    print(
+        f"{result.completed} completed, {result.remaining} remaining "
+        f"({result.deferred} awaiting sessions)"
+        + ("; quota exhausted, rerun after reset" if result.quota_exhausted else "")
+    )
+    return 0
+
+
+def _render(args: argparse.Namespace) -> int:
+    portfolio = load_portfolio()
+    symbols = _selected_symbols(portfolio, args.ticker)
+    if symbols is None:
+        print(f"{args.ticker!r} is not in config/portfolio.yaml", file=sys.stderr)
+        return 2
+    try:
+        for symbol in symbols:
+            target = render_chart(
+                portfolio,
+                symbol,
+                db=Path(args.db) if args.db else portfolio.path("db"),
+                moves_dir=Path(args.moves_dir) if args.moves_dir else portfolio.path("moves"),
+                events_dir=Path(args.events_dir) if args.events_dir else portfolio.path("events"),
+                out_dir=Path(args.out_dir) if args.out_dir else portfolio.path("out"),
+            )
+            print(f"{symbol}: chart written -> {target}")
+    except (OSError, ValueError) as exc:
+        print(f"render: {exc}", file=sys.stderr)
+        return 1
+    return 0
+
+
+def _chart(args: argparse.Namespace) -> int:
+    """The user-facing trigger: prices -> moves -> events -> HTML, no model calls."""
+    portfolio = load_portfolio()
+    symbols = _selected_symbols(portfolio, args.ticker)
+    if symbols is None:
+        print(
+            f"{args.ticker!r} is not in config/portfolio.yaml; add its symbol and CIK first",
+            file=sys.stderr,
+        )
+        return 2
+    store = Store.open(args.db or portfolio.path("db"))
+    try:
+        missing = any(
+            not store.price_bar_count(symbol) for symbol in [*symbols, portfolio.benchmark]
+        )
+    finally:
+        store.close()
+    if args.refresh_prices or missing:
+        result = _ingest_prices(args)
+        if result:
+            return result
+    result = _detect_moves(args)
+    if result:
+        return result
+    event_result = 0
+    if not args.skip_events:
+        event_result = _collect_events(args)
+        if event_result:
+            print(
+                "Event collection is incomplete; rendering the evidence available so far.",
+                file=sys.stderr,
+            )
+    render_result = _render(args)
+    return render_result or event_result
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -120,7 +217,9 @@ def main(argv: list[str] | None = None) -> int:
 
     ingest = sub.add_parser("ingest-prices", help="fetch adjusted daily bars")
     ingest.add_argument(
-        "ticker", nargs="?", default=None,
+        "ticker",
+        nargs="?",
+        default=None,
         help="ticker, company name, or alias; omit for the whole portfolio",
     )
     ingest.add_argument("--db", default=None, help="override the configured database")
@@ -128,7 +227,9 @@ def main(argv: list[str] | None = None) -> int:
 
     detect = sub.add_parser("detect-moves", help="flag days whose abnormal return is large")
     detect.add_argument(
-        "ticker", nargs="?", default=None,
+        "ticker",
+        nargs="?",
+        default=None,
         help="ticker, company name, or alias; omit for the whole portfolio",
     )
     detect.add_argument("--db", default=None, help="override the configured database")
@@ -136,6 +237,41 @@ def main(argv: list[str] | None = None) -> int:
         "--moves-dir", default=None, help="override the configured artifact directory"
     )
     detect.set_defaults(func=_detect_moves)
+
+    collect = sub.add_parser("collect-events", help="assemble dated evidence for flagged moves")
+    collect.add_argument("ticker", nargs="?", default=None)
+    collect.add_argument("--db", default=None)
+    collect.add_argument("--moves-dir", default=None)
+    collect.add_argument("--events-dir", default=None)
+    collect.add_argument("--cache-dir", default=None)
+    collect.add_argument("--date", default=None, help="collect a single flagged YYYY-MM-DD")
+    collect.add_argument(
+        "--macro-calendar", default=str(PROJECT_ROOT / "config/macro_calendar.yaml")
+    )
+    collect.add_argument(
+        "--rebuild", action="store_true", help="rebuild bundles using cached responses"
+    )
+    collect.add_argument("--keyless", action="store_true", help="collect SEC, HN and macro only")
+    collect.set_defaults(func=_collect_events)
+
+    render = sub.add_parser("render", help="build a self-contained price and event chart offline")
+    chart = sub.add_parser("chart", help="run the pipeline and generate a price/event HTML chart")
+    for command in (render, chart):
+        command.add_argument("ticker", nargs="?", default=None)
+        command.add_argument("--db", default=None)
+        command.add_argument("--moves-dir", default=None)
+        command.add_argument("--events-dir", default=None)
+        command.add_argument("--out-dir", default=None)
+    render.set_defaults(func=_render)
+    chart.add_argument("--cache-dir", default=None)
+    chart.add_argument("--macro-calendar", default=str(PROJECT_ROOT / "config/macro_calendar.yaml"))
+    chart.add_argument("--keyless", action="store_true", help="collect SEC, HN and macro only")
+    chart.add_argument(
+        "--skip-events", action="store_true", help="render existing evidence offline"
+    )
+    chart.add_argument("--refresh-prices", action="store_true", help="fetch prices even if stored")
+    chart.add_argument("--rebuild", action="store_true", help="rebuild event bundles from cache")
+    chart.set_defaults(func=_chart, date=None)
 
     args = parser.parse_args(argv)
     if not getattr(args, "func", None):

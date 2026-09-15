@@ -19,9 +19,9 @@ moves:
   sigma_window: 60
   z_threshold: 2.5
 
-# Alpha Vantage news coverage begins around here. Moves before this date are
+# Earliest META news measured in the previous session: 2020-01-21. Moves before this date are
 # flagged news_coverage_known_thin in Plan 2 (spec §7).
-news_coverage_start: "2022-03-01"
+news_coverage_start: "2020-01-21"
 
 paths:
   db: data/prices.sqlite
