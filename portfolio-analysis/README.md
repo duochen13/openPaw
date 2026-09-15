@@ -140,6 +140,16 @@ To regenerate entirely from saved data:
 ./portfolio-analysis/run render META
 ```
 
+To build one offline dashboard for every configured stock:
+
+```bash
+./portfolio-analysis/run render
+./portfolio-analysis/run dashboard
+```
+
+Open `portfolio-analysis/out/index.html` and use its stock selector to switch
+between the individual evidence charts.
+
 To update prices too:
 
 ```bash

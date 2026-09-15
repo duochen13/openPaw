@@ -57,7 +57,7 @@ def _write_portfolio(tmp_path, **overrides):
 @pytest.mark.unit
 def test_the_shipped_config_loads_and_is_valid():
     portfolio = load_portfolio()
-    assert portfolio.symbols == ("META",)
+    assert portfolio.symbols == ("META", "NOW", "GOOGL", "TSLA", "NVDA", "CRM", "ORCL")
     assert portfolio.benchmark == "QQQ"
     assert portfolio.price_years == 6
     assert portfolio.move_params.beta_window == 250

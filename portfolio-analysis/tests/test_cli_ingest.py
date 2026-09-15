@@ -25,7 +25,16 @@ def test_ingest_fetches_the_universe_and_the_benchmark(tmp_path):
     with mock.patch.object(cli.prices, "fetch_yahoo", side_effect=fake_fetch):
         assert cli.main(["ingest-prices", "--db", str(db)]) == 0
 
-    assert calls == [("META", 6), ("QQQ", 6)]
+    assert calls == [
+        ("META", 6),
+        ("NOW", 6),
+        ("GOOGL", 6),
+        ("TSLA", 6),
+        ("NVDA", 6),
+        ("CRM", 6),
+        ("ORCL", 6),
+        ("QQQ", 6),
+    ]
     store = Store.open(db)
     try:
         assert store.price_bar_count("META") == 2
@@ -53,7 +62,7 @@ def test_ingest_accepts_a_single_ticker_by_alias(tmp_path):
 def test_ingest_rejects_a_ticker_outside_the_portfolio(tmp_path, capsys):
     db = tmp_path / "t.sqlite"
     with mock.patch.object(cli.prices, "fetch_yahoo") as fake:
-        assert cli.main(["ingest-prices", "TSLA", "--db", str(db)]) == 2
+        assert cli.main(["ingest-prices", "UNKNOWN", "--db", str(db)]) == 2
     fake.assert_not_called()
     assert "not in the portfolio" in capsys.readouterr().err
 
