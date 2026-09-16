@@ -39,6 +39,16 @@ class MacroSource:
             for name, series in self._series.items()
         }
 
+    def catalog(self) -> dict[str, list[dict[str, str]]]:
+        """Return the checked-in release dates for interactive analysis."""
+        return {
+            name: [
+                {"date": str(event["date"]), "url": str(event["url"])}
+                for event in series["events"]
+            ]
+            for name, series in self._series.items()
+        }
+
     def collect(
         self,
         ticker: str,
