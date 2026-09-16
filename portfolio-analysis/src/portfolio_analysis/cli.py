@@ -16,6 +16,7 @@ from portfolio_analysis.artifacts import MovesArtifact, write_moves
 from portfolio_analysis.collection import collect_events
 from portfolio_analysis.config import PROJECT_ROOT, Portfolio, load_portfolio
 from portfolio_analysis.dashboard import render_dashboard
+from portfolio_analysis.event_dashboard import event_dashboard_data, render_event_dashboard
 from portfolio_analysis.events.macro import MacroSource
 from portfolio_analysis.http import CachedHttp, ProviderError, RateLimitLedger
 from portfolio_analysis.render import render_chart
@@ -186,6 +187,22 @@ def _dashboard(args: argparse.Namespace) -> int:
     return 0
 
 
+def _event_dashboard(args: argparse.Namespace) -> int:
+    portfolio = load_portfolio()
+    store = Store.open(args.db or portfolio.path("db"))
+    try:
+        data = event_dashboard_data(
+            portfolio, store, MacroSource(Path(args.macro_calendar))
+        )
+    finally:
+        store.close()
+    target = render_event_dashboard(
+        data, Path(args.out_dir) if args.out_dir else portfolio.path("out")
+    )
+    print(f"event dashboard written -> {target}")
+    return 0
+
+
 def _chart(args: argparse.Namespace) -> int:
     """The user-facing trigger: prices -> moves -> events -> HTML, no model calls."""
     portfolio = load_portfolio()
@@ -274,6 +291,15 @@ def main(argv: list[str] | None = None) -> int:
     )
     dashboard.add_argument("--out-dir", default=None)
     dashboard.set_defaults(func=_dashboard)
+    event_dashboard = sub.add_parser(
+        "event-dashboard", help="compare returns around macro release dates"
+    )
+    event_dashboard.add_argument("--db", default=None)
+    event_dashboard.add_argument("--out-dir", default=None)
+    event_dashboard.add_argument(
+        "--macro-calendar", default=str(PROJECT_ROOT / "config/macro_calendar.yaml")
+    )
+    event_dashboard.set_defaults(func=_event_dashboard)
     chart = sub.add_parser("chart", help="run the pipeline and generate a price/event HTML chart")
     for command in (render, chart):
         command.add_argument("ticker", nargs="?", default=None)
