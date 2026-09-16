@@ -1,0 +1,278 @@
+{
+  "2021-01-27": {
+    "action": "hold",
+    "change_bp": 0,
+    "target_range": "0.00%\u20130.25%",
+    "source": "https://fred.stlouisfed.org/series/DFEDTARU"
+  },
+  "2021-03-17": {
+    "action": "hold",
+    "change_bp": 0,
+    "target_range": "0.00%\u20130.25%",
+    "source": "https://fred.stlouisfed.org/series/DFEDTARU"
+  },
+  "2021-04-28": {
+    "action": "hold",
+    "change_bp": 0,
+    "target_range": "0.00%\u20130.25%",
+    "source": "https://fred.stlouisfed.org/series/DFEDTARU"
+  },
+  "2021-06-16": {
+    "action": "hold",
+    "change_bp": 0,
+    "target_range": "0.00%\u20130.25%",
+    "source": "https://fred.stlouisfed.org/series/DFEDTARU"
+  },
+  "2021-07-28": {
+    "action": "hold",
+    "change_bp": 0,
+    "target_range": "0.00%\u20130.25%",
+    "source": "https://fred.stlouisfed.org/series/DFEDTARU"
+  },
+  "2021-09-22": {
+    "action": "hold",
+    "change_bp": 0,
+    "target_range": "0.00%\u20130.25%",
+    "source": "https://fred.stlouisfed.org/series/DFEDTARU"
+  },
+  "2021-11-03": {
+    "action": "hold",
+    "change_bp": 0,
+    "target_range": "0.00%\u20130.25%",
+    "source": "https://fred.stlouisfed.org/series/DFEDTARU"
+  },
+  "2021-12-15": {
+    "action": "hold",
+    "change_bp": 0,
+    "target_range": "0.00%\u20130.25%",
+    "source": "https://fred.stlouisfed.org/series/DFEDTARU"
+  },
+  "2022-01-26": {
+    "action": "hold",
+    "change_bp": 0,
+    "target_range": "0.00%\u20130.25%",
+    "source": "https://fred.stlouisfed.org/series/DFEDTARU"
+  },
+  "2022-03-16": {
+    "action": "hike",
+    "change_bp": 25,
+    "target_range": "0.25%\u20130.50%",
+    "source": "https://fred.stlouisfed.org/series/DFEDTARU"
+  },
+  "2022-05-04": {
+    "action": "hike",
+    "change_bp": 50,
+    "target_range": "0.75%\u20131.00%",
+    "source": "https://fred.stlouisfed.org/series/DFEDTARU"
+  },
+  "2022-06-15": {
+    "action": "hike",
+    "change_bp": 75,
+    "target_range": "1.50%\u20131.75%",
+    "source": "https://fred.stlouisfed.org/series/DFEDTARU"
+  },
+  "2022-07-27": {
+    "action": "hike",
+    "change_bp": 75,
+    "target_range": "2.25%\u20132.50%",
+    "source": "https://fred.stlouisfed.org/series/DFEDTARU"
+  },
+  "2022-09-21": {
+    "action": "hike",
+    "change_bp": 75,
+    "target_range": "3.00%\u20133.25%",
+    "source": "https://fred.stlouisfed.org/series/DFEDTARU"
+  },
+  "2022-11-02": {
+    "action": "hike",
+    "change_bp": 75,
+    "target_range": "3.75%\u20134.00%",
+    "source": "https://fred.stlouisfed.org/series/DFEDTARU"
+  },
+  "2022-12-14": {
+    "action": "hike",
+    "change_bp": 50,
+    "target_range": "4.25%\u20134.50%",
+    "source": "https://fred.stlouisfed.org/series/DFEDTARU"
+  },
+  "2023-02-01": {
+    "action": "hike",
+    "change_bp": 25,
+    "target_range": "4.50%\u20134.75%",
+    "source": "https://fred.stlouisfed.org/series/DFEDTARU"
+  },
+  "2023-03-22": {
+    "action": "hike",
+    "change_bp": 25,
+    "target_range": "4.75%\u20135.00%",
+    "source": "https://fred.stlouisfed.org/series/DFEDTARU"
+  },
+  "2023-05-03": {
+    "action": "hike",
+    "change_bp": 25,
+    "target_range": "5.00%\u20135.25%",
+    "source": "https://fred.stlouisfed.org/series/DFEDTARU"
+  },
+  "2023-06-14": {
+    "action": "hold",
+    "change_bp": 0,
+    "target_range": "5.00%\u20135.25%",
+    "source": "https://fred.stlouisfed.org/series/DFEDTARU"
+  },
+  "2023-07-26": {
+    "action": "hike",
+    "change_bp": 25,
+    "target_range": "5.25%\u20135.50%",
+    "source": "https://fred.stlouisfed.org/series/DFEDTARU"
+  },
+  "2023-09-20": {
+    "action": "hold",
+    "change_bp": 0,
+    "target_range": "5.25%\u20135.50%",
+    "source": "https://fred.stlouisfed.org/series/DFEDTARU"
+  },
+  "2023-11-01": {
+    "action": "hold",
+    "change_bp": 0,
+    "target_range": "5.25%\u20135.50%",
+    "source": "https://fred.stlouisfed.org/series/DFEDTARU"
+  },
+  "2023-12-13": {
+    "action": "hold",
+    "change_bp": 0,
+    "target_range": "5.25%\u20135.50%",
+    "source": "https://fred.stlouisfed.org/series/DFEDTARU"
+  },
+  "2024-01-31": {
+    "action": "hold",
+    "change_bp": 0,
+    "target_range": "5.25%\u20135.50%",
+    "source": "https://fred.stlouisfed.org/series/DFEDTARU"
+  },
+  "2024-03-20": {
+    "action": "hold",
+    "change_bp": 0,
+    "target_range": "5.25%\u20135.50%",
+    "source": "https://fred.stlouisfed.org/series/DFEDTARU"
+  },
+  "2024-05-01": {
+    "action": "hold",
+    "change_bp": 0,
+    "target_range": "5.25%\u20135.50%",
+    "source": "https://fred.stlouisfed.org/series/DFEDTARU"
+  },
+  "2024-06-12": {
+    "action": "hold",
+    "change_bp": 0,
+    "target_range": "5.25%\u20135.50%",
+    "source": "https://fred.stlouisfed.org/series/DFEDTARU"
+  },
+  "2024-07-31": {
+    "action": "hold",
+    "change_bp": 0,
+    "target_range": "5.25%\u20135.50%",
+    "source": "https://fred.stlouisfed.org/series/DFEDTARU"
+  },
+  "2024-09-18": {
+    "action": "cut",
+    "change_bp": -50,
+    "target_range": "4.75%\u20135.00%",
+    "source": "https://fred.stlouisfed.org/series/DFEDTARU"
+  },
+  "2024-11-07": {
+    "action": "cut",
+    "change_bp": -25,
+    "target_range": "4.50%\u20134.75%",
+    "source": "https://fred.stlouisfed.org/series/DFEDTARU"
+  },
+  "2024-12-18": {
+    "action": "cut",
+    "change_bp": -25,
+    "target_range": "4.25%\u20134.50%",
+    "source": "https://fred.stlouisfed.org/series/DFEDTARU"
+  },
+  "2025-01-29": {
+    "action": "hold",
+    "change_bp": 0,
+    "target_range": "4.25%\u20134.50%",
+    "source": "https://fred.stlouisfed.org/series/DFEDTARU"
+  },
+  "2025-03-19": {
+    "action": "hold",
+    "change_bp": 0,
+    "target_range": "4.25%\u20134.50%",
+    "source": "https://fred.stlouisfed.org/series/DFEDTARU"
+  },
+  "2025-05-07": {
+    "action": "hold",
+    "change_bp": 0,
+    "target_range": "4.25%\u20134.50%",
+    "source": "https://fred.stlouisfed.org/series/DFEDTARU"
+  },
+  "2025-06-18": {
+    "action": "hold",
+    "change_bp": 0,
+    "target_range": "4.25%\u20134.50%",
+    "source": "https://fred.stlouisfed.org/series/DFEDTARU"
+  },
+  "2025-07-30": {
+    "action": "hold",
+    "change_bp": 0,
+    "target_range": "4.25%\u20134.50%",
+    "source": "https://fred.stlouisfed.org/series/DFEDTARU"
+  },
+  "2025-08-22": {
+    "action": "hold",
+    "change_bp": 0,
+    "target_range": "4.25%\u20134.50%",
+    "source": "https://fred.stlouisfed.org/series/DFEDTARU"
+  },
+  "2025-09-17": {
+    "action": "cut",
+    "change_bp": -25,
+    "target_range": "4.00%\u20134.25%",
+    "source": "https://fred.stlouisfed.org/series/DFEDTARU"
+  },
+  "2025-10-29": {
+    "action": "cut",
+    "change_bp": -25,
+    "target_range": "3.75%\u20134.00%",
+    "source": "https://fred.stlouisfed.org/series/DFEDTARU"
+  },
+  "2025-12-10": {
+    "action": "cut",
+    "change_bp": -25,
+    "target_range": "3.50%\u20133.75%",
+    "source": "https://fred.stlouisfed.org/series/DFEDTARU"
+  },
+  "2026-01-28": {
+    "action": "hold",
+    "change_bp": 0,
+    "target_range": "3.50%\u20133.75%",
+    "source": "https://fred.stlouisfed.org/series/DFEDTARU"
+  },
+  "2026-03-18": {
+    "action": "hold",
+    "change_bp": 0,
+    "target_range": "3.50%\u20133.75%",
+    "source": "https://fred.stlouisfed.org/series/DFEDTARU"
+  },
+  "2026-04-29": {
+    "action": "hold",
+    "change_bp": 0,
+    "target_range": "3.50%\u20133.75%",
+    "source": "https://fred.stlouisfed.org/series/DFEDTARU"
+  },
+  "2026-06-17": {
+    "action": "hold",
+    "change_bp": 0,
+    "target_range": "3.50%\u20133.75%",
+    "source": "https://fred.stlouisfed.org/series/DFEDTARU"
+  },
+  "2026-07-29": {
+    "action": "hold",
+    "change_bp": 0,
+    "target_range": "3.50%\u20133.75%",
+    "source": "https://fred.stlouisfed.org/series/DFEDTARU"
+  }
+}

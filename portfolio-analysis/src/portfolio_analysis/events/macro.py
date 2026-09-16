@@ -22,6 +22,10 @@ class MacroSource:
         if data.get("schema_version") != 1:
             raise ValueError("unsupported macro calendar schema")
         self._series: dict[str, Any] = data["series"]
+        decisions_path = path.with_name("fomc_decisions.yaml")
+        self._fomc_decisions: dict[str, Any] = (
+            yaml.safe_load(decisions_path.read_text()) if decisions_path.exists() else {}
+        )
         if set(self._series) != {"FOMC", "CPI", "PCE"}:
             raise ValueError("macro calendar needs FOMC, CPI, and PCE")
         for series in self._series.values():
@@ -43,7 +47,15 @@ class MacroSource:
         """Return the checked-in release dates for interactive analysis."""
         return {
             name: [
-                {"date": str(event["date"]), "url": str(event["url"])}
+                {
+                    "date": str(event["date"]),
+                    "url": str(event["url"]),
+                    **(
+                        self._fomc_decisions.get(str(event["date"]), {})
+                        if name == "FOMC"
+                        else {}
+                    ),
+                }
                 for event in series["events"]
             ]
             for name, series in self._series.items()
