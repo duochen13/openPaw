@@ -97,9 +97,9 @@ async function handler(event) {
       transactionCount: spending.transactions.length
     });
 
-    // Sync digest items to the Notion Daily Calendar. This is a no-op when
-    // NOTION_API_KEY/NOTION_DATABASE_ID are unset, and failures are logged
-    // but never break the digest run.
+    // Sync digest items to a Notion Daily Report subpage. This is a no-op when
+    // NOTION_API_KEY/NOTION_DAILY_REPORT_PAGE_ID are unset, and failures are
+    // logged but never break the digest run.
     try {
       const { syncDigestToNotion } = require('./notion');
       const notionResult = await syncDigestToNotion(products, stories);

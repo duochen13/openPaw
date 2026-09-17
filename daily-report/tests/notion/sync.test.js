@@ -1,11 +1,18 @@
 const { Client } = require('@notionhq/client');
-const { syncDigestToNotion } = require('../../src/notion/sync');
+const { syncDigestToNotion, pageTitleFor } = require('../../src/notion/sync');
 
 jest.mock('@notionhq/client', () => ({
   Client: jest.fn()
 }));
 
-describe('Notion daily calendar sync', () => {
+describe('pageTitleFor', () => {
+  test('formats YYYY-MM-DD as MM-DD', () => {
+    expect(pageTitleFor('2026-09-17')).toBe('09-17');
+    expect(pageTitleFor('2026-01-05')).toBe('01-05');
+  });
+});
+
+describe('Notion daily report sync', () => {
   let notion;
   const OLD_ENV = process.env;
 
@@ -42,30 +49,34 @@ describe('Notion daily calendar sync', () => {
     }
   ];
 
-  function routeQueries({ dailyPages = [], existingItemIds = {} } = {}) {
-    notion.databases.query.mockImplementation(async ({ database_id, filter }) => {
-      if (database_id === 'digests-db-id') {
-        return { results: dailyPages };
+  function childPageBlock(title) {
+    return { id: `block-${title}`, type: 'child_page', child_page: { title } };
+  }
+
+  // parentChildren: blocks under the Daily Report page; pageChildren: blocks
+  // already inside the day's subpage.
+  function routeChildren({ parentChildren = [], pageChildren = [] } = {}) {
+    notion.blocks.children.list.mockImplementation(async ({ block_id }) => {
+      if (block_id === 'daily-report-page-id') {
+        return { results: parentChildren, has_more: false, next_cursor: null };
       }
-      const urlCondition = (filter.and || []).find((c) => c.property === 'URL');
-      const url = urlCondition && urlCondition.url.equals;
-      const pageId = existingItemIds[url];
-      return { results: pageId ? [{ id: pageId }] : [] };
+      return { results: pageChildren, has_more: false, next_cursor: null };
     });
-    notion.pages.create.mockImplementation(async () => ({ id: `page-${Math.random().toString(36).slice(2)}` }));
+    notion.pages.create.mockImplementation(async () => ({
+      id: `page-${Math.random().toString(36).slice(2)}`
+    }));
   }
 
   beforeEach(() => {
     jest.clearAllMocks();
     process.env = { ...OLD_ENV };
     process.env.NOTION_API_KEY = 'secret_test_key';
-    process.env.NOTION_DATABASE_ID = 'items-db-id';
-    process.env.NOTION_DIGEST_DATABASE_ID = 'digests-db-id';
+    process.env.NOTION_DAILY_REPORT_PAGE_ID = 'daily-report-page-id';
     delete process.env.NOTION_API_KEY_ARN;
 
     notion = {
-      databases: { query: jest.fn() },
-      pages: { create: jest.fn(), update: jest.fn() }
+      blocks: { children: { list: jest.fn(), append: jest.fn() } },
+      pages: { create: jest.fn() }
     };
     Client.mockImplementation(() => notion);
   });
@@ -76,18 +87,17 @@ describe('Notion daily calendar sync', () => {
 
   test('is a no-op when Notion is not configured', async () => {
     delete process.env.NOTION_API_KEY;
-    delete process.env.NOTION_DATABASE_ID;
-    delete process.env.NOTION_DIGEST_DATABASE_ID;
+    delete process.env.NOTION_DAILY_REPORT_PAGE_ID;
 
     const result = await syncDigestToNotion(sampleProducts, sampleStories, { date: '2026-09-17' });
 
     expect(result).toEqual({ skipped: true });
     expect(Client).not.toHaveBeenCalled();
-    expect(notion.databases.query).not.toHaveBeenCalled();
+    expect(notion.blocks.children.list).not.toHaveBeenCalled();
   });
 
   test('is a no-op when only the API key is set', async () => {
-    delete process.env.NOTION_DATABASE_ID;
+    delete process.env.NOTION_DAILY_REPORT_PAGE_ID;
 
     const result = await syncDigestToNotion(sampleProducts, sampleStories, { date: '2026-09-17' });
 
@@ -95,118 +105,77 @@ describe('Notion daily calendar sync', () => {
     expect(Client).not.toHaveBeenCalled();
   });
 
-  test('creates a daily page and item pages with the right properties', async () => {
-    routeQueries({ dailyPages: [] });
+  test('creates a MM-DD subpage and appends grouped item blocks', async () => {
+    routeChildren();
 
     const result = await syncDigestToNotion(sampleProducts, sampleStories, { date: '2026-09-17' });
 
     expect(Client).toHaveBeenCalledWith({ auth: 'secret_test_key' });
     expect(result.success).toBe(true);
-    expect(result.date).toBe('2026-09-17');
-    expect(result.itemsCreated).toBe(3);
-    expect(result.itemsUpdated).toBe(0);
-    expect(result.digestPageId).toBeTruthy();
+    expect(result.pageTitle).toBe('09-17');
+    expect(result.pageCreated).toBe(true);
+    expect(result.itemsAppended).toBe(3);
 
-    // Daily page created once, keyed on the date.
-    const dailyCreates = notion.pages.create.mock.calls.filter(
-      ([args]) => args.parent.database_id === 'digests-db-id'
-    );
-    expect(dailyCreates).toHaveLength(1);
-    expect(dailyCreates[0][0].properties.Name.title[0].text.content).toContain('2026-09-17');
-    expect(dailyCreates[0][0].properties.Date.date.start).toBe('2026-09-17');
+    // Subpage created under the Daily Report page, titled by date.
+    expect(notion.pages.create).toHaveBeenCalledTimes(1);
+    const createArgs = notion.pages.create.mock.calls[0][0];
+    expect(createArgs.parent.page_id).toBe('daily-report-page-id');
+    expect(createArgs.properties.title[0].text.content).toBe('09-17');
 
-    // Item pages created with the documented schema.
-    const itemCreates = notion.pages.create.mock.calls.filter(
-      ([args]) => args.parent.database_id === 'items-db-id'
-    );
-    expect(itemCreates).toHaveLength(3);
+    // One append with a heading + bullets per source.
+    expect(notion.blocks.children.append).toHaveBeenCalledTimes(1);
+    const appendArgs = notion.blocks.children.append.mock.calls[0][0];
+    expect(appendArgs.block_id).toBe(result.pageId);
+    const types = appendArgs.children.map((b) => b.type);
+    expect(types).toEqual([
+      'heading_2',
+      'bulleted_list_item',
+      'bulleted_list_item',
+      'heading_2',
+      'bulleted_list_item'
+    ]);
+    expect(appendArgs.children[0].heading_2.rich_text[0].text.content).toBe('Product Hunt');
+    expect(appendArgs.children[3].heading_2.rich_text[0].text.content).toBe('Hacker News');
 
-    const productPage = itemCreates.find(
-      ([args]) => args.properties.URL.url === 'https://www.producthunt.com/posts/cool-app'
-    )[0];
-    expect(productPage.properties.Name.title[0].text.content).toBe('Cool App');
-    expect(productPage.properties.Type.select.name).toBe('Product Hunt');
-    expect(productPage.properties.Date.date.start).toBe('2026-09-17');
-    expect(productPage.properties.Score.number).toBe(73);
-    expect(productPage.properties.Status.select.name).toBe('New');
-    expect(productPage.properties.Digest.relation[0].id).toBe(result.digestPageId);
+    const bullet = appendArgs.children[1].bulleted_list_item.rich_text[0].text;
+    expect(bullet.content).toBe('Cool App (73)');
+    expect(bullet.link.url).toBe('https://www.producthunt.com/posts/cool-app');
 
-    const storyPage = itemCreates.find(
-      ([args]) => args.properties.URL.url === 'https://example.com/hn-story'
-    )[0];
-    expect(storyPage.properties.Name.title[0].text.content).toBe('Some HN story');
-    expect(storyPage.properties.Type.select.name).toBe('Hacker News');
-    expect(storyPage.properties.Score.number).toBe(250);
-    expect(storyPage.properties.Status.select.name).toBe('New');
+    const storyBullet = appendArgs.children[4].bulleted_list_item.rich_text[0].text;
+    expect(storyBullet.content).toBe('Some HN story (250)');
+    expect(storyBullet.link.url).toBe('https://example.com/hn-story');
   });
 
-  test('reuses the existing daily page instead of creating a duplicate', async () => {
-    routeQueries({ dailyPages: [{ id: 'existing-daily-page' }] });
-
-    const result = await syncDigestToNotion(sampleProducts, [], { date: '2026-09-17' });
-
-    expect(result.digestPageId).toBe('existing-daily-page');
-    const dailyCreates = notion.pages.create.mock.calls.filter(
-      ([args]) => args.parent.database_id === 'digests-db-id'
-    );
-    expect(dailyCreates).toHaveLength(0);
-
-    const itemCreates = notion.pages.create.mock.calls.filter(
-      ([args]) => args.parent.database_id === 'items-db-id'
-    );
-    expect(itemCreates[0][0].properties.Digest.relation[0].id).toBe('existing-daily-page');
-  });
-
-  test('upserts: updates score on existing items without touching Status', async () => {
-    routeQueries({
-      dailyPages: [{ id: 'daily-page-1' }],
-      existingItemIds: { 'https://www.producthunt.com/posts/cool-app': 'item-page-1' }
+  test('reuses the existing subpage and does not duplicate content', async () => {
+    routeChildren({
+      parentChildren: [childPageBlock('09-16'), childPageBlock('09-17')],
+      pageChildren: [{ id: 'existing-block', type: 'heading_2' }]
     });
 
     const result = await syncDigestToNotion(sampleProducts, sampleStories, { date: '2026-09-17' });
 
-    expect(result.itemsCreated).toBe(2);
-    expect(result.itemsUpdated).toBe(1);
-
-    // The existing item was updated, not re-created.
-    expect(notion.pages.update).toHaveBeenCalledTimes(1);
-    const updateArgs = notion.pages.update.mock.calls[0][0];
-    expect(updateArgs.page_id).toBe('item-page-1');
-    expect(updateArgs.properties.Score.number).toBe(73);
-    expect(updateArgs.properties.Type.select.name).toBe('Product Hunt');
-    // Status must never be overwritten — the user may have flipped it manually.
-    expect(updateArgs.properties.Status).toBeUndefined();
-
-    // A fresh item was created for the new URL.
-    const createdUrls = notion.pages.create.mock.calls
-      .filter(([args]) => args.parent.database_id === 'items-db-id')
-      .map(([args]) => args.properties.URL.url);
-    expect(createdUrls).toContain('https://www.producthunt.com/posts/another-tool');
-    expect(createdUrls).not.toContain('https://www.producthunt.com/posts/cool-app');
+    expect(result.success).toBe(true);
+    expect(result.pageId).toBe('block-09-17');
+    expect(result.pageCreated).toBe(false);
+    expect(notion.pages.create).not.toHaveBeenCalled();
+    // Page already has content: leave it alone.
+    expect(notion.blocks.children.append).not.toHaveBeenCalled();
+    expect(result.itemsAppended).toBe(0);
   });
 
-  test('works without a digest database: no daily page, no relation', async () => {
-    delete process.env.NOTION_DIGEST_DATABASE_ID;
-    routeQueries();
+  test('fills an existing but empty subpage', async () => {
+    routeChildren({ parentChildren: [childPageBlock('09-17')], pageChildren: [] });
 
-    const result = await syncDigestToNotion(sampleProducts, sampleStories, { date: '2026-09-17' });
+    const result = await syncDigestToNotion(sampleProducts, [], { date: '2026-09-17' });
 
-    expect(result.success).toBe(true);
-    expect(result.digestPageId).toBeNull();
-    const dailyQueries = notion.databases.query.mock.calls.filter(
-      ([args]) => args.database_id === 'digests-db-id'
-    );
-    expect(dailyQueries).toHaveLength(0);
-
-    const itemCreates = notion.pages.create.mock.calls.filter(
-      ([args]) => args.parent.database_id === 'items-db-id'
-    );
-    expect(itemCreates).toHaveLength(3);
-    expect(itemCreates[0][0].properties.Digest).toBeUndefined();
+    expect(result.pageCreated).toBe(false);
+    expect(notion.pages.create).not.toHaveBeenCalled();
+    expect(notion.blocks.children.append).toHaveBeenCalledTimes(1);
+    expect(result.itemsAppended).toBe(2);
   });
 
   test('skips items missing a name or url', async () => {
-    routeQueries({ dailyPages: [{ id: 'daily-page-1' }] });
+    routeChildren();
 
     const result = await syncDigestToNotion(
       [{ name: '', url: 'https://www.producthunt.com/posts/nameless', trendingScore: 10 }],
@@ -214,26 +183,9 @@ describe('Notion daily calendar sync', () => {
       { date: '2026-09-17' }
     );
 
-    expect(result.itemsCreated).toBe(0);
-    const itemCreates = notion.pages.create.mock.calls.filter(
-      ([args]) => args.parent.database_id === 'items-db-id'
-    );
-    expect(itemCreates).toHaveLength(0);
-  });
-
-  test('continues past per-item failures and reports them', async () => {
-    routeQueries({ dailyPages: [{ id: 'daily-page-1' }] });
-    notion.pages.create.mockImplementation(async ({ parent }) => {
-      if (parent.database_id === 'items-db-id') {
-        throw new Error('Notion API exploded');
-      }
-      return { id: 'daily-page-2' };
-    });
-
-    const result = await syncDigestToNotion(sampleProducts, sampleStories, { date: '2026-09-17' });
-
     expect(result.success).toBe(true);
-    expect(result.itemsCreated).toBe(0);
-    expect(result.itemsFailed).toBe(3);
+    expect(result.pageCreated).toBe(true);
+    expect(notion.blocks.children.append).not.toHaveBeenCalled();
+    expect(result.itemsAppended).toBe(0);
   });
 });

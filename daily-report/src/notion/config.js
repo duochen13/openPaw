@@ -7,9 +7,9 @@ const { getSecret } = require('../utils/secrets');
  * AWS Secrets Manager ARNs for Lambda, plain env vars for local dev.
  *
  *   NOTION_API_KEY / NOTION_API_KEY_ARN - Notion internal integration token
- *   NOTION_DATABASE_ID                  - "Daily Digest Items" database id (required)
- *   NOTION_DIGEST_DATABASE_ID           - "Daily Digests" database id (optional,
- *                                         enables one calendar page per day)
+ *   NOTION_DAILY_REPORT_PAGE_ID         - the "Daily Report" page id; each
+ *                                         run creates (or reuses) a "MM-DD"
+ *                                         subpage under it
  *
  * Returns null when Notion is not configured, so the sync is a no-op.
  */
@@ -19,16 +19,12 @@ async function getNotionConfig() {
     apiKey = await getSecret(process.env.NOTION_API_KEY_ARN);
   }
 
-  const databaseId = process.env.NOTION_DATABASE_ID || null;
-  if (!apiKey || !databaseId) {
+  const dailyReportPageId = process.env.NOTION_DAILY_REPORT_PAGE_ID || null;
+  if (!apiKey || !dailyReportPageId) {
     return null;
   }
 
-  return {
-    apiKey,
-    databaseId,
-    digestDatabaseId: process.env.NOTION_DIGEST_DATABASE_ID || null
-  };
+  return { apiKey, dailyReportPageId };
 }
 
 module.exports = { getNotionConfig };

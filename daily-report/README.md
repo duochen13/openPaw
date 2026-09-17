@@ -54,14 +54,15 @@ Required variables:
 - `TIMEZONE` - Timezone for scheduling (default: America/Los_Angeles)
 
 Optional variables:
-- `NOTION_API_KEY` (or `NOTION_API_KEY_ARN` on Lambda) + `NOTION_DATABASE_ID` - sync digest items to Notion (see below); when unset, Notion sync is skipped
+- `NOTION_API_KEY` (or `NOTION_API_KEY_ARN` on Lambda) + `NOTION_DAILY_REPORT_PAGE_ID` - sync digest items to a Notion subpage (see below); when unset, Notion sync is skipped
 
-## Notion Daily Calendar (optional)
+## Notion Daily Report (optional)
 
-Each digest run can also sync that day's Product Hunt products and Hacker News
-stories into Notion: one row per item, plus (optionally) one calendar page per
-day linking to its items. In Notion you can flip an item's `Status` to
-`Reviewed` or `Interesting` — the sync never overwrites it.
+Each digest run can also write that day's Product Hunt products and Hacker News
+stories into Notion: a subpage titled `MM-DD` (e.g. `09-17`) under your
+**Daily Report** page, with the items as linked bullets grouped by source.
+Re-runs never duplicate content — a subpage that already has content is left
+alone.
 
 ### 1. Create a Notion integration
 
@@ -69,49 +70,27 @@ day linking to its items. In Notion you can flip an item's `Status` to
 2. Give it a name (e.g. `Daily Digest`), pick your workspace
 3. Copy the **Internal Integration Token** → set as `NOTION_API_KEY`
 
-### 2. Create the databases
+### 2. Share the Daily Report page with the integration
 
-Create a database named **Daily Digest Items** with these exact properties:
-
-| Property | Type | Notes |
-|----------|------|-------|
-| Name | Title | Product name / story title |
-| Type | Select | Options: `Product Hunt`, `Hacker News` |
-| URL | URL | Link to the product / story |
-| Date | Date | The digest day |
-| Score | Number | Trending score (PH) / points (HN) |
-| Status | Select | Options: `New`, `Reviewed`, `Interesting` |
-| Digest | Relation | → **Daily Digests** (only needed if you use step 3) |
-
-Optionally, create a second database named **Daily Digests** for the
-per-day calendar entries:
-
-| Property | Type | Notes |
-|----------|------|-------|
-| Name | Title | e.g. `Daily Digest — 2026-09-17` |
-| Date | Date | Add a Notion **Calendar view** on this property |
-
-### 3. Share the databases with the integration
-
-For each database: open it → **Share** → invite your integration (search by
+Open your **Daily Report** page → **Share** → invite your integration (search by
 the name you gave it in step 1) → **Can edit**. Without this, the API returns
 "object not found" errors.
 
-### 4. Configure
+### 3. Configure
 
-Copy each database's ID from its URL
-(`notion.so/<workspace>/<DATABASE_ID>?v=...` — the 32-char hex part) into:
+Copy the page's ID from its URL
+(`notion.so/Daily-Report-<PAGE_ID>` — the 32-char hex part) into:
 
 ```bash
-NOTION_DATABASE_ID=abc123...        # Daily Digest Items
-NOTION_DIGEST_DATABASE_ID=def456...  # Daily Digests (optional)
+NOTION_DAILY_REPORT_PAGE_ID=abc123...   # Daily Report page
 ```
 
 For the Lambda deployment, store the token in AWS Secrets Manager and set
 `NOTION_API_KEY_ARN` instead of `NOTION_API_KEY`.
 
-The sync runs after the email is sent, upserts on `(Date, URL)` so re-runs
-never duplicate rows, and is skipped entirely when the vars are unset.
+The sync runs after the email is sent, creates (or reuses) the day's `MM-DD`
+subpage, fills it only when it's empty, and is skipped entirely when the vars
+are unset.
 
 ## Deployment
 

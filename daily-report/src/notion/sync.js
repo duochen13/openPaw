@@ -5,80 +5,43 @@ const { logger } = require('../utils/logger');
 
 const TYPE_PRODUCT_HUNT = 'Product Hunt';
 const TYPE_HACKER_NEWS = 'Hacker News';
-const STATUS_NEW = 'New';
 
 /**
- * Notion Daily Calendar sync.
+ * Notion Daily Report sync.
  *
- * Database design (see README for setup instructions):
+ * Each run writes the day's digest into a subpage of the "Daily Report" page
+ * (NOTION_DAILY_REPORT_PAGE_ID). The subpage is titled "MM-DD" (e.g. "09-17")
+ * and holds the Product Hunt / Hacker News items as linked bullets.
  *
- *   "Daily Digest Items" (NOTION_DATABASE_ID)
- *     Name    title   - product name / story title
- *     Type    select  - "Product Hunt" | "Hacker News"
- *     URL     url     - link to the product / story
- *     Date    date    - the digest day (YYYY-MM-DD)
- *     Score   number  - trendingScore (PH) / points (HN)
- *     Status  select  - "New" | "Reviewed" | "Interesting" (user flips this in
- *                       Notion; the sync sets "New" on create and never
- *                       overwrites it afterwards)
- *     Digest  relation -> "Daily Digests" (only populated when
- *                       NOTION_DIGEST_DATABASE_ID is configured)
- *
- *   "Daily Digests" (NOTION_DIGEST_DATABASE_ID, optional)
- *     Name    title   - e.g. "Daily Digest — 2026-09-17"
- *     Date    date    - the digest day; add a Notion calendar view on this
- *
- * Both writes are upserts keyed on (Date, URL) for items and (Date) for the
- * daily page, so re-running the digest for the same day never creates
- * duplicates.
+ * Re-runs are safe: when the day's subpage already exists and has content, the
+ * sync leaves it alone instead of duplicating items or clobbering manual edits.
  */
 
-async function findDailyPage(notion, digestDatabaseId, date) {
-  const response = await notion.databases.query({
-    database_id: digestDatabaseId,
-    filter: { property: 'Date', date: { equals: date } },
-    page_size: 1
-  });
-  return response.results[0] || null;
+/**
+ * "2026-09-17" -> "09-17"
+ */
+function pageTitleFor(date) {
+  const [, month, day] = date.split('-');
+  return `${month}-${day}`;
 }
 
-async function createDailyPage(notion, digestDatabaseId, date) {
-  return notion.pages.create({
-    parent: { database_id: digestDatabaseId },
-    properties: {
-      Name: { title: [{ text: { content: `Daily Digest — ${date}` } }] },
-      Date: { date: { start: date } }
+async function findSubpage(notion, parentPageId, title) {
+  let cursor;
+  do {
+    const response = await notion.blocks.children.list({
+      block_id: parentPageId,
+      start_cursor: cursor,
+      page_size: 100
+    });
+    const match = response.results.find(
+      (block) => block.type === 'child_page' && block.child_page && block.child_page.title === title
+    );
+    if (match) {
+      return match;
     }
-  });
-}
-
-async function findItemPage(notion, databaseId, date, url) {
-  const response = await notion.databases.query({
-    database_id: databaseId,
-    filter: {
-      and: [
-        { property: 'Date', date: { equals: date } },
-        { property: 'URL', url: { equals: url } }
-      ]
-    },
-    page_size: 1
-  });
-  return response.results[0] || null;
-}
-
-function buildItemProperties({ name, type, url, date, score, digestPageId }) {
-  const properties = {
-    Name: { title: [{ text: { content: name } }] },
-    Type: { select: { name: type } },
-    URL: { url },
-    Date: { date: { start: date } },
-    Score: { number: typeof score === 'number' ? score : null },
-    Status: { select: { name: STATUS_NEW } }
-  };
-  if (digestPageId) {
-    properties.Digest = { relation: [{ id: digestPageId }] };
-  }
-  return properties;
+    cursor = response.has_more ? response.next_cursor : undefined;
+  } while (cursor);
+  return null;
 }
 
 function normalizeItems(products, stories) {
@@ -97,8 +60,44 @@ function normalizeItems(products, stories) {
   return [...fromProducts, ...fromStories].filter((item) => item.name && item.url);
 }
 
+function richText(content, url) {
+  const text = { content };
+  if (url) {
+    text.link = { url };
+  }
+  return [{ type: 'text', text }];
+}
+
+function buildContentBlocks(items) {
+  const blocks = [];
+  const groups = [
+    [TYPE_PRODUCT_HUNT, 'Product Hunt'],
+    [TYPE_HACKER_NEWS, 'Hacker News']
+  ];
+  for (const [type, heading] of groups) {
+    const groupItems = items.filter((item) => item.type === type);
+    if (groupItems.length === 0) {
+      continue;
+    }
+    blocks.push({
+      object: 'block',
+      type: 'heading_2',
+      heading_2: { rich_text: richText(heading) }
+    });
+    for (const item of groupItems) {
+      const label = typeof item.score === 'number' ? `${item.name} (${item.score})` : item.name;
+      blocks.push({
+        object: 'block',
+        type: 'bulleted_list_item',
+        bulleted_list_item: { rich_text: richText(label, item.url) }
+      });
+    }
+  }
+  return blocks;
+}
+
 /**
- * Sync the day's digest items to Notion.
+ * Sync the day's digest items to a "MM-DD" subpage under the Daily Report page.
  *
  * @param {Array} products - Product Hunt products from fetchTopProductHuntProducts
  * @param {Array} stories  - Hacker News stories from fetchTopHackerNewsStories
@@ -106,80 +105,58 @@ function normalizeItems(products, stories) {
  * @param {string} [options.date] - digest day as YYYY-MM-DD (defaults to today
  *                                  in TIMEZONE; the override exists for tests)
  * @returns {Promise<Object>} { skipped: true } when Notion is not configured,
- *          otherwise { success, date, itemsCreated, itemsUpdated, itemsFailed, digestPageId }
+ *          otherwise { success, date, pageTitle, pageId, pageCreated, itemsAppended }
  */
 async function syncDigestToNotion(products, stories, options = {}) {
   const config = await getNotionConfig();
   if (!config) {
-    logger.info('Notion sync skipped: NOTION_API_KEY/NOTION_DATABASE_ID not set');
+    logger.info('Notion sync skipped: NOTION_API_KEY/NOTION_DAILY_REPORT_PAGE_ID not set');
     return { skipped: true };
   }
 
   const timezone = process.env.TIMEZONE || 'America/Los_Angeles';
   const date = options.date || DateTime.now().setZone(timezone).toISODate();
+  const title = pageTitleFor(date);
 
   const notion = new Client({ auth: config.apiKey });
   const items = normalizeItems(products, stories);
 
-  // Upsert the daily calendar page (one per day), when a digests DB is configured.
-  let digestPageId = null;
-  if (config.digestDatabaseId) {
-    const existingDailyPage = await findDailyPage(notion, config.digestDatabaseId, date);
-    if (existingDailyPage) {
-      digestPageId = existingDailyPage.id;
-      logger.info('Reusing existing Notion daily page', { date, pageId: digestPageId });
-    } else {
-      const dailyPage = await createDailyPage(notion, config.digestDatabaseId, date);
-      digestPageId = dailyPage.id;
-      logger.info('Created Notion daily page', { date, pageId: digestPageId });
-    }
+  let page = await findSubpage(notion, config.dailyReportPageId, title);
+  let pageCreated = false;
+  if (!page) {
+    page = await notion.pages.create({
+      parent: { page_id: config.dailyReportPageId },
+      properties: { title: [{ text: { content: title } }] }
+    });
+    pageCreated = true;
+    logger.info('Created Notion daily subpage', { title, pageId: page.id });
+  } else {
+    logger.info('Reusing existing Notion daily subpage', { title, pageId: page.id });
   }
 
-  let itemsCreated = 0;
-  let itemsUpdated = 0;
-  let itemsFailed = 0;
-
-  for (const item of items) {
-    try {
-      const existingItem = await findItemPage(notion, config.databaseId, date, item.url);
-      if (existingItem) {
-        // Refresh the score, but never touch Status: the user may have
-        // manually flipped it to Reviewed / Interesting in Notion.
-        await notion.pages.update({
-          page_id: existingItem.id,
-          properties: {
-            Type: { select: { name: item.type } },
-            Score: { number: typeof item.score === 'number' ? item.score : null },
-            ...(digestPageId ? { Digest: { relation: [{ id: digestPageId }] } } : {})
-          }
-        });
-        itemsUpdated += 1;
-      } else {
-        await notion.pages.create({
-          parent: { database_id: config.databaseId },
-          properties: buildItemProperties({ ...item, date, digestPageId })
-        });
-        itemsCreated += 1;
-      }
-    } catch (error) {
-      // One bad item must not kill the rest of the sync.
-      logger.warn('Failed to sync item to Notion', {
-        name: item.name,
-        url: item.url,
-        error: error.message
+  // Populate only a fresh/empty page: re-runs must not duplicate items or
+  // wipe out anything added manually.
+  const existingChildren = await notion.blocks.children.list({ block_id: page.id, page_size: 1 });
+  let itemsAppended = 0;
+  if (existingChildren.results.length === 0 && items.length > 0) {
+    const blocks = buildContentBlocks(items);
+    for (let i = 0; i < blocks.length; i += 100) {
+      await notion.blocks.children.append({
+        block_id: page.id,
+        children: blocks.slice(i, i + 100)
       });
-      itemsFailed += 1;
     }
+    itemsAppended = items.length;
   }
 
-  const result = { success: true, date, itemsCreated, itemsUpdated, itemsFailed, digestPageId };
+  const result = { success: true, date, pageTitle: title, pageId: page.id, pageCreated, itemsAppended };
   logger.info('Notion sync completed', result);
   return result;
 }
 
 module.exports = {
   syncDigestToNotion,
+  pageTitleFor,
   TYPE_PRODUCT_HUNT,
-  TYPE_HACKER_NEWS,
-  STATUS_NEW
+  TYPE_HACKER_NEWS
 };
