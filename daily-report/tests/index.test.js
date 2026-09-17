@@ -7,6 +7,7 @@ const { fetchFoodOrdersFromEmail } = require('../src/fetchers/foodOrders');
 const { buildEmailTemplate } = require('../src/email/template');
 const { sendEmail } = require('../src/gmail/client');
 const { getSecret } = require('../src/utils/secrets');
+const { syncDigestToNotion } = require('../src/notion');
 const { DateTime } = require('luxon');
 
 jest.mock('../src/fetchers/productHunt');
@@ -17,6 +18,7 @@ jest.mock('../src/fetchers/foodOrders');
 jest.mock('../src/email/template');
 jest.mock('../src/gmail/client');
 jest.mock('../src/utils/secrets');
+jest.mock('../src/notion');
 jest.mock('luxon', () => {
   const actual = jest.requireActual('luxon');
   return {
@@ -77,6 +79,7 @@ describe('Lambda Handler', () => {
 
     fetchStockData.mockResolvedValue({ holdings: [] });
     fetchFoodOrdersFromEmail.mockResolvedValue(mockFoodOrders);
+    syncDigestToNotion.mockResolvedValue({ skipped: true });
   });
 
   test('executes successfully when in time window', async () => {
@@ -183,5 +186,51 @@ describe('Lambda Handler', () => {
 
     expect(result.statusCode).toBe(200);
     expect(buildEmailTemplate).toHaveBeenCalledWith(mockPHProducts, mockHNStories, { total: 0, transactions: [] }, mockFoodOrders, { holdings: [] });
+  });
+
+  test('syncs digest items to Notion after the email is sent', async () => {
+    const mockPHProducts = [{ id: 1, name: 'Product 1' }];
+    const mockHNStories = [{ id: 101, title: 'Story 1' }];
+    const mockSpending = { total: 150.75, transactions: [{ id: 't1', amount: 150.75 }] };
+
+    fetchTopProductHuntProducts.mockResolvedValueOnce(mockPHProducts);
+    fetchTopHackerNewsStories.mockResolvedValueOnce(mockHNStories);
+    fetchPlaidSpending.mockResolvedValueOnce(mockSpending);
+    buildEmailTemplate.mockReturnValueOnce('<html>Email</html>');
+    sendEmail.mockResolvedValueOnce({ messageId: 'msg-123' });
+    syncDigestToNotion.mockResolvedValueOnce({
+      success: true,
+      date: '2026-09-17',
+      itemsCreated: 2,
+      itemsUpdated: 0,
+      itemsFailed: 0,
+      digestPageId: 'daily-page-1'
+    });
+
+    const result = await handler({});
+
+    expect(result.statusCode).toBe(200);
+    expect(syncDigestToNotion).toHaveBeenCalledWith(mockPHProducts, mockHNStories);
+    expect(syncDigestToNotion.mock.invocationCallOrder[0]).toBeGreaterThan(
+      sendEmail.mock.invocationCallOrder[0]
+    );
+  });
+
+  test('does not fail the run when Notion sync throws', async () => {
+    const mockPHProducts = [{ id: 1, name: 'Product 1' }];
+    const mockHNStories = [{ id: 101, title: 'Story 1' }];
+    const mockSpending = { total: 150.75, transactions: [{ id: 't1', amount: 150.75 }] };
+
+    fetchTopProductHuntProducts.mockResolvedValueOnce(mockPHProducts);
+    fetchTopHackerNewsStories.mockResolvedValueOnce(mockHNStories);
+    fetchPlaidSpending.mockResolvedValueOnce(mockSpending);
+    buildEmailTemplate.mockReturnValueOnce('<html>Email</html>');
+    sendEmail.mockResolvedValueOnce({ messageId: 'msg-123' });
+    syncDigestToNotion.mockRejectedValueOnce(new Error('Notion is down'));
+
+    const result = await handler({});
+
+    expect(result.statusCode).toBe(200);
+    expect(result.body).toContain('Success');
   });
 });
