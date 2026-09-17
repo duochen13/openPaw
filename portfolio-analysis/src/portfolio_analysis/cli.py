@@ -18,6 +18,7 @@ from portfolio_analysis.config import PROJECT_ROOT, Portfolio, load_portfolio
 from portfolio_analysis.dashboard import render_dashboard
 from portfolio_analysis.event_dashboard import event_dashboard_data, render_event_dashboard
 from portfolio_analysis.events.macro import MacroSource
+from portfolio_analysis.events.reddit import collect_reddit_for_events
 from portfolio_analysis.http import CachedHttp, ProviderError, RateLimitLedger
 from portfolio_analysis.render import render_chart
 from portfolio_analysis.store import Store
@@ -189,10 +190,18 @@ def _dashboard(args: argparse.Namespace) -> int:
 
 def _event_dashboard(args: argparse.Namespace) -> int:
     portfolio = load_portfolio()
+    reddit_dir = (
+        Path(args.reddit_dir)
+        if args.reddit_dir
+        else (portfolio.path("reddit") if "reddit" in portfolio.paths else None)
+    )
     store = Store.open(args.db or portfolio.path("db"))
     try:
         data = event_dashboard_data(
-            portfolio, store, MacroSource(Path(args.macro_calendar))
+            portfolio,
+            store,
+            MacroSource(Path(args.macro_calendar)),
+            reddit_dir=reddit_dir,
         )
     finally:
         store.close()
@@ -200,6 +209,38 @@ def _event_dashboard(args: argparse.Namespace) -> int:
         data, Path(args.out_dir) if args.out_dir else portfolio.path("out")
     )
     print(f"event dashboard written -> {target}")
+    return 0
+
+
+def _collect_reddit(args: argparse.Namespace) -> int:
+    portfolio = load_portfolio()
+    cache = Path(args.cache_dir) if args.cache_dir else portfolio.path("cache")
+    if args.reddit_dir:
+        reddit_dir = Path(args.reddit_dir)
+    elif "reddit" in portfolio.paths:
+        reddit_dir = portfolio.path("reddit")
+    else:
+        reddit_dir = PROJECT_ROOT / "data" / "reddit"
+    reddit_dir.mkdir(parents=True, exist_ok=True)
+    # Same CachedHttp + quota-ledger construction as collect-events: the
+    # ledger at <cache>/quota.json is what makes collection resumable across
+    # runs and quota exhaustion non-destructive.
+    http = CachedHttp(cache, ledger=RateLimitLedger(cache / "quota.json"))
+    try:
+        result = collect_reddit_for_events(
+            MacroSource(Path(args.macro_calendar)),
+            reddit_dir,
+            http,
+            daily_limit=args.daily_limit,
+            rebuild=args.rebuild,
+        )
+    except (OSError, ValueError, ProviderError) as exc:
+        print(f"collect-reddit: {exc}", file=sys.stderr)
+        return 1
+    print(
+        f"{result.completed} completed, {result.remaining} remaining"
+        + ("; quota exhausted, rerun after reset" if result.quota_exhausted else "")
+    )
     return 0
 
 
@@ -297,9 +338,34 @@ def main(argv: list[str] | None = None) -> int:
     event_dashboard.add_argument("--db", default=None)
     event_dashboard.add_argument("--out-dir", default=None)
     event_dashboard.add_argument(
+        "--reddit-dir",
+        default=None,
+        help="directory of per-event Reddit JSON files; omit to use the configured path",
+    )
+    event_dashboard.add_argument(
         "--macro-calendar", default=str(PROJECT_ROOT / "config/macro_calendar.yaml")
     )
     event_dashboard.set_defaults(func=_event_dashboard)
+    collect_reddit = sub.add_parser(
+        "collect-reddit", help="collect ranked Reddit commentary for macro events"
+    )
+    collect_reddit.add_argument("--cache-dir", default=None)
+    collect_reddit.add_argument(
+        "--reddit-dir", default=None, help="override the configured reddit directory"
+    )
+    collect_reddit.add_argument(
+        "--macro-calendar", default=str(PROJECT_ROOT / "config/macro_calendar.yaml")
+    )
+    collect_reddit.add_argument(
+        "--daily-limit",
+        type=int,
+        default=400,
+        help="max Arctic Shift requests per day (quota exhaustion stops the run)",
+    )
+    collect_reddit.add_argument(
+        "--rebuild", action="store_true", help="re-collect even completed events"
+    )
+    collect_reddit.set_defaults(func=_collect_reddit)
     chart = sub.add_parser("chart", help="run the pipeline and generate a price/event HTML chart")
     for command in (render, chart):
         command.add_argument("ticker", nargs="?", default=None)
