@@ -53,6 +53,45 @@ Required variables:
 - `PRODUCT_HUNT_API_KEY_ARN` - ARN for Product Hunt API key
 - `TIMEZONE` - Timezone for scheduling (default: America/Los_Angeles)
 
+Optional variables:
+- `NOTION_API_KEY` (or `NOTION_API_KEY_ARN` on Lambda) + `NOTION_DAILY_REPORT_PAGE_ID` - sync digest items to a Notion subpage (see below); when unset, Notion sync is skipped
+
+## Notion Daily Report (optional)
+
+Each digest run can also write that day's Product Hunt products and Hacker News
+stories into Notion: a subpage titled `MM-DD` (e.g. `09-17`) under your
+**Daily Report** page, with the items as linked bullets grouped by source.
+Re-runs never duplicate content — a subpage that already has content is left
+alone.
+
+### 1. Create a Notion integration
+
+1. Go to https://www.notion.so/my-account/integrations → **New integration**
+2. Give it a name (e.g. `Daily Digest`), pick your workspace
+3. Copy the **Internal Integration Token** → set as `NOTION_API_KEY`
+
+### 2. Share the Daily Report page with the integration
+
+Open your **Daily Report** page → **Share** → invite your integration (search by
+the name you gave it in step 1) → **Can edit**. Without this, the API returns
+"object not found" errors.
+
+### 3. Configure
+
+Copy the page's ID from its URL
+(`notion.so/Daily-Report-<PAGE_ID>` — the 32-char hex part) into:
+
+```bash
+NOTION_DAILY_REPORT_PAGE_ID=abc123...   # Daily Report page
+```
+
+For the Lambda deployment, store the token in AWS Secrets Manager and set
+`NOTION_API_KEY_ARN` instead of `NOTION_API_KEY`.
+
+The sync runs after the email is sent, creates (or reuses) the day's `MM-DD`
+subpage, fills it only when it's empty, and is skipped entirely when the vars
+are unset.
+
 ## Deployment
 
 See [SETUP.md](./SETUP.md) for complete deployment instructions.
@@ -73,6 +112,10 @@ daily-report/
 │   ├── fetchers/
 │   │   ├── productHunt.js    # Product Hunt API
 │   │   └── hackerNews.js     # Hacker News API
+│   ├── notion/
+│   │   ├── index.js          # Notion module entrypoint
+│   │   ├── config.js         # Env/ARN config resolution
+│   │   └── sync.js           # Daily calendar upsert logic
 │   ├── email/
 │   │   ├── template.js       # HTML email builder
 │   │   └── styles.js         # CSS styles

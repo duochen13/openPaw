@@ -97,6 +97,19 @@ async function handler(event) {
       transactionCount: spending.transactions.length
     });
 
+    // Sync digest items to a Notion Daily Report subpage. This is a no-op when
+    // NOTION_API_KEY/NOTION_DAILY_REPORT_PAGE_ID are unset, and failures are
+    // logged but never break the digest run.
+    try {
+      const { syncDigestToNotion } = require('./notion');
+      const notionResult = await syncDigestToNotion(products, stories);
+      if (!notionResult.skipped) {
+        logger.info('Notion sync finished', notionResult);
+      }
+    } catch (error) {
+      logger.warn('Notion sync failed (non-fatal)', { error: error.message });
+    }
+
     return {
       statusCode: 200,
       body: JSON.stringify({
