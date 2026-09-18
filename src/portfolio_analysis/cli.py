@@ -1,0 +1,407 @@
+"""Command-line entry point.
+
+This tool explains past price moves. It has no brokerage integration, places
+no orders, and produces no forward-looking signal (spec §2).
+"""
+
+from __future__ import annotations
+
+import argparse
+import sys
+from pathlib import Path
+
+from portfolio_analysis import moves as moves_module
+from portfolio_analysis import prices
+from portfolio_analysis.artifacts import MovesArtifact, write_moves
+from portfolio_analysis.collection import collect_events
+from portfolio_analysis.config import PROJECT_ROOT, Portfolio, load_portfolio
+from portfolio_analysis.dashboard import render_dashboard
+from portfolio_analysis.event_dashboard import event_dashboard_data, render_event_dashboard
+from portfolio_analysis.events.macro import MacroSource
+from portfolio_analysis.events.reddit import collect_reddit_for_events
+from portfolio_analysis.http import CachedHttp, ProviderError, RateLimitLedger
+from portfolio_analysis.render import render_chart
+from portfolio_analysis.store import Store
+
+
+def _selected_symbols(portfolio: Portfolio, requested: str | None) -> list[str] | None:
+    """The universe, or the single resolved symbol. None means unresolvable."""
+    if requested is None:
+        return list(portfolio.symbols)
+    symbol = portfolio.resolve(requested)
+    return None if symbol is None else [symbol]
+
+
+def _ingest_prices(args: argparse.Namespace) -> int:
+    portfolio = load_portfolio()
+    symbols = _selected_symbols(portfolio, args.ticker)
+    if symbols is None:
+        print(
+            f"{args.ticker!r} is not in the portfolio; add it to config/portfolio.yaml",
+            file=sys.stderr,
+        )
+        return 2
+
+    # The benchmark is fetched alongside the universe, never separately. Beta
+    # cannot be computed without it, so an ingest that skips it leaves a store
+    # that looks complete and is not. Industry benchmarks ride along the same
+    # way: the compare view cannot draw the third line without them.
+    targets = [*symbols, portfolio.benchmark]
+    for symbol in symbols:
+        industry = portfolio.industry_benchmark(symbol)
+        if industry and industry not in targets:
+            targets.append(industry)
+
+    store = Store.open(args.db or portfolio.path("db"))
+    try:
+        for symbol in targets:
+            bars = prices.fetch_yahoo(symbol, years=portfolio.price_years)
+            written = store.upsert_price_bars(bars)
+            first = bars[0]["date"] if bars else "-"
+            last = bars[-1]["date"] if bars else "-"
+            print(f"{symbol}: {written} bar(s) upserted, {first} .. {last}")
+    finally:
+        store.close()
+    return 0
+
+
+def _detect_moves(args: argparse.Namespace) -> int:
+    portfolio = load_portfolio()
+    symbols = _selected_symbols(portfolio, args.ticker)
+    if symbols is None:
+        print(
+            f"{args.ticker!r} is not in the portfolio; add it to config/portfolio.yaml",
+            file=sys.stderr,
+        )
+        return 2
+
+    moves_dir = Path(args.moves_dir) if args.moves_dir else portfolio.path("moves")
+    store = Store.open(args.db or portfolio.path("db"))
+    try:
+        benchmark_series = store.adjusted_series(portfolio.benchmark)
+        if not benchmark_series:
+            print(
+                f"no prices for benchmark {portfolio.benchmark}; "
+                "run `ingest-prices` first - beta cannot be computed without it",
+                file=sys.stderr,
+            )
+            return 1
+
+        for symbol in symbols:
+            asset_series = store.adjusted_series(symbol)
+            if not asset_series:
+                print(f"no prices for {symbol}; run `ingest-prices` first", file=sys.stderr)
+                return 1
+
+            found, coverage = moves_module.compute_moves(
+                symbol,
+                portfolio.benchmark,
+                asset_series,
+                benchmark_series,
+                portfolio.move_params,
+            )
+            store.replace_moves(symbol, [m.as_row() for m in found])
+            path = write_moves(
+                moves_dir,
+                MovesArtifact(
+                    ticker=symbol,
+                    benchmark=portfolio.benchmark,
+                    params=portfolio.move_params,
+                    coverage=coverage,
+                    moves=found,
+                ),
+            )
+            evaluated = (
+                f"{coverage.evaluated[0]} .. {coverage.evaluated[1]}"
+                if coverage.evaluated
+                else "none (series shorter than the beta window)"
+            )
+            print(
+                f"{symbol}: {coverage.flagged_days} flagged of "
+                f"{coverage.evaluated_days} evaluated ({evaluated}) -> {path}"
+            )
+    finally:
+        store.close()
+    return 0
+
+
+def _collect_events(args: argparse.Namespace) -> int:
+    portfolio = load_portfolio()
+    symbols = _selected_symbols(portfolio, args.ticker)
+    if symbols is None:
+        print(f"{args.ticker!r} is not in the portfolio", file=sys.stderr)
+        return 2
+    cache = Path(args.cache_dir) if args.cache_dir else portfolio.path("cache")
+    http = CachedHttp(cache, ledger=RateLimitLedger(cache / "quota.json"))
+    try:
+        result = collect_events(
+            portfolio,
+            symbols,
+            db=Path(args.db) if args.db else portfolio.path("db"),
+            moves_dir=Path(args.moves_dir) if args.moves_dir else portfolio.path("moves"),
+            events_dir=Path(args.events_dir) if args.events_dir else portfolio.path("events"),
+            http=http,
+            macro=MacroSource(Path(args.macro_calendar)),
+            only_date=args.date,
+            rebuild=args.rebuild,
+            keyless=args.keyless,
+        )
+    except (OSError, ValueError, ProviderError) as exc:
+        print(f"collect-events: {exc}", file=sys.stderr)
+        return 1
+    print(
+        f"{result.completed} completed, {result.remaining} remaining "
+        f"({result.deferred} awaiting sessions)"
+        + ("; quota exhausted, rerun after reset" if result.quota_exhausted else "")
+    )
+    return 0
+
+
+def _render(args: argparse.Namespace) -> int:
+    portfolio = load_portfolio()
+    symbols = _selected_symbols(portfolio, args.ticker)
+    if symbols is None:
+        print(f"{args.ticker!r} is not in config/portfolio.yaml", file=sys.stderr)
+        return 2
+    try:
+        for symbol in symbols:
+            target = render_chart(
+                portfolio,
+                symbol,
+                db=Path(args.db) if args.db else portfolio.path("db"),
+                moves_dir=Path(args.moves_dir) if args.moves_dir else portfolio.path("moves"),
+                events_dir=Path(args.events_dir) if args.events_dir else portfolio.path("events"),
+                out_dir=Path(args.out_dir) if args.out_dir else portfolio.path("out"),
+            )
+            print(f"{symbol}: chart written -> {target}")
+    except (OSError, ValueError) as exc:
+        print(f"render: {exc}", file=sys.stderr)
+        return 1
+    return 0
+
+
+def _dashboard(args: argparse.Namespace) -> int:
+    portfolio = load_portfolio()
+    try:
+        target = render_dashboard(
+            portfolio, Path(args.out_dir) if args.out_dir else portfolio.path("out")
+        )
+    except OSError as exc:
+        print(f"dashboard: {exc}", file=sys.stderr)
+        return 1
+    print(f"dashboard written -> {target}")
+    return 0
+
+
+def _event_dashboard(args: argparse.Namespace) -> int:
+    portfolio = load_portfolio()
+    reddit_dir = (
+        Path(args.reddit_dir)
+        if args.reddit_dir
+        else (portfolio.path("reddit") if "reddit" in portfolio.paths else None)
+    )
+    store = Store.open(args.db or portfolio.path("db"))
+    try:
+        data = event_dashboard_data(
+            portfolio,
+            store,
+            MacroSource(Path(args.macro_calendar)),
+            reddit_dir=reddit_dir,
+        )
+    finally:
+        store.close()
+    target = render_event_dashboard(
+        data, Path(args.out_dir) if args.out_dir else portfolio.path("out")
+    )
+    print(f"event dashboard written -> {target}")
+    return 0
+
+
+def _collect_reddit(args: argparse.Namespace) -> int:
+    portfolio = load_portfolio()
+    cache = Path(args.cache_dir) if args.cache_dir else portfolio.path("cache")
+    if args.reddit_dir:
+        reddit_dir = Path(args.reddit_dir)
+    elif "reddit" in portfolio.paths:
+        reddit_dir = portfolio.path("reddit")
+    else:
+        reddit_dir = PROJECT_ROOT / "data" / "reddit"
+    reddit_dir.mkdir(parents=True, exist_ok=True)
+    # Same CachedHttp + quota-ledger construction as collect-events: the
+    # ledger at <cache>/quota.json is what makes collection resumable across
+    # runs and quota exhaustion non-destructive.
+    http = CachedHttp(cache, ledger=RateLimitLedger(cache / "quota.json"))
+    try:
+        result = collect_reddit_for_events(
+            MacroSource(Path(args.macro_calendar)),
+            reddit_dir,
+            http,
+            daily_limit=args.daily_limit,
+            rebuild=args.rebuild,
+        )
+    except (OSError, ValueError, ProviderError) as exc:
+        print(f"collect-reddit: {exc}", file=sys.stderr)
+        return 1
+    print(
+        f"{result.completed} completed, {result.remaining} remaining"
+        + ("; quota exhausted, rerun after reset" if result.quota_exhausted else "")
+    )
+    return 0
+
+
+def _chart(args: argparse.Namespace) -> int:
+    """The user-facing trigger: prices -> moves -> events -> HTML, no model calls."""
+    portfolio = load_portfolio()
+    symbols = _selected_symbols(portfolio, args.ticker)
+    if symbols is None:
+        print(
+            f"{args.ticker!r} is not in config/portfolio.yaml; add its symbol and CIK first",
+            file=sys.stderr,
+        )
+        return 2
+    store = Store.open(args.db or portfolio.path("db"))
+    try:
+        industry_tickers = [
+            ticker
+            for symbol in symbols
+            if (ticker := portfolio.industry_benchmark(symbol))
+        ]
+        missing = any(
+            not store.price_bar_count(symbol)
+            for symbol in [*symbols, portfolio.benchmark, *industry_tickers]
+        )
+    finally:
+        store.close()
+    if args.refresh_prices or missing:
+        result = _ingest_prices(args)
+        if result:
+            return result
+    result = _detect_moves(args)
+    if result:
+        return result
+    event_result = 0
+    if not args.skip_events:
+        event_result = _collect_events(args)
+        if event_result:
+            print(
+                "Event collection is incomplete; rendering the evidence available so far.",
+                file=sys.stderr,
+            )
+    render_result = _render(args)
+    return render_result or event_result
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(
+        prog="portfolio-analysis",
+        description="Retrospective attribution of large single-day equity moves.",
+    )
+    sub = parser.add_subparsers(dest="command")
+
+    ingest = sub.add_parser("ingest-prices", help="fetch adjusted daily bars")
+    ingest.add_argument(
+        "ticker",
+        nargs="?",
+        default=None,
+        help="ticker, company name, or alias; omit for the whole portfolio",
+    )
+    ingest.add_argument("--db", default=None, help="override the configured database")
+    ingest.set_defaults(func=_ingest_prices)
+
+    detect = sub.add_parser("detect-moves", help="flag days whose abnormal return is large")
+    detect.add_argument(
+        "ticker",
+        nargs="?",
+        default=None,
+        help="ticker, company name, or alias; omit for the whole portfolio",
+    )
+    detect.add_argument("--db", default=None, help="override the configured database")
+    detect.add_argument(
+        "--moves-dir", default=None, help="override the configured artifact directory"
+    )
+    detect.set_defaults(func=_detect_moves)
+
+    collect = sub.add_parser("collect-events", help="assemble dated evidence for flagged moves")
+    collect.add_argument("ticker", nargs="?", default=None)
+    collect.add_argument("--db", default=None)
+    collect.add_argument("--moves-dir", default=None)
+    collect.add_argument("--events-dir", default=None)
+    collect.add_argument("--cache-dir", default=None)
+    collect.add_argument("--date", default=None, help="collect a single flagged YYYY-MM-DD")
+    collect.add_argument(
+        "--macro-calendar", default=str(PROJECT_ROOT / "config/macro_calendar.yaml")
+    )
+    collect.add_argument(
+        "--rebuild", action="store_true", help="rebuild bundles using cached responses"
+    )
+    collect.add_argument("--keyless", action="store_true", help="collect SEC, HN and macro only")
+    collect.set_defaults(func=_collect_events)
+
+    render = sub.add_parser("render", help="build a self-contained price and event chart offline")
+    dashboard = sub.add_parser(
+        "dashboard", help="build an offline dashboard linking all configured stock charts"
+    )
+    dashboard.add_argument("--out-dir", default=None)
+    dashboard.set_defaults(func=_dashboard)
+    event_dashboard = sub.add_parser(
+        "event-dashboard", help="compare returns around macro release dates"
+    )
+    event_dashboard.add_argument("--db", default=None)
+    event_dashboard.add_argument("--out-dir", default=None)
+    event_dashboard.add_argument(
+        "--reddit-dir",
+        default=None,
+        help="directory of per-event Reddit JSON files; omit to use the configured path",
+    )
+    event_dashboard.add_argument(
+        "--macro-calendar", default=str(PROJECT_ROOT / "config/macro_calendar.yaml")
+    )
+    event_dashboard.set_defaults(func=_event_dashboard)
+    collect_reddit = sub.add_parser(
+        "collect-reddit", help="collect ranked Reddit commentary for macro events"
+    )
+    collect_reddit.add_argument("--cache-dir", default=None)
+    collect_reddit.add_argument(
+        "--reddit-dir", default=None, help="override the configured reddit directory"
+    )
+    collect_reddit.add_argument(
+        "--macro-calendar", default=str(PROJECT_ROOT / "config/macro_calendar.yaml")
+    )
+    collect_reddit.add_argument(
+        "--daily-limit",
+        type=int,
+        default=400,
+        help="max Arctic Shift requests per day (quota exhaustion stops the run)",
+    )
+    collect_reddit.add_argument(
+        "--rebuild", action="store_true", help="re-collect even completed events"
+    )
+    collect_reddit.set_defaults(func=_collect_reddit)
+    chart = sub.add_parser("chart", help="run the pipeline and generate a price/event HTML chart")
+    for command in (render, chart):
+        command.add_argument("ticker", nargs="?", default=None)
+        command.add_argument("--db", default=None)
+        command.add_argument("--moves-dir", default=None)
+        command.add_argument("--events-dir", default=None)
+        command.add_argument("--out-dir", default=None)
+    render.set_defaults(func=_render)
+    chart.add_argument("--cache-dir", default=None)
+    chart.add_argument("--macro-calendar", default=str(PROJECT_ROOT / "config/macro_calendar.yaml"))
+    chart.add_argument("--keyless", action="store_true", help="collect SEC, HN and macro only")
+    chart.add_argument(
+        "--skip-events", action="store_true", help="render existing evidence offline"
+    )
+    chart.add_argument("--refresh-prices", action="store_true", help="fetch prices even if stored")
+    chart.add_argument("--rebuild", action="store_true", help="rebuild event bundles from cache")
+    chart.set_defaults(func=_chart, date=None)
+
+    args = parser.parse_args(argv)
+    if not getattr(args, "func", None):
+        parser.print_usage()
+        return 2
+    result: int = args.func(args)
+    return result
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
