@@ -26,6 +26,7 @@ follow-up: it needs a risk-free series this project does not carry.
 
 from __future__ import annotations
 
+import math
 import statistics as st
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
@@ -136,6 +137,34 @@ def ols_beta(asset: Sequence[float], benchmark: Sequence[float]) -> float:
     """
     beta, _ = ols_regression(asset, benchmark)
     return beta
+
+
+def correlation(asset: Sequence[float], benchmark: Sequence[float]) -> float:
+    """Pearson correlation of two same-length return series.
+
+    Raises when either series is degenerate: a zero-variance series has no
+    defined correlation, and inventing one would launder a flat line into a
+    relationship.
+    """
+    if len(asset) != len(benchmark):
+        raise ValueError(
+            f"series must be the same length, got {len(asset)} and {len(benchmark)}"
+        )
+    if len(asset) < 2:
+        raise ValueError(f"need at least two observations, got {len(asset)}")
+    mean_asset = st.fmean(asset)
+    mean_benchmark = st.fmean(benchmark)
+    covariance = st.fmean(
+        (a - mean_asset) * (b - mean_benchmark)
+        for a, b in zip(asset, benchmark, strict=True)
+    )
+    var_asset = st.fmean((a - mean_asset) ** 2 for a in asset)
+    var_benchmark = st.fmean((b - mean_benchmark) ** 2 for b in benchmark)
+    if var_asset == 0 or var_benchmark == 0:
+        raise ValueError(
+            "one series has zero variance over the window; correlation is undefined"
+        )
+    return covariance / math.sqrt(var_asset * var_benchmark)
 
 
 def annualize_alpha(alpha_daily: float) -> float:
