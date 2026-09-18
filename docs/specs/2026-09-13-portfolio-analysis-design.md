@@ -165,6 +165,19 @@ Conveniently, the discarded warm-up year is roughly the same year that has no ne
 
 The benchmark is configured in `config/portfolio.yaml`, defaulting to `QQQ` to match the sibling repo's watchlist.
 
+**Industry benchmarks.** `config/portfolio.yaml` also carries an `industry_benchmarks`
+mapping, symbol → ETF/index ticker (e.g. `NOW: CLOU` for SaaS, `META: MAGS` for
+the Magnificent 7, `NVDA: SOXX` for AI chips). The compare view draws the
+industry benchmark as a third line next to the stock and the market benchmark —
+all three rebased to 100 on the visible window — and the header shows a second
+factor strip: trailing β, annualized α, and correlation ρ of daily returns vs
+the industry benchmark, computed over the overlapping window only. α stays
+labeled as a trailing residual, not a forecast. Unmapped symbols (or a mapped
+ticker with no stored prices) render the two-line chart exactly as before. An
+industry series that starts later than the stock (MAGS listed April 2023)
+contributes only its overlap: the line begins when its data begins, and the
+factor stats appear only once the overlap reaches a full window.
+
 ## 6. Event collection
 
 For each flagged move, collect documents and facts in the window `[t-2, t+1]` **trading** days.
