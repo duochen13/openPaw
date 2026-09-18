@@ -226,17 +226,31 @@ def test_chart_data_carries_factor_regime_and_decomposition(tmp_path):
     assert "forecast" in factor["note"]
 
     regime = data["regime"]
+    assert regime["default_window"] == "250"
+    assert set(regime["windows"]) == {"60", "125", "250"}
+    reg = regime["windows"]["250"]
     # 300 days at a 21-session step: 4 sample points, strictly increasing.
-    assert len(regime["dates"]) >= 2
-    assert list(regime["dates"]) == sorted(regime["dates"])
-    assert regime["dates"][-1] == dates[-1]
-    assert regime["beta"][-1] == pytest.approx(factor["beta"])
-    assert regime["alpha_annualized"][-1] == pytest.approx(factor["alpha_annualized"])
+    assert len(reg["dates"]) >= 2
+    assert list(reg["dates"]) == sorted(reg["dates"])
+    assert reg["dates"][-1] == dates[-1]
+    assert reg["beta"][-1] == pytest.approx(factor["beta"])
+    assert reg["alpha_annualized"][-1] == pytest.approx(factor["alpha_annualized"])
     # R² rides the identical trailing window: it must match the factor strip
     # value and stay inside its [0, 1] bounds.
-    assert regime["r_squared"][-1] == pytest.approx(factor["r_squared"])
-    assert all(0.0 <= r <= 1.0 for r in regime["r_squared"])
-    assert len(regime["r_squared"]) == len(regime["dates"])
+    assert reg["r_squared"][-1] == pytest.approx(factor["r_squared"])
+    assert all(0.0 <= r <= 1.0 for r in reg["r_squared"])
+    assert len(reg["r_squared"]) == len(reg["dates"])
+    # Slope/acceleration ride the same sampled dates; the trailing point has
+    # enough history for both (needs alpha 40 sessions back).
+    assert len(reg["alpha_slope"]) == len(reg["dates"])
+    assert len(reg["alpha_accel"]) == len(reg["dates"])
+    assert len(reg["signals"]) == len(reg["dates"])
+    assert reg["alpha_slope"][-1] is not None
+    assert reg["alpha_accel"][-1] is not None
+    assert set(reg["signals"]) <= {"turnaround", "turnaround-strong", "early-watch", None}
+    # The shorter windows sample the same series earlier and further back.
+    assert len(regime["windows"]["60"]["dates"]) > len(reg["dates"])
+    assert regime["windows"]["60"]["dates"][-1] == dates[-1]
 
     row = next(m for m in data["moves"] if m["date"] == dates[-1])
     assert row["alpha"] == pytest.approx(DRIFT, abs=1e-3)
@@ -256,7 +270,17 @@ def test_chart_data_with_short_series_omits_factor_and_regime(tmp_path):
         name="Meta",
     )
     assert data["factor"] is None
-    assert data["regime"] == {"dates": [], "beta": [], "r_squared": [], "alpha_annualized": []}
+    empty = {
+        "dates": [],
+        "beta": [],
+        "r_squared": [],
+        "alpha_annualized": [],
+        "alpha_slope": [],
+        "alpha_accel": [],
+        "signals": [],
+    }
+    assert data["regime"]["default_window"] == "250"
+    assert data["regime"]["windows"] == {"60": empty, "125": empty, "250": empty}
 
 
 @pytest.mark.unit
