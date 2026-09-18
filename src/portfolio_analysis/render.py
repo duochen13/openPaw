@@ -14,7 +14,7 @@ from urllib.parse import urlsplit
 from portfolio_analysis.artifacts import MovesArtifact, read_moves
 from portfolio_analysis.bundle import SCHEMA_VERSION, bundle_hash, move_payload
 from portfolio_analysis.config import Portfolio
-from portfolio_analysis.moves import aligned_returns, annualize_alpha, ols_regression
+from portfolio_analysis.moves import aligned_returns, annualize_alpha, correlation, ols_regression
 from portfolio_analysis.naming import safe_ticker_component
 from portfolio_analysis.store import Store
 
@@ -126,6 +126,47 @@ def _trailing_factor(
     }
 
 
+def _industry_factor(
+    asset: dict[str, float],
+    industry: dict[str, float],
+    window: int,
+    industry_name: str,
+) -> dict[str, object] | None:
+    """Trailing-window beta, annualized alpha, and correlation vs the industry.
+
+    Computed over the overlapping window only: a short industry history (e.g.
+    MAGS, listed April 2023) contributes only its overlap with the asset.
+    Returns None when the overlap is shorter than one full window or the
+    regression is degenerate - no made-up numbers, the same rule as
+    _trailing_factor. The template hides the strip when this is None.
+    """
+    try:
+        dates, asset_returns, industry_returns = aligned_returns(asset, industry)
+    except ValueError:
+        return None
+    if len(asset_returns) < window:
+        return None
+    try:
+        beta, alpha = ols_regression(
+            asset_returns[-window:], industry_returns[-window:]
+        )
+        rho = correlation(asset_returns[-window:], industry_returns[-window:])
+    except ValueError:
+        return None
+    return {
+        "beta": beta,
+        "alpha_annualized": annualize_alpha(alpha),
+        "correlation": rho,
+        "window": window,
+        "as_of": dates[-1],
+        "benchmark": industry_name,
+        "note": (
+            "Trailing OLS intercept vs the industry benchmark: the drift the "
+            "industry does not explain. A historical residual, not a forecast."
+        ),
+    }
+
+
 def _regime_points(
     asset: dict[str, float],
     benchmark: dict[str, float],
@@ -164,6 +205,8 @@ def chart_data(
     *,
     name: str,
     aliases: tuple[str, ...] = (),
+    industry: dict[str, float] | None = None,
+    industry_name: str | None = None,
 ) -> dict[str, Any]:
     dates = sorted(set(asset) & set(benchmark))
     if artifact.coverage.evaluated:
@@ -178,6 +221,23 @@ def chart_data(
     ):
         raise ValueError("chart prices must be finite and positive")
     symbol = safe_ticker_component(artifact.ticker)
+    # The industry line is optional: unmapped symbols, or a mapped ticker
+    # with no stored prices, render the two-line chart exactly as before.
+    # industry_prices stays aligned with `dates`; None marks days before the
+    # industry series starts (e.g. MAGS, listed April 2023).
+    industry_prices: list[float | None] = [None] * len(dates)
+    industry_factor: dict[str, object] | None = None
+    if industry and industry_name:
+        if any(
+            industry.get(d) is not None
+            and (not math.isfinite(industry[d]) or industry[d] <= 0)
+            for d in dates
+        ):
+            raise ValueError("industry chart prices must be finite and positive")
+        industry_prices = [industry.get(d) for d in dates]
+        industry_factor = _industry_factor(
+            asset, industry, artifact.params.beta_window, industry_name
+        )
     moves = []
     for move in artifact.moves:
         if move.date not in dates:
@@ -240,6 +300,9 @@ def chart_data(
         "dates": dates,
         "prices": [asset[d] for d in dates],
         "benchmark_prices": [benchmark[d] for d in dates],
+        "industry_benchmark": industry_name,
+        "industry_prices": industry_prices,
+        "industry_factor": industry_factor,
         "moves": moves,
         "threshold": artifact.params.z_threshold,
         "beta_window": artifact.params.beta_window,
@@ -286,6 +349,12 @@ def render_chart(
         raise ValueError("move artifact does not match configured ticker/benchmark")
     store = Store.open(db)
     try:
+        # The industry benchmark is best-effort: a mapped ticker with no
+        # stored prices renders the two-line chart, not an error.
+        industry_ticker = portfolio.industry_benchmark(symbol)
+        industry_series = (
+            store.adjusted_series(industry_ticker) if industry_ticker else {}
+        )
         data = chart_data(
             artifact,
             store.adjusted_series(symbol),
@@ -293,6 +362,8 @@ def render_chart(
             events_dir,
             name=portfolio.entry(symbol).name,
             aliases=portfolio.entry(symbol).aliases,
+            industry=industry_series or None,
+            industry_name=industry_ticker if industry_series else None,
         )
     finally:
         store.close()
