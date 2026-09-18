@@ -53,4 +53,5 @@ paths:
   events: data/events
   reasons: data/reasons
   cache: data/cache
+  reddit: data/reddit
   out: out

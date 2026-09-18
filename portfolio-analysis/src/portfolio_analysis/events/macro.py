@@ -21,6 +21,9 @@ class MacroSource:
         data = yaml.safe_load(raw)
         if data.get("schema_version") != 1:
             raise ValueError("unsupported macro calendar schema")
+        #: Issue #7: when the checked-in calendar was last revised; surfaced as
+        #: the source timestamp in per-event context blocks.
+        self.as_of: str = str(data.get("as_of") or "")
         self._series: dict[str, Any] = data["series"]
         decisions_path = path.with_name("fomc_decisions.yaml")
         self._fomc_decisions: dict[str, Any] = (
