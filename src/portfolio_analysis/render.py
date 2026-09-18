@@ -16,6 +16,14 @@ from portfolio_analysis.bundle import SCHEMA_VERSION, bundle_hash, move_payload
 from portfolio_analysis.config import Portfolio
 from portfolio_analysis.moves import aligned_returns, annualize_alpha, correlation, ols_regression
 from portfolio_analysis.naming import safe_ticker_component
+from portfolio_analysis.signals import (
+    REGIME_WINDOWS,
+    SLOPE_SPAN,
+    alpha_acceleration,
+    alpha_signal,
+    rolling_alpha_daily,
+    rolling_slope,
+)
 from portfolio_analysis.store import Store
 
 #: Sample the rolling beta/alpha series this often (trading days). Sixty-odd
@@ -179,43 +187,60 @@ def _regime_points(
     window: int,
     step: int = _REGIME_STEP,
 ) -> dict[str, list[object]]:
-    """Rolling beta, annualized alpha, and R², sampled every `step` sessions.
+    """Rolling beta, annualized alpha, R², alpha slope/acceleration and
+    turnaround signals, sampled every `step` sessions.
 
     R² is computed over the identical return observations as beta and alpha.
-    Empty when the series is shorter than one full window, for the same reason
-    as _trailing_factor. The most recent session is always the last point. A
-    degenerate window (zero variance, so beta/alpha/R² are all undefined) is
-    skipped, never filled with a made-up number.
+    The slope is the change in *annualized* alpha per trading session over
+    ``SLOPE_SPAN`` sessions (see ``signals`` for the unit convention); the
+    acceleration is the change in the slope over the same span. Both are
+    derived from the full daily alpha series and then sampled, so the "20
+    trading days" definition is exact, not an artifact of the sampling grid.
+    ``signals[i]`` classifies the sampled point (turnaround / strong /
+    early-watch) or is ``None``; slope, acceleration and signals are ``None``
+    during their warmup. Empty when the series is shorter than one full
+    window, for the same reason as _trailing_factor. The most recent session
+    is always the last point. A degenerate window (zero variance, so
+    beta/alpha/R² are all undefined) is skipped, never filled with a made-up
+    number.
     """
     dates, asset_returns, benchmark_returns = aligned_returns(asset, benchmark)
+    empty: dict[str, list[object]] = {
+        "dates": [],
+        "beta": [],
+        "r_squared": [],
+        "alpha_annualized": [],
+        "alpha_slope": [],
+        "alpha_accel": [],
+        "signals": [],
+    }
     if len(asset_returns) < window:
-        return {"dates": [], "beta": [], "r_squared": [], "alpha_annualized": []}
+        return empty
+    alpha_daily = rolling_alpha_daily(asset_returns, benchmark_returns, window)
+    slope_daily = rolling_slope(alpha_daily, SLOPE_SPAN)
+    accel_daily = alpha_acceleration(slope_daily, SLOPE_SPAN)
     ends = list(range(window, len(asset_returns) + 1, step))
     if ends[-1] != len(asset_returns):
         ends.append(len(asset_returns))
-    out_dates: list[object] = []
-    out_beta: list[object] = []
-    out_r_squared: list[object] = []
-    out_alpha: list[object] = []
+    out: dict[str, list[object]] = {key: [] for key in empty}
     for end in ends:
-        try:
-            beta, alpha, r_squared = ols_regression(
-                asset_returns[end - window : end],
-                benchmark_returns[end - window : end],
-                r_squared=True,
-            )
-        except ValueError:
-            continue
-        out_dates.append(dates[end - 1])
-        out_beta.append(beta)
-        out_r_squared.append(r_squared)
-        out_alpha.append(annualize_alpha(alpha))
-    return {
-        "dates": out_dates,
-        "beta": out_beta,
-        "r_squared": out_r_squared,
-        "alpha_annualized": out_alpha,
-    }
+        i = end - 1  # return index whose date is dates[end - 1]
+        alpha_ann = alpha_daily[i]
+        if alpha_ann is None:
+            continue  # degenerate window: beta/alpha/R² undefined, skip
+        beta, _, r_squared = ols_regression(
+            asset_returns[end - window : end],
+            benchmark_returns[end - window : end],
+            r_squared=True,
+        )
+        out["dates"].append(dates[i])
+        out["beta"].append(beta)
+        out["r_squared"].append(r_squared)
+        out["alpha_annualized"].append(alpha_ann)
+        out["alpha_slope"].append(slope_daily[i])
+        out["alpha_accel"].append(accel_daily[i])
+        out["signals"].append(alpha_signal(alpha_ann, slope_daily[i], accel_daily[i]))
+    return out
 
 
 def chart_data(
@@ -331,7 +356,15 @@ def chart_data(
         "factor": _trailing_factor(
             asset, benchmark, artifact.params.beta_window, artifact.benchmark
         ),
-        "regime": _regime_points(asset, benchmark, artifact.params.beta_window),
+        "regime": {
+            # The window switch (issue #19) offers 60/125/250-session OLS;
+            # "250" is the default and matches artifact.params.beta_window.
+            "default_window": "250",
+            "windows": {
+                str(window): _regime_points(asset, benchmark, window)
+                for window in REGIME_WINDOWS
+            },
+        },
     }
 
 
