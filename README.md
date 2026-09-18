@@ -152,6 +152,18 @@ To build one offline dashboard for every configured stock:
 Open `portfolio-analysis/out/index.html` and use its stock selector to switch
 between the individual evidence charts.
 
+To compare factor trajectories across stocks on one page:
+
+```bash
+./portfolio-analysis/run factor-dashboard
+```
+
+This produces **`portfolio-analysis/out/factors.html`**: Beta and Alpha
+(annualized, trailing 250-session OLS vs the benchmark) over time for every
+configured stock, with a draggable time-frame slider, per-stock toggles, and
+hover values. Like the other pages it is fully offline with no external
+resources.
+
 To update prices too:
 
 ```bash
