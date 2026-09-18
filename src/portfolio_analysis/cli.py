@@ -19,6 +19,10 @@ from portfolio_analysis.dashboard import render_dashboard
 from portfolio_analysis.event_dashboard import event_dashboard_data, render_event_dashboard
 from portfolio_analysis.events.macro import MacroSource
 from portfolio_analysis.events.reddit import collect_reddit_for_events
+from portfolio_analysis.factor_dashboard import (
+    factor_dashboard_data,
+    render_factor_dashboard,
+)
 from portfolio_analysis.http import CachedHttp, ProviderError, RateLimitLedger
 from portfolio_analysis.render import render_chart
 from portfolio_analysis.store import Store
@@ -193,6 +197,27 @@ def _dashboard(args: argparse.Namespace) -> int:
     return 0
 
 
+def _factor_dashboard(args: argparse.Namespace) -> int:
+    portfolio = load_portfolio()
+    store = Store.open(args.db or portfolio.path("db"))
+    try:
+        data = factor_dashboard_data(portfolio, store)
+    except ValueError as exc:
+        print(f"factor-dashboard: {exc}", file=sys.stderr)
+        return 1
+    finally:
+        store.close()
+    try:
+        target = render_factor_dashboard(
+            data, Path(args.out_dir) if args.out_dir else portfolio.path("out")
+        )
+    except OSError as exc:
+        print(f"factor-dashboard: {exc}", file=sys.stderr)
+        return 1
+    print(f"factor dashboard written -> {target}")
+    return 0
+
+
 def _event_dashboard(args: argparse.Namespace) -> int:
     portfolio = load_portfolio()
     reddit_dir = (
@@ -343,6 +368,13 @@ def main(argv: list[str] | None = None) -> int:
     )
     dashboard.add_argument("--out-dir", default=None)
     dashboard.set_defaults(func=_dashboard)
+    factor_dashboard = sub.add_parser(
+        "factor-dashboard",
+        help="build a cross-stock beta/alpha comparison dashboard",
+    )
+    factor_dashboard.add_argument("--db", default=None)
+    factor_dashboard.add_argument("--out-dir", default=None)
+    factor_dashboard.set_defaults(func=_factor_dashboard)
     event_dashboard = sub.add_parser(
         "event-dashboard", help="compare returns around macro release dates"
     )
