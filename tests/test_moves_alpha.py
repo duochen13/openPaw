@@ -232,6 +232,11 @@ def test_chart_data_carries_factor_regime_and_decomposition(tmp_path):
     assert regime["dates"][-1] == dates[-1]
     assert regime["beta"][-1] == pytest.approx(factor["beta"])
     assert regime["alpha_annualized"][-1] == pytest.approx(factor["alpha_annualized"])
+    # R² rides the identical trailing window: it must match the factor strip
+    # value and stay inside its [0, 1] bounds.
+    assert regime["r_squared"][-1] == pytest.approx(factor["r_squared"])
+    assert all(0.0 <= r <= 1.0 for r in regime["r_squared"])
+    assert len(regime["r_squared"]) == len(regime["dates"])
 
     row = next(m for m in data["moves"] if m["date"] == dates[-1])
     assert row["alpha"] == pytest.approx(DRIFT, abs=1e-3)
@@ -251,7 +256,7 @@ def test_chart_data_with_short_series_omits_factor_and_regime(tmp_path):
         name="Meta",
     )
     assert data["factor"] is None
-    assert data["regime"] == {"dates": [], "beta": [], "alpha_annualized": []}
+    assert data["regime"] == {"dates": [], "beta": [], "r_squared": [], "alpha_annualized": []}
 
 
 @pytest.mark.unit
