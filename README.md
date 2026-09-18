@@ -130,6 +130,7 @@ is available. No paid model or attribution API is called.
 The chart includes:
 
 - Stock versus benchmark, indexed to 100, or adjusted share price in USD.
+- Optional industry benchmark line (e.g. SaaS for NOW, Mag7 for META/GOOGL, AI chips for NVDA): a third indexed line plus trailing β, annualized α, and correlation ρ versus the industry in the header.
 - Up/down markers, a selectable move list, and period/direction filters.
 - Dated events and linked source headlines; post-move events are labeled.
 - Explicit missing/partial evidence, keyboard/touch controls, light/dark themes.
