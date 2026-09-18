@@ -31,6 +31,7 @@ import statistics as st
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from itertools import pairwise
+from typing import Literal, overload
 
 from portfolio_analysis.config import MoveParams
 from portfolio_analysis.naming import safe_ticker_component
@@ -98,7 +99,24 @@ def aligned_returns(
 _TRADING_DAYS_PER_YEAR = 252
 
 
-def ols_regression(asset: Sequence[float], benchmark: Sequence[float]) -> tuple[float, float]:
+@overload
+def ols_regression(
+    asset: Sequence[float], benchmark: Sequence[float]
+) -> tuple[float, float]: ...
+
+
+@overload
+def ols_regression(
+    asset: Sequence[float], benchmark: Sequence[float], *, r_squared: Literal[True]
+) -> tuple[float, float, float]: ...
+
+
+def ols_regression(
+    asset: Sequence[float],
+    benchmark: Sequence[float],
+    *,
+    r_squared: bool = False,
+) -> tuple[float, float] | tuple[float, float, float]:
     """Slope (beta) and intercept (alpha) of the OLS regression of asset
     returns on benchmark returns.
 
@@ -109,6 +127,16 @@ def ols_regression(asset: Sequence[float], benchmark: Sequence[float]) -> tuple[
 
     Jensen's alpha (net of the risk-free rate) is a deliberate follow-up: it
     needs a risk-free series this project does not carry.
+
+    Pass ``r_squared=True`` to also return the coefficient of determination
+    ``(beta, alpha, r_squared)``, where R² = 1 - SSE/SST over the same window:
+    the share of the asset's return variance the benchmark explains. R² is
+    *not* beta² - beta measures sensitivity, R² measures fit. For single-factor
+    OLS with an intercept, R² equals the squared Pearson correlation. A
+    zero-variance asset series has no defined R² (inventing one would launder
+    a flat line into a relationship), so it raises the same ValueError as the
+    other degenerate inputs. R² is clamped to [0, 1] against floating-point
+    drift; the OLS-with-intercept identity SSE ≤ SST holds mathematically.
     """
     if len(asset) != len(benchmark):
         raise ValueError(f"series must be the same length, got {len(asset)} and {len(benchmark)}")
@@ -125,7 +153,14 @@ def ols_regression(asset: Sequence[float], benchmark: Sequence[float]) -> tuple[
         raise ValueError("benchmark has zero variance over the window; beta is undefined")
     beta = covariance / variance
     alpha = mean_asset - beta * mean_benchmark
-    return beta, alpha
+    if not r_squared:
+        return beta, alpha
+
+    sse = math.fsum((a - (alpha + beta * b)) ** 2 for a, b in zip(asset, benchmark, strict=True))
+    sst = math.fsum((a - mean_asset) ** 2 for a in asset)
+    if sst == 0:
+        raise ValueError("asset has zero variance over the window; R² is undefined")
+    return beta, alpha, min(1.0, max(0.0, 1.0 - sse / sst))
 
 
 def ols_beta(asset: Sequence[float], benchmark: Sequence[float]) -> float:
