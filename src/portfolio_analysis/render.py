@@ -102,19 +102,25 @@ def _trailing_factor(
     window: int,
     benchmark_name: str,
 ) -> dict[str, object] | None:
-    """Trailing-window beta and annualized alpha vs the benchmark.
+    """Trailing-window beta, annualized alpha, and R² vs the benchmark.
 
-    Returns None when the series is shorter than one full window: a beta over
-    a partial window is not comparable to the detection beta, and a made-up
-    number here would be worse than no number. The template hides the strip
-    when this is None.
+    Returns None when the series is shorter than one full window or the
+    trailing window is degenerate: a beta over a partial window is not
+    comparable to the detection beta, and a made-up number here would be
+    worse than no number. The template hides the strip when this is None.
     """
     dates, asset_returns, benchmark_returns = aligned_returns(asset, benchmark)
     if len(asset_returns) < window:
         return None
-    beta, alpha = ols_regression(asset_returns[-window:], benchmark_returns[-window:])
+    try:
+        beta, alpha, r_squared = ols_regression(
+            asset_returns[-window:], benchmark_returns[-window:], r_squared=True
+        )
+    except ValueError:
+        return None
     return {
         "beta": beta,
+        "r_squared": r_squared,
         "alpha_annualized": annualize_alpha(alpha),
         "window": window,
         "as_of": dates[-1],
@@ -173,28 +179,43 @@ def _regime_points(
     window: int,
     step: int = _REGIME_STEP,
 ) -> dict[str, list[object]]:
-    """Rolling beta and annualized alpha, sampled every `step` sessions.
+    """Rolling beta, annualized alpha, and R², sampled every `step` sessions.
 
+    R² is computed over the identical return observations as beta and alpha.
     Empty when the series is shorter than one full window, for the same reason
-    as _trailing_factor. The most recent session is always the last point.
+    as _trailing_factor. The most recent session is always the last point. A
+    degenerate window (zero variance, so beta/alpha/R² are all undefined) is
+    skipped, never filled with a made-up number.
     """
     dates, asset_returns, benchmark_returns = aligned_returns(asset, benchmark)
     if len(asset_returns) < window:
-        return {"dates": [], "beta": [], "alpha_annualized": []}
+        return {"dates": [], "beta": [], "r_squared": [], "alpha_annualized": []}
     ends = list(range(window, len(asset_returns) + 1, step))
     if ends[-1] != len(asset_returns):
         ends.append(len(asset_returns))
     out_dates: list[object] = []
     out_beta: list[object] = []
+    out_r_squared: list[object] = []
     out_alpha: list[object] = []
     for end in ends:
-        beta, alpha = ols_regression(
-            asset_returns[end - window : end], benchmark_returns[end - window : end]
-        )
+        try:
+            beta, alpha, r_squared = ols_regression(
+                asset_returns[end - window : end],
+                benchmark_returns[end - window : end],
+                r_squared=True,
+            )
+        except ValueError:
+            continue
         out_dates.append(dates[end - 1])
         out_beta.append(beta)
+        out_r_squared.append(r_squared)
         out_alpha.append(annualize_alpha(alpha))
-    return {"dates": out_dates, "beta": out_beta, "alpha_annualized": out_alpha}
+    return {
+        "dates": out_dates,
+        "beta": out_beta,
+        "r_squared": out_r_squared,
+        "alpha_annualized": out_alpha,
+    }
 
 
 def chart_data(
