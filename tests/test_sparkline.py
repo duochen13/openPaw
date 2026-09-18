@@ -48,7 +48,7 @@ const document = {
 __TEMPLATE_CODE__
 
 // ---- fixture: 21-session sampled regime series, 2021-09-17 .. 2026-09-17 ----
-const regimeDates = [], regimeBeta = [], regimeAlpha = [];
+const regimeDates = [], regimeBeta = [], regimeR2 = [], regimeAlpha = [];
 {
   let d = new Date("2021-09-17T12:00:00Z");
   const end = new Date("2026-09-17T12:00:00Z");
@@ -56,6 +56,7 @@ const regimeDates = [], regimeBeta = [], regimeAlpha = [];
   while (d <= end) {
     regimeDates.push(d.toISOString().slice(0, 10));
     regimeBeta.push(1.2 - i * 0.015 + (i % 3) * 0.01);
+    regimeR2.push(Math.min(0.99, 0.35 + i * 0.004 + (i % 4) * 0.01));
     regimeAlpha.push(-0.05 - i * 0.002 + (i % 5) * 0.001);
     d = new Date(d.getTime() + 21 * 86400000);
     i++;
@@ -64,7 +65,8 @@ const regimeDates = [], regimeBeta = [], regimeAlpha = [];
 const data = {
   ticker: "NOW", name: "ServiceNow, Inc.", benchmark: "QQQ",
   dates: ["2020-09-18", "2026-09-17"],
-  regime: {dates: regimeDates, beta: regimeBeta, alpha_annualized: regimeAlpha},
+  regime: {dates: regimeDates, beta: regimeBeta, r_squared: regimeR2,
+           alpha_annualized: regimeAlpha},
 };
 const maxDate = data.dates.at(-1);
 const state = {range: "all", view: "compare", direction: "all", start: data.dates[0], end: maxDate};
@@ -94,7 +96,15 @@ check("empty hidden", document.getElementById("regime-empty").hidden === true);
 check("bench label", document.getElementById("regime-bench").textContent === "QQQ");
 check("beta polyline point count", polyPoints("spark-beta") === regimeDates.length);
 check("alpha polyline point count", polyPoints("spark-alpha") === regimeDates.length);
+check("rsquared polyline point count", polyPoints("spark-rsquared") === regimeDates.length);
 check("annotation hidden initially", annoGroup("spark-beta").attrs.visibility === "hidden");
+// R² sparkline uses a fixed 0-1 axis: labels must read 0% / 100% regardless of data range
+{
+  const r2texts = svgTexts("spark-rsquared");
+  check("rsquared axis fixed 0-1",
+        r2texts.includes("+100.00%") && r2texts.includes("+0.00%"),
+        JSON.stringify(r2texts));
+}
 
 // 2. hover annotation on the beta sparkline
 {
@@ -123,6 +133,22 @@ check("annotation hidden initially", annoGroup("spark-beta").attrs.visibility ==
   svg.onpointerleave();
 }
 
+// 3b. hover annotation on the R² sparkline: fixed-axis, pct + R² label
+{
+  const svg = document.getElementById("spark-rsquared");
+  const n = regimeDates.length;
+  svg.onpointermove({clientX: 200, clientY: 60});
+  const expI = Math.max(0, Math.min(n - 1, Math.round((200 - 52) / (600 - 52 - 10) * (n - 1))));
+  const anno = annoGroup("spark-rsquared");
+  check("rsquared annotation visible on hover", anno.attrs.visibility === "visible");
+  const tag = anno.children[1];
+  const expText = `${dateLabel(regimeDates[expI])} \u00b7 R\u00b2 ${pct(regimeR2[expI])}`;
+  check("rsquared annotation date+value", tag.textContent === expText,
+        JSON.stringify(tag.textContent) + " vs " + JSON.stringify(expText));
+  svg.onpointerleave();
+  check("rsquared annotation hidden on leave", anno.attrs.visibility === "hidden");
+}
+
 // 4. 12-month window re-slices both sparklines
 state.range = "1";
 renderRegime();
@@ -131,6 +157,11 @@ renderRegime();
   check("12m beta point count", polyPoints("spark-beta") === expIdx.length,
         String(polyPoints("spark-beta")) + " vs " + expIdx.length);
   check("12m alpha point count", polyPoints("spark-alpha") === expIdx.length);
+  check("12m rsquared point count", polyPoints("spark-rsquared") === expIdx.length);
+  const r2texts = svgTexts("spark-rsquared");
+  check("12m rsquared axis still fixed 0-1",
+        r2texts.includes("+100.00%") && r2texts.includes("+0.00%"),
+        JSON.stringify(r2texts));
   const texts = svgTexts("spark-beta");
   check("12m x-axis start label",
         texts.includes(dateLabel(regimeDates[expIdx[0]])), JSON.stringify(texts));
