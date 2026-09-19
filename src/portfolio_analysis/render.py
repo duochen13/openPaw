@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
+from portfolio_analysis import kpis as kpis_module
 from portfolio_analysis.artifacts import MovesArtifact, read_moves
 from portfolio_analysis.bundle import SCHEMA_VERSION, bundle_hash, move_payload
 from portfolio_analysis.config import Portfolio
@@ -275,6 +276,26 @@ def _pe_panel(
     }
 
 
+def _kpi_data(store: Store, symbol: str) -> dict[str, Any] | None:
+    """Business-KPI panels for the per-stock chart (issue #29).
+
+    None when the ticker has no KPI config or no stored KPI data - the
+    template hides the section, the same rule as the P/E and factor
+    panels. A broken KPI config degrades to no section, never a crash.
+    """
+    try:
+        metric_keys = kpis_module.load_kpi_config().get(symbol, [])
+    except kpis_module.ConfigError:
+        return None
+    if not metric_keys:
+        return None
+    series = {key: store.kpi_quarters(symbol, key) for key in metric_keys}
+    series = {key: rows for key, rows in series.items() if rows}
+    if not series:
+        return None
+    return kpis_module.kpi_panels(series, metric_keys)
+
+
 def chart_data(
     artifact: MovesArtifact,
     asset: dict[str, float],
@@ -286,6 +307,7 @@ def chart_data(
     industry: dict[str, float] | None = None,
     industry_name: str | None = None,
     eps_quarters: list[tuple[str, str, float]] | None = None,
+    kpis: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     dates = sorted(set(asset) & set(benchmark))
     if artifact.coverage.evaluated:
@@ -390,6 +412,7 @@ def chart_data(
             asset, benchmark, artifact.params.beta_window, artifact.benchmark
         ),
         "pe": _pe_panel(asset, eps_quarters or []),
+        "kpis": kpis,
         "regime": {
             # The window switch (issue #19) offers 60/125/250-session OLS;
             # "250" is the default and matches artifact.params.beta_window.
@@ -453,6 +476,7 @@ def render_chart(
             industry=industry_series or None,
             industry_name=industry_ticker if industry_series else None,
             eps_quarters=store.eps_quarters(symbol),
+            kpis=_kpi_data(store, symbol),
         )
     finally:
         store.close()
