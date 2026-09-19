@@ -53,6 +53,16 @@ CREATE TABLE IF NOT EXISTS move (
     computed_at      TEXT NOT NULL,
     PRIMARY KEY (ticker, date)
 );
+
+CREATE TABLE IF NOT EXISTS eps_quarter (
+    ticker     TEXT NOT NULL,
+    quarter    TEXT NOT NULL CHECK (typeof(quarter) = 'text' AND quarter GLOB '{_ISO_DATE}'),
+    filed      TEXT NOT NULL CHECK (typeof(filed) = 'text' AND filed GLOB '{_ISO_DATE}'),
+    eps        REAL NOT NULL,
+    source     TEXT NOT NULL,
+    fetched_at TEXT NOT NULL,
+    PRIMARY KEY (ticker, quarter)
+);
 """
 
 _PRICE_COLUMNS = (
@@ -63,6 +73,7 @@ _MOVE_COLUMNS = (
     "ticker", "date", "ret", "benchmark", "benchmark_return",
     "beta", "alpha", "abnormal_return", "sigma_60", "z", "computed_at",
 )
+_EPS_COLUMNS = ("ticker", "quarter", "filed", "eps", "source", "fetched_at")
 
 
 def _migrate(conn: sqlite3.Connection) -> None:
@@ -76,6 +87,13 @@ def _migrate(conn: sqlite3.Connection) -> None:
     columns = {row[1] for row in conn.execute("PRAGMA table_info(move)")}
     if "alpha" not in columns:
         conn.execute("ALTER TABLE move ADD COLUMN alpha REAL NOT NULL DEFAULT 0.0")
+    # The eps_quarter table shipped mid-development of issue #28 without the
+    # filed column; databases created in that window gain it here.
+    eps_columns = {row[1] for row in conn.execute("PRAGMA table_info(eps_quarter)")}
+    if eps_columns and "filed" not in eps_columns:
+        conn.execute(
+            "ALTER TABLE eps_quarter ADD COLUMN filed TEXT NOT NULL DEFAULT '1970-01-01'"
+        )
 
 
 def _now() -> str:
@@ -103,13 +121,20 @@ class Store:
         self._conn.close()
 
     def _upsert(
-        self, table: str, columns: tuple[str, ...], rows: Iterable[Mapping[str, object]]
+        self,
+        table: str,
+        columns: tuple[str, ...],
+        rows: Iterable[Mapping[str, object]],
+        key_columns: tuple[str, str] = ("ticker", "date"),
     ) -> int:
         placeholders = ", ".join(f":{c}" for c in columns)
-        updates = ", ".join(f"{c} = excluded.{c}" for c in columns if c not in ("ticker", "date"))
+        updates = ", ".join(
+            f"{c} = excluded.{c}" for c in columns if c not in key_columns
+        )
+        conflict = ", ".join(key_columns)
         sql = (
             f"INSERT INTO {table} ({', '.join(columns)}) VALUES ({placeholders}) "
-            f"ON CONFLICT (ticker, date) DO UPDATE SET {updates}"
+            f"ON CONFLICT ({conflict}) DO UPDATE SET {updates}"
         )
         stamped = [{**row, "fetched_at": _now(), "computed_at": _now()} for row in rows]
         payload = [{c: row[c] for c in columns} for row in stamped]
@@ -119,6 +144,37 @@ class Store:
 
     def upsert_price_bars(self, bars: Iterable[Mapping[str, object]]) -> int:
         return self._upsert("price_bar", _PRICE_COLUMNS, bars)
+
+    def upsert_eps_quarters(
+        self, quarters: Iterable[Mapping[str, object]]
+    ) -> int:
+        """Upsert quarterly EPS actuals (issue #28).
+
+        A restated quarter is legitimately rewritten by a later fetch, the
+        same upsert-not-append reasoning as price bars.
+        """
+        return self._upsert(
+            "eps_quarter", _EPS_COLUMNS, quarters, key_columns=("ticker", "quarter")
+        )
+
+    def eps_quarters(self, ticker: str) -> list[tuple[str, str, float]]:
+        """(quarter_end, filed, eps) ascending for ``ticker``."""
+        cursor = self._conn.execute(
+            "SELECT quarter, filed, eps FROM eps_quarter WHERE ticker = ? ORDER BY quarter",
+            (ticker.upper(),),
+        )
+        return [
+            (row["quarter"], row["filed"], float(row["eps"])) for row in cursor
+        ]
+
+    def eps_fetched_at(self, ticker: str) -> str | None:
+        """Newest fetch timestamp for ``ticker``'s EPS quarters, if any."""
+        cursor = self._conn.execute(
+            "SELECT MAX(fetched_at) AS latest FROM eps_quarter WHERE ticker = ?",
+            (ticker.upper(),),
+        )
+        row = cursor.fetchone()
+        return str(row["latest"]) if row and row["latest"] else None
 
     def upsert_moves(self, moves: Iterable[Mapping[str, object]]) -> int:
         return self._upsert("move", _MOVE_COLUMNS, moves)
