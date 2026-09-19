@@ -8,10 +8,11 @@ from __future__ import annotations
 
 import argparse
 import sys
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+from portfolio_analysis import fundamentals, prices
 from portfolio_analysis import moves as moves_module
-from portfolio_analysis import prices
 from portfolio_analysis.artifacts import MovesArtifact, write_moves
 from portfolio_analysis.collection import collect_events
 from portfolio_analysis.config import PROJECT_ROOT, Portfolio, load_portfolio
@@ -23,7 +24,12 @@ from portfolio_analysis.factor_dashboard import (
     factor_dashboard_data,
     render_factor_dashboard,
 )
-from portfolio_analysis.http import CachedHttp, ProviderError, RateLimitLedger
+from portfolio_analysis.http import (
+    CachedHttp,
+    ProviderError,
+    QuotaExhausted,
+    RateLimitLedger,
+)
 from portfolio_analysis.render import render_chart
 from portfolio_analysis.store import Store
 
@@ -64,6 +70,71 @@ def _ingest_prices(args: argparse.Namespace) -> int:
             first = bars[0]["date"] if bars else "-"
             last = bars[-1]["date"] if bars else "-"
             print(f"{symbol}: {written} bar(s) upserted, {first} .. {last}")
+    finally:
+        store.close()
+    return 0
+
+
+#: Fundamentals refresh interval. Quarterly EPS changes on earnings day;
+#: re-fetching daily keeps the store fresh without hammering the vendor.
+_FUNDAMENTALS_TTL = timedelta(hours=24)
+
+
+def _fundamentals_fresh(store: Store, symbol: str) -> bool:
+    fetched_at = store.eps_fetched_at(symbol)
+    if not fetched_at:
+        return False
+    try:
+        age = datetime.now(UTC) - datetime.fromisoformat(fetched_at)
+    except ValueError:
+        return False
+    return age < _FUNDAMENTALS_TTL
+
+
+def _fetch_fundamentals(args: argparse.Namespace) -> int:
+    """Fetch quarterly EPS actuals from SEC EDGAR for the universe (issue #28)."""
+    portfolio = load_portfolio()
+    symbols = _selected_symbols(portfolio, args.ticker)
+    if symbols is None:
+        print(
+            f"{args.ticker!r} is not in the portfolio; add it to config/portfolio.yaml",
+            file=sys.stderr,
+        )
+        return 2
+
+    cache = portfolio.path("cache")
+    http = CachedHttp(cache, ledger=RateLimitLedger(cache / "quota.json"))
+    store = Store.open(args.db or portfolio.path("db"))
+    try:
+        for symbol in symbols:
+            if not args.force and _fundamentals_fresh(store, symbol):
+                print(f"{symbol}: fresh, skipping (use --force to refetch)")
+                continue
+            cik = portfolio.entry(symbol).cik
+            try:
+                facts = fundamentals.fetch_companyfacts(cik, http.get_json)
+                quarters = fundamentals.parse_quarterly_eps(facts)
+            except (
+                fundamentals.VendorResponseError,
+                ProviderError,
+                QuotaExhausted,
+            ) as exc:
+                print(f"{symbol}: fetch failed, keeping stored quarters: {exc}")
+                continue
+            rows = [
+                {
+                    "ticker": symbol,
+                    "quarter": q["quarter"],
+                    "filed": q["filed"],
+                    "eps": q["eps"],
+                    "source": "edgar",
+                }
+                for q in quarters
+            ]
+            written = store.upsert_eps_quarters(rows)
+            first = quarters[0]["quarter"] if quarters else "-"
+            last = quarters[-1]["quarter"] if quarters else "-"
+            print(f"{symbol}: {written} quarter(s) upserted, {first} .. {last}")
     finally:
         store.close()
     return 0
@@ -332,6 +403,21 @@ def main(argv: list[str] | None = None) -> int:
     )
     ingest.add_argument("--db", default=None, help="override the configured database")
     ingest.set_defaults(func=_ingest_prices)
+
+    fetch_fund = sub.add_parser(
+        "fetch-fundamentals", help="fetch quarterly EPS actuals for P/E (issue #28)"
+    )
+    fetch_fund.add_argument(
+        "ticker",
+        nargs="?",
+        default=None,
+        help="ticker, company name, or alias; omit for the whole portfolio",
+    )
+    fetch_fund.add_argument("--db", default=None, help="override the configured database")
+    fetch_fund.add_argument(
+        "--force", action="store_true", help="refetch even if stored data is fresh"
+    )
+    fetch_fund.set_defaults(func=_fetch_fundamentals)
 
     detect = sub.add_parser("detect-moves", help="flag days whose abnormal return is large")
     detect.add_argument(
