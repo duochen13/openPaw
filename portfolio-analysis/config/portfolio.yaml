@@ -33,6 +33,17 @@ tickers:
 # Beta is measured against this. QQQ matches the sibling repo's watchlist.
 benchmark: QQQ
 
+# Industry benchmark per symbol, drawn as a third line in the compare view
+# next to the market benchmark. Unmapped symbols render the two-line chart
+# exactly as before. Note MAGS listed in April 2023, so its history is much
+# shorter than the stock series; the chart only uses the overlapping window.
+industry_benchmarks:
+  NOW: CLOU # SaaS: Global X Cloud Computing ETF
+  MSFT: CLOU
+  GOOGL: MAGS # Mag7: Roundhill Magnificent Seven ETF
+  META: MAGS
+  NVDA: SOXX # AI chips: iShares Semiconductor ETF
+
 # Six years, not five. A 250-day beta window consumes the first trading year,
 # so five years of fetched prices would yield only four years of evaluable
 # days (spec §5).

@@ -2,6 +2,8 @@
 
     r_t      = adj_close_t / adj_close_{t-1} - 1
     beta     = OLS slope of r on r_benchmark over [t-250, t-1]
+    alpha    = OLS intercept over the same window (the daily drift the market
+               does not explain)
     AR_t     = r_t - beta * r_benchmark_t
     sigma_60 = stdev(AR) over [t-60, t-1]
     z_t      = AR_t / sigma_60
@@ -16,13 +18,20 @@ The historical abnormal returns used for sigma are computed with the SAME beta
 estimated at t, rather than each with its own contemporaneous beta. This is the
 constant-beta convention of a standard event study, and it avoids a recursive
 estimation whose result would depend on where the series happened to start.
+
+Alpha is the raw OLS intercept - a trailing statistical residual, not a
+forecast. Jensen's alpha (net of the risk-free rate) is a deliberate
+follow-up: it needs a risk-free series this project does not carry.
 """
+
 from __future__ import annotations
 
+import math
 import statistics as st
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from itertools import pairwise
+from typing import Literal, overload
 
 from portfolio_analysis.config import MoveParams
 from portfolio_analysis.naming import safe_ticker_component
@@ -85,12 +94,92 @@ def aligned_returns(
     return dates, asset_returns, benchmark_returns
 
 
+#: Trading sessions per year, for annualizing the daily alpha at presentation
+#: time. The stored alpha stays daily; only the display multiplies.
+_TRADING_DAYS_PER_YEAR = 252
+
+
+@overload
+def ols_regression(
+    asset: Sequence[float], benchmark: Sequence[float]
+) -> tuple[float, float]: ...
+
+
+@overload
+def ols_regression(
+    asset: Sequence[float], benchmark: Sequence[float], *, r_squared: Literal[True]
+) -> tuple[float, float, float]: ...
+
+
+def ols_regression(
+    asset: Sequence[float],
+    benchmark: Sequence[float],
+    *,
+    r_squared: bool = False,
+) -> tuple[float, float] | tuple[float, float, float]:
+    """Slope (beta) and intercept (alpha) of the OLS regression of asset
+    returns on benchmark returns.
+
+    Returns ``(beta, alpha)``. The intercept is the expected asset return on a
+    day the benchmark does not move - the drift the market does not explain.
+    It is a daily rate; annualize with ``_TRADING_DAYS_PER_YEAR`` only when
+    presenting it, never when storing it.
+
+    Jensen's alpha (net of the risk-free rate) is a deliberate follow-up: it
+    needs a risk-free series this project does not carry.
+
+    Pass ``r_squared=True`` to also return the coefficient of determination
+    ``(beta, alpha, r_squared)``, where R² = 1 - SSE/SST over the same window:
+    the share of the asset's return variance the benchmark explains. R² is
+    *not* beta² - beta measures sensitivity, R² measures fit. For single-factor
+    OLS with an intercept, R² equals the squared Pearson correlation. A
+    zero-variance asset series has no defined R² (inventing one would launder
+    a flat line into a relationship), so it raises the same ValueError as the
+    other degenerate inputs. R² is clamped to [0, 1] against floating-point
+    drift; the OLS-with-intercept identity SSE ≤ SST holds mathematically.
+    """
+    if len(asset) != len(benchmark):
+        raise ValueError(f"series must be the same length, got {len(asset)} and {len(benchmark)}")
+    if len(asset) < 2:
+        raise ValueError(f"need at least two observations, got {len(asset)}")
+
+    mean_asset = st.fmean(asset)
+    mean_benchmark = st.fmean(benchmark)
+    covariance = st.fmean(
+        (a - mean_asset) * (b - mean_benchmark) for a, b in zip(asset, benchmark, strict=True)
+    )
+    variance = st.fmean((b - mean_benchmark) ** 2 for b in benchmark)
+    if variance == 0:
+        raise ValueError("benchmark has zero variance over the window; beta is undefined")
+    beta = covariance / variance
+    alpha = mean_asset - beta * mean_benchmark
+    if not r_squared:
+        return beta, alpha
+
+    sse = math.fsum((a - (alpha + beta * b)) ** 2 for a, b in zip(asset, benchmark, strict=True))
+    sst = math.fsum((a - mean_asset) ** 2 for a in asset)
+    if sst == 0:
+        raise ValueError("asset has zero variance over the window; R² is undefined")
+    return beta, alpha, min(1.0, max(0.0, 1.0 - sse / sst))
+
+
 def ols_beta(asset: Sequence[float], benchmark: Sequence[float]) -> float:
     """Slope of the OLS regression of asset returns on benchmark returns.
 
     cov / var, which is the slope of the least-squares line. The intercept is
-    alpha and is deliberately not returned: this project measures how much of a
-    move the market explains, not whether the name outperforms.
+    alpha; see ols_regression. This wrapper keeps the beta-only call sites
+    (and their tests) intact.
+    """
+    beta, _ = ols_regression(asset, benchmark)
+    return beta
+
+
+def correlation(asset: Sequence[float], benchmark: Sequence[float]) -> float:
+    """Pearson correlation of two same-length return series.
+
+    Raises when either series is degenerate: a zero-variance series has no
+    defined correlation, and inventing one would launder a flat line into a
+    relationship.
     """
     if len(asset) != len(benchmark):
         raise ValueError(
@@ -98,22 +187,38 @@ def ols_beta(asset: Sequence[float], benchmark: Sequence[float]) -> float:
         )
     if len(asset) < 2:
         raise ValueError(f"need at least two observations, got {len(asset)}")
-
     mean_asset = st.fmean(asset)
     mean_benchmark = st.fmean(benchmark)
     covariance = st.fmean(
         (a - mean_asset) * (b - mean_benchmark)
         for a, b in zip(asset, benchmark, strict=True)
     )
-    variance = st.fmean((b - mean_benchmark) ** 2 for b in benchmark)
-    if variance == 0:
-        raise ValueError("benchmark has zero variance over the window; beta is undefined")
-    return covariance / variance
+    var_asset = st.fmean((a - mean_asset) ** 2 for a in asset)
+    var_benchmark = st.fmean((b - mean_benchmark) ** 2 for b in benchmark)
+    if var_asset == 0 or var_benchmark == 0:
+        raise ValueError(
+            "one series has zero variance over the window; correlation is undefined"
+        )
+    return covariance / math.sqrt(var_asset * var_benchmark)
+
+
+def annualize_alpha(alpha_daily: float) -> float:
+    """Present the daily OLS intercept as an annualized rate.
+
+    The stored alpha stays daily; only the display multiplies. Kept here so
+    the 252 lives next to the regression that produced the intercept.
+    """
+    return alpha_daily * _TRADING_DAYS_PER_YEAR
 
 
 @dataclass(frozen=True)
 class Move:
-    """One flagged day, fully decomposed (spec §7 `move` block)."""
+    """One flagged day, fully decomposed (spec §7 `move` block).
+
+    ``alpha`` is the OLS intercept from the same trailing window that produced
+    ``beta`` - the daily drift the benchmark does not explain. Stored daily;
+    annualize (x252) only at presentation time.
+    """
 
     ticker: str
     date: str
@@ -121,6 +226,7 @@ class Move:
     benchmark: str
     benchmark_return: float
     beta: float
+    alpha: float
     abnormal_return: float
     sigma_60: float
     z: float
@@ -134,6 +240,7 @@ class Move:
             "benchmark": self.benchmark,
             "benchmark_return": self.benchmark_return,
             "beta": self.beta,
+            "alpha": self.alpha,
             "abnormal_return": self.abnormal_return,
             "sigma_60": self.sigma_60,
             "z": self.z,
@@ -178,7 +285,7 @@ def compute_moves(
     moves: list[Move] = []
     for index in range(first, len(dates)):
         window = slice(index - params.beta_window, index)
-        beta = ols_beta(asset_returns[window], benchmark_returns[window])
+        beta, alpha = ols_regression(asset_returns[window], benchmark_returns[window])
 
         # Constant beta across the sigma window, per the module docstring.
         abnormal = [
@@ -193,17 +300,20 @@ def compute_moves(
             )
         z = abnormal[-1] / sigma
         if abs(z) >= params.z_threshold:
-            moves.append(Move(
-                ticker=symbol,
-                date=dates[index],
-                ret=asset_returns[index],
-                benchmark=benchmark_name,
-                benchmark_return=benchmark_returns[index],
-                beta=beta,
-                abnormal_return=abnormal[-1],
-                sigma_60=sigma,
-                z=z,
-            ))
+            moves.append(
+                Move(
+                    ticker=symbol,
+                    date=dates[index],
+                    ret=asset_returns[index],
+                    benchmark=benchmark_name,
+                    benchmark_return=benchmark_returns[index],
+                    beta=beta,
+                    alpha=alpha,
+                    abnormal_return=abnormal[-1],
+                    sigma_60=sigma,
+                    z=z,
+                )
+            )
 
     return moves, Coverage(
         price_series=price_series,

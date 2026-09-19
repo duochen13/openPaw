@@ -76,6 +76,7 @@ def test_upsert_and_read_moves(store):
         "benchmark": "QQQ",
         "benchmark_return": -0.004830,
         "beta": 1.490,
+        "alpha": 0.000312,
         "abnormal_return": -0.098419,
         "sigma_60": 0.026083,
         "z": -3.77,
@@ -92,7 +93,8 @@ def test_recomputing_moves_replaces_rather_than_duplicates(store):
     move = {
         "ticker": "META", "date": "2024-04-25", "ret": -0.105613,
         "benchmark": "QQQ", "benchmark_return": -0.004830, "beta": 1.490,
-        "abnormal_return": -0.098419, "sigma_60": 0.026083, "z": -3.77,
+        "alpha": 0.000312, "abnormal_return": -0.098419,
+        "sigma_60": 0.026083, "z": -3.77,
     }
     store.upsert_moves([move])
     store.upsert_moves([{**move, "z": -3.80}])

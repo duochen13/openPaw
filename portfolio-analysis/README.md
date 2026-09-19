@@ -8,6 +8,9 @@ Design spec: [`docs/specs/2026-09-13-portfolio-analysis-design.md`](docs/specs/2
 
 ## Setup
 
+Run setup and test commands from the `portfolio-analysis/` directory. Commands
+beginning with `./portfolio-analysis/run` below run from the repository root.
+
 Requires [`uv`](https://docs.astral.sh/uv/).
 Do not use `pip` — it is broken on this machine's Homebrew Python 3.14 (`pyexpat` symbol error).
 
@@ -161,3 +164,27 @@ company name, CIK, and aliases. Replace `META` with that configured symbol.
 The chart displays historical context; it does not claim the nearby events
 caused the move. Model attribution and reliability controls remain separate,
 unimplemented work.
+
+## Factor and valuation dashboards
+
+The application source, tests, and configuration live under `portfolio-analysis/`.
+From the repository root, use the existing launcher:
+
+```bash
+./portfolio-analysis/run detect-moves
+./portfolio-analysis/run render
+./portfolio-analysis/run dashboard
+./portfolio-analysis/run factor-dashboard
+open portfolio-analysis/out/index.html
+```
+
+After upgrading older move artifacts, `detect-moves` regenerates them from stored
+prices in the current schema. Alpha and beta use stored price history. To populate
+P/E and supported business KPIs, fetch quarterly fundamentals before rendering:
+
+```bash
+./portfolio-analysis/run fetch-fundamentals
+./portfolio-analysis/run render
+```
+
+The cross-stock alpha/beta comparison is `portfolio-analysis/out/factors.html`.

@@ -17,7 +17,7 @@ from portfolio_analysis.config import MoveParams
 from portfolio_analysis.moves import Coverage, Move
 from portfolio_analysis.naming import safe_ticker_component
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 
 @dataclass(frozen=True)
@@ -58,6 +58,7 @@ def write_moves(directory: Path, artifact: MovesArtifact) -> Path:
                 "ret": m.ret,
                 "benchmark_return": m.benchmark_return,
                 "beta": m.beta,
+                "alpha": m.alpha,
                 "abnormal_return": m.abnormal_return,
                 "sigma_60": m.sigma_60,
                 "z": m.z,
@@ -74,7 +75,8 @@ def read_moves(path: Path) -> MovesArtifact:
     raw = json.loads(Path(path).read_text())
     if raw["schema_version"] != SCHEMA_VERSION:
         raise ValueError(
-            f"{path}: schema_version {raw['schema_version']}, expected {SCHEMA_VERSION}"
+            f"{path}: schema_version {raw['schema_version']}, expected {SCHEMA_VERSION}; "
+            "re-run detect-moves to regenerate the artifact"
         )
     cov = raw["coverage"]
     ticker, benchmark = raw["ticker"], raw["benchmark"]
@@ -100,6 +102,7 @@ def read_moves(path: Path) -> MovesArtifact:
                 benchmark=benchmark,
                 benchmark_return=float(m["benchmark_return"]),
                 beta=float(m["beta"]),
+                alpha=float(m["alpha"]),
                 abnormal_return=float(m["abnormal_return"]),
                 sigma_60=float(m["sigma_60"]),
                 z=float(m["z"]),

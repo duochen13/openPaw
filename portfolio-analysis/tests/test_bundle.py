@@ -6,7 +6,7 @@ from portfolio_analysis.bundle import build_bundle, bundle_hash, reusable, write
 from portfolio_analysis.events.base import Document, VerifiedFact
 from portfolio_analysis.moves import Move
 
-MOVE = Move("META", "2024-04-25", -0.10, "QQQ", -0.005, 1.4, -0.093, 0.025, -3.72)
+MOVE = Move("META", "2024-04-25", -0.10, "QQQ", -0.005, 1.4, 0.0003, -0.093, 0.025, -3.72)
 
 
 class Source:

@@ -6,7 +6,7 @@ code (spec §3).
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -85,10 +85,20 @@ class Portfolio:
     move_params: MoveParams
     news_coverage_start: str
     paths: dict[str, str]
+    # Defaulted so older constructions (and configs without the key) keep
+    # working: unmapped means the two-line chart, not an error.
+    industry_benchmarks: dict[str, str] = field(default_factory=dict)
 
     @property
     def symbols(self) -> tuple[str, ...]:
         return tuple(e.symbol for e in self.entries)
+
+    def industry_benchmark(self, symbol: str) -> str | None:
+        """The industry benchmark ticker for a symbol, or None when unmapped.
+
+        Unmapped symbols render the two-line chart exactly as before.
+        """
+        return self.industry_benchmarks.get(symbol.upper())
 
     def entry(self, symbol: str) -> PortfolioEntry:
         for e in self.entries:
@@ -141,6 +151,13 @@ def load_portfolio(path: Path | None = None) -> Portfolio:
     return Portfolio(
         entries=entries,
         benchmark=safe_ticker_component(raw["benchmark"]),
+        # Keys and values are sanitized like every other ticker crossing an
+        # I/O boundary. Absent entirely in old configs: unmapped means the
+        # two-line chart, not an error.
+        industry_benchmarks={
+            safe_ticker_component(str(symbol)): safe_ticker_component(str(ticker))
+            for symbol, ticker in (raw.get("industry_benchmarks") or {}).items()
+        },
         price_years=int(raw["price_years"]),
         move_params=MoveParams(
             beta_window=int(moves["beta_window"]),

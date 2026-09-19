@@ -48,7 +48,7 @@ def test_valid_evidence_attached_but_stale_or_corrupt_evidence_rejected(tmp_path
     path.parent.mkdir()
     path.write_text(json.dumps(bundle()))
     assert data(tmp_path)["moves"][0]["evidence_status"] == "available"
-    stale = data(tmp_path, artifact([replace(MOVE, ret=-0.12)]))["moves"][0]
+    stale = data(tmp_path, artifact([replace(MOVE, ret=-0.12, abnormal_return=-0.113)]))["moves"][0]
     assert stale["evidence_status"] == "stale"
     assert stale["documents"] == []
     path.write_text(path.read_text().replace("example.com", "evil.com"))
@@ -59,6 +59,28 @@ def test_empty_move_set_still_renders_price_history(tmp_path):
     result = data(tmp_path, artifact([]))
     assert result["moves"] == []
     assert '<svg id="chart"' in render_html(result)
+
+
+def test_timeframe_slider_markup_present_and_period_select_kept(tmp_path):
+    text = render_html(data(tmp_path))
+    for frag in (
+        'id="timeframe-bar"',
+        'id="tf-presets"',
+        'data-tf="all"',
+        'data-tf="3"',
+        'data-tf="1"',
+        'data-tf="0.5"',
+        'id="tf-slider"',
+        'id="tf-h0"',
+        'id="tf-h1"',
+        'role="slider"',
+        'id="tf-d0"',
+        'id="tf-d1"',
+        'id="range"',
+        'syncSliderFromState',
+        'commitTF',
+    ):
+        assert frag in text, frag
 
 
 def test_script_escape_and_dangerous_source_urls(tmp_path):
@@ -134,3 +156,46 @@ def test_chart_offline_mode_does_not_collect(monkeypatch, setup):
     monkeypatch.setattr(cli, "_collect_events", lambda _: pytest.fail("unexpected collection"))
     monkeypatch.setattr(cli, "_render", lambda _: 0)
     assert cli.main(["chart", "META", "--skip-events"]) == 0
+
+
+def test_chart_data_defaults_kpis_to_none(tmp_path):
+    # Existing callers are unaffected: no KPIs means the template hides
+    # the business-metrics section, the same rule as the P/E panel.
+    assert data(tmp_path)["kpis"] is None
+
+
+def test_chart_data_carries_kpi_payload(tmp_path):
+    payload = {"metrics": [{"key": "revenue", "label": "Revenue"}]}
+    result = chart_data(
+        artifact(),
+        {"2024-04-24": 100, "2024-04-25": 90},
+        {"2024-04-24": 100, "2024-04-25": 99.5},
+        tmp_path,
+        name="Meta Platforms",
+        kpis=payload,
+    )
+    assert result["kpis"] is payload
+
+
+def test_render_html_embeds_kpi_section_and_payload(tmp_path):
+    payload = {
+        "metrics": [{
+            "key": "revenue", "label": "Revenue", "format": "currency",
+            "yoy_unit": "pct", "quarters": ["2024-03-31"], "values": [100.0],
+            "yoy": [None], "current": 100.0, "current_yoy": None,
+            "as_of": "2024-03-31", "quarters_reported": 1,
+            "blurb": "Quarterly revenue (SEC EDGAR).",
+        }]
+    }
+    result = chart_data(
+        artifact(),
+        {"2024-04-24": 100, "2024-04-25": 90},
+        {"2024-04-24": 100, "2024-04-25": 99.5},
+        tmp_path,
+        name="Meta Platforms",
+        kpis=payload,
+    )
+    html = render_html(result)
+    assert 'id="kpi-box"' in html
+    assert "renderKPIs();" in html
+    assert '"kpis": {"metrics": [{"key": "revenue"' in html

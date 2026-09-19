@@ -24,11 +24,15 @@ def canonical(value: Any) -> str:
 
 
 def move_payload(move: Move) -> dict[str, object]:
+    # Alpha is part of the payload: a move whose intercept changed is a
+    # different move, so existing bundles hash-mismatch and surface as stale
+    # rather than silently carrying the old decomposition.
     return {
         "return": move.ret,
         "benchmark": move.benchmark,
         "benchmark_return": move.benchmark_return,
         "beta": move.beta,
+        "alpha": move.alpha,
         "abnormal_return": move.abnormal_return,
         "sigma_60": move.sigma_60,
         "z": move.z,

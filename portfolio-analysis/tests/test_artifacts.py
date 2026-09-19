@@ -8,8 +8,8 @@ from portfolio_analysis.moves import Coverage, Move
 
 MOVE = Move(
     ticker="META", date="2024-04-25", ret=-0.105613, benchmark="QQQ",
-    benchmark_return=-0.004830, beta=1.490, abnormal_return=-0.098419,
-    sigma_60=0.026083, z=-3.77,
+    benchmark_return=-0.004830, beta=1.490, alpha=0.000312,
+    abnormal_return=-0.098419, sigma_60=0.026083, z=-3.77,
 )
 COVERAGE = Coverage(
     price_series=("2020-09-14", "2026-09-11"),

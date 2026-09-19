@@ -34,6 +34,11 @@ def test_ingest_fetches_the_universe_and_the_benchmark(tmp_path):
         ("CRM", 6),
         ("ORCL", 6),
         ("QQQ", 6),
+        # Industry benchmarks ride along after the market benchmark, in
+        # symbol order, deduplicated: META->MAGS, NOW->CLOU, NVDA->SOXX.
+        ("MAGS", 6),
+        ("CLOU", 6),
+        ("SOXX", 6),
     ]
     store = Store.open(db)
     try:
@@ -55,7 +60,7 @@ def test_ingest_accepts_a_single_ticker_by_alias(tmp_path):
     with mock.patch.object(cli.prices, "fetch_yahoo", side_effect=fake_fetch):
         assert cli.main(["ingest-prices", "Facebook", "--db", str(db)]) == 0
 
-    assert calls == ["META", "QQQ"]
+    assert calls == ["META", "QQQ", "MAGS"]
 
 
 @pytest.mark.unit

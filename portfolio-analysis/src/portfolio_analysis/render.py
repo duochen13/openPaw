@@ -11,11 +11,27 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
+from portfolio_analysis import kpis as kpis_module
 from portfolio_analysis.artifacts import MovesArtifact, read_moves
 from portfolio_analysis.bundle import SCHEMA_VERSION, bundle_hash, move_payload
 from portfolio_analysis.config import Portfolio
+from portfolio_analysis.fundamentals import pe_series
+from portfolio_analysis.moves import aligned_returns, annualize_alpha, correlation, ols_regression
 from portfolio_analysis.naming import safe_ticker_component
+from portfolio_analysis.signals import (
+    REGIME_WINDOWS,
+    SLOPE_SPAN,
+    alpha_acceleration,
+    alpha_signal,
+    rolling_alpha_daily,
+    rolling_slope,
+)
 from portfolio_analysis.store import Store
+
+#: Sample the rolling beta/alpha series this often (trading days). Sixty-odd
+#: points keeps the embedded JSON small while still showing regime changes
+#: like a beta collapsing from 1.0 to 0.27.
+_REGIME_STEP = 21
 
 
 def safe_url(value: object) -> str:
@@ -90,6 +106,196 @@ def _documents(bundle: dict[str, Any], aliases: tuple[str, ...]) -> list[dict[st
     )
 
 
+def _trailing_factor(
+    asset: dict[str, float],
+    benchmark: dict[str, float],
+    window: int,
+    benchmark_name: str,
+) -> dict[str, object] | None:
+    """Trailing-window beta, annualized alpha, and R² vs the benchmark.
+
+    Returns None when the series is shorter than one full window or the
+    trailing window is degenerate: a beta over a partial window is not
+    comparable to the detection beta, and a made-up number here would be
+    worse than no number. The template hides the strip when this is None.
+    """
+    dates, asset_returns, benchmark_returns = aligned_returns(asset, benchmark)
+    if len(asset_returns) < window:
+        return None
+    try:
+        beta, alpha, r_squared = ols_regression(
+            asset_returns[-window:], benchmark_returns[-window:], r_squared=True
+        )
+    except ValueError:
+        return None
+    return {
+        "beta": beta,
+        "r_squared": r_squared,
+        "alpha_annualized": annualize_alpha(alpha),
+        "window": window,
+        "as_of": dates[-1],
+        "benchmark": benchmark_name,
+        "note": (
+            "Trailing OLS intercept vs the benchmark: the drift the market "
+            "does not explain. A historical residual, not a forecast."
+        ),
+    }
+
+
+def _industry_factor(
+    asset: dict[str, float],
+    industry: dict[str, float],
+    window: int,
+    industry_name: str,
+) -> dict[str, object] | None:
+    """Trailing-window beta, annualized alpha, and correlation vs the industry.
+
+    Computed over the overlapping window only: a short industry history (e.g.
+    MAGS, listed April 2023) contributes only its overlap with the asset.
+    Returns None when the overlap is shorter than one full window or the
+    regression is degenerate - no made-up numbers, the same rule as
+    _trailing_factor. The template hides the strip when this is None.
+    """
+    try:
+        dates, asset_returns, industry_returns = aligned_returns(asset, industry)
+    except ValueError:
+        return None
+    if len(asset_returns) < window:
+        return None
+    try:
+        beta, alpha = ols_regression(
+            asset_returns[-window:], industry_returns[-window:]
+        )
+        rho = correlation(asset_returns[-window:], industry_returns[-window:])
+    except ValueError:
+        return None
+    return {
+        "beta": beta,
+        "alpha_annualized": annualize_alpha(alpha),
+        "correlation": rho,
+        "window": window,
+        "as_of": dates[-1],
+        "benchmark": industry_name,
+        "note": (
+            "Trailing OLS intercept vs the industry benchmark: the drift the "
+            "industry does not explain. A historical residual, not a forecast."
+        ),
+    }
+
+
+def _regime_points(
+    asset: dict[str, float],
+    benchmark: dict[str, float],
+    window: int,
+    step: int = _REGIME_STEP,
+) -> dict[str, list[object]]:
+    """Rolling beta, annualized alpha, R², alpha slope/acceleration and
+    turnaround signals, sampled every `step` sessions.
+
+    R² is computed over the identical return observations as beta and alpha.
+    The slope is the change in *annualized* alpha per trading session over
+    ``SLOPE_SPAN`` sessions (see ``signals`` for the unit convention); the
+    acceleration is the change in the slope over the same span. Both are
+    derived from the full daily alpha series and then sampled, so the "20
+    trading days" definition is exact, not an artifact of the sampling grid.
+    ``signals[i]`` classifies the sampled point (turnaround / strong /
+    early-watch) or is ``None``; slope, acceleration and signals are ``None``
+    during their warmup. Empty when the series is shorter than one full
+    window, for the same reason as _trailing_factor. The most recent session
+    is always the last point. A degenerate window (zero variance, so
+    beta/alpha/R² are all undefined) is skipped, never filled with a made-up
+    number.
+    """
+    dates, asset_returns, benchmark_returns = aligned_returns(asset, benchmark)
+    empty: dict[str, list[object]] = {
+        "dates": [],
+        "beta": [],
+        "r_squared": [],
+        "alpha_annualized": [],
+        "alpha_slope": [],
+        "alpha_accel": [],
+        "signals": [],
+    }
+    if len(asset_returns) < window:
+        return empty
+    alpha_daily = rolling_alpha_daily(asset_returns, benchmark_returns, window)
+    slope_daily = rolling_slope(alpha_daily, SLOPE_SPAN)
+    accel_daily = alpha_acceleration(slope_daily, SLOPE_SPAN)
+    ends = list(range(window, len(asset_returns) + 1, step))
+    if ends[-1] != len(asset_returns):
+        ends.append(len(asset_returns))
+    out: dict[str, list[object]] = {key: [] for key in empty}
+    for end in ends:
+        i = end - 1  # return index whose date is dates[end - 1]
+        alpha_ann = alpha_daily[i]
+        if alpha_ann is None:
+            continue  # degenerate window: beta/alpha/R² undefined, skip
+        beta, _, r_squared = ols_regression(
+            asset_returns[end - window : end],
+            benchmark_returns[end - window : end],
+            r_squared=True,
+        )
+        out["dates"].append(dates[i])
+        out["beta"].append(beta)
+        out["r_squared"].append(r_squared)
+        out["alpha_annualized"].append(alpha_ann)
+        out["alpha_slope"].append(slope_daily[i])
+        out["alpha_accel"].append(accel_daily[i])
+        out["signals"].append(alpha_signal(alpha_ann, slope_daily[i], accel_daily[i]))
+    return out
+
+
+def _pe_panel(
+    asset: dict[str, float],
+    quarters: list[tuple[str, str, float]],
+) -> dict[str, object] | None:
+    """Rolling TTM P/E panel data (issue #28).
+
+    Daily adjusted close over the TTM EPS in effect that day. Returns None
+    when no quarter is stored at all - the template hides the section, the
+    same rule as the factor strips. Days before the fourth reported quarter
+    (or with non-positive TTM EPS) carry None: gaps, never invented numbers.
+    """
+    if not quarters:
+        return None
+    series = pe_series(asset, quarters)
+    dates = sorted(series)
+    pe = [series[d]["pe"] for d in dates]
+    ttm = [series[d]["ttm_eps"] for d in dates]
+    defined = [(d, v) for d, v in zip(dates, pe, strict=True) if v is not None]
+    current = defined[-1] if defined else (None, None)
+    current_ttm = ttm[dates.index(current[0])] if current[0] else None
+    return {
+        "dates": dates,
+        "pe": pe,
+        "ttm_eps": ttm,
+        "current_pe": current[1],
+        "current_ttm_eps": current_ttm,
+        "as_of": current[0],
+        "quarters_reported": len(quarters),
+    }
+
+
+def _kpi_data(store: Store, symbol: str) -> dict[str, Any] | None:
+    """Business-KPI panels for the per-stock chart (issue #29).
+
+    None when the ticker has no KPI config or no stored KPI data - the
+    template hides the section, the same rule as the P/E and factor
+    panels. A broken KPI config degrades to no section, never a crash.
+    """
+    try:
+        metric_keys = kpis_module.load_kpi_config().get(symbol, [])
+    except kpis_module.ConfigError:
+        return None
+    if not metric_keys:
+        return None
+    series = {key: store.kpi_quarters(symbol, key) for key in metric_keys}
+    series = {key: rows for key, rows in series.items() if rows}
+    if not series:
+        return None
+    return kpis_module.kpi_panels(series, metric_keys)
+
+
 def chart_data(
     artifact: MovesArtifact,
     asset: dict[str, float],
@@ -98,6 +304,10 @@ def chart_data(
     *,
     name: str,
     aliases: tuple[str, ...] = (),
+    industry: dict[str, float] | None = None,
+    industry_name: str | None = None,
+    eps_quarters: list[tuple[str, str, float]] | None = None,
+    kpis: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     dates = sorted(set(asset) & set(benchmark))
     if artifact.coverage.evaluated:
@@ -112,13 +322,48 @@ def chart_data(
     ):
         raise ValueError("chart prices must be finite and positive")
     symbol = safe_ticker_component(artifact.ticker)
+    # The industry line is optional: unmapped symbols, or a mapped ticker
+    # with no stored prices, render the two-line chart exactly as before.
+    # industry_prices stays aligned with `dates`; None marks days before the
+    # industry series starts (e.g. MAGS, listed April 2023).
+    industry_prices: list[float | None] = [None] * len(dates)
+    industry_factor: dict[str, object] | None = None
+    if industry and industry_name:
+        if any(
+            industry.get(d) is not None
+            and (not math.isfinite(industry[d]) or industry[d] <= 0)
+            for d in dates
+        ):
+            raise ValueError("industry chart prices must be finite and positive")
+        industry_prices = [industry.get(d) for d in dates]
+        industry_factor = _industry_factor(
+            asset, industry, artifact.params.beta_window, industry_name
+        )
     moves = []
     for move in artifact.moves:
         if move.date not in dates:
             raise ValueError(f"move {move.date} is outside the rendered price series")
+        market_component = move.beta * move.benchmark_return
+        # By construction in compute_moves, ret == beta*benchmark_return +
+        # abnormal_return. Verify rather than assume: a hand-built artifact
+        # with an inconsistent decomposition must fail loudly here, not render
+        # a tooltip whose parts do not add up.
+        if not math.isclose(
+            move.ret,
+            market_component + move.abnormal_return,
+            rel_tol=1e-9,
+            abs_tol=1e-12,
+        ):
+            raise ValueError(
+                f"move {move.date}: ret {move.ret} != beta*benchmark_return "
+                f"({market_component}) + abnormal_return ({move.abnormal_return})"
+            )
         row: dict[str, Any] = {
             "date": move.date,
             **move_payload(move),
+            "market_component": market_component,
+            "idiosyncratic_component": move.abnormal_return,
+            "alpha_annualized": annualize_alpha(move.alpha),
             "facts": [],
             "documents": [],
             "coverage": None,
@@ -156,10 +401,27 @@ def chart_data(
         "dates": dates,
         "prices": [asset[d] for d in dates],
         "benchmark_prices": [benchmark[d] for d in dates],
+        "industry_benchmark": industry_name,
+        "industry_prices": industry_prices,
+        "industry_factor": industry_factor,
         "moves": moves,
         "threshold": artifact.params.z_threshold,
         "beta_window": artifact.params.beta_window,
         "sigma_window": artifact.params.sigma_window,
+        "factor": _trailing_factor(
+            asset, benchmark, artifact.params.beta_window, artifact.benchmark
+        ),
+        "pe": _pe_panel(asset, eps_quarters or []),
+        "kpis": kpis,
+        "regime": {
+            # The window switch (issue #19) offers 60/125/250-session OLS;
+            # "250" is the default and matches artifact.params.beta_window.
+            "default_window": "250",
+            "windows": {
+                str(window): _regime_points(asset, benchmark, window)
+                for window in REGIME_WINDOWS
+            },
+        },
     }
 
 
@@ -198,6 +460,12 @@ def render_chart(
         raise ValueError("move artifact does not match configured ticker/benchmark")
     store = Store.open(db)
     try:
+        # The industry benchmark is best-effort: a mapped ticker with no
+        # stored prices renders the two-line chart, not an error.
+        industry_ticker = portfolio.industry_benchmark(symbol)
+        industry_series = (
+            store.adjusted_series(industry_ticker) if industry_ticker else {}
+        )
         data = chart_data(
             artifact,
             store.adjusted_series(symbol),
@@ -205,6 +473,10 @@ def render_chart(
             events_dir,
             name=portfolio.entry(symbol).name,
             aliases=portfolio.entry(symbol).aliases,
+            industry=industry_series or None,
+            industry_name=industry_ticker if industry_series else None,
+            eps_quarters=store.eps_quarters(symbol),
+            kpis=_kpi_data(store, symbol),
         )
     finally:
         store.close()

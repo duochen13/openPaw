@@ -1,5 +1,10 @@
 # portfolio-analysis
 
+The package, configuration, scripts, and tests live in
+[`portfolio-analysis/`](portfolio-analysis/). The Python package is
+`portfolio-analysis/src/portfolio_analysis/`; there is no root-level source copy.
+See the [project README](portfolio-analysis/README.md) for dashboard commands.
+
 Retrospective attribution of large single-day equity moves to dated, cited events.
 
 **This project explains the past. It makes no predictive claim and produces no trading signal.**
@@ -12,6 +17,7 @@ Requires [`uv`](https://docs.astral.sh/uv/).
 Do not use `pip` — it is broken on this machine's Homebrew Python 3.14 (`pyexpat` symbol error).
 
 ```bash
+cd portfolio-analysis
 uv venv -p 3.13
 uv pip install -e ".[dev]"
 .venv/bin/pytest

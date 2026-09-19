@@ -8,10 +8,12 @@ from __future__ import annotations
 
 import argparse
 import sys
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+from portfolio_analysis import fundamentals, prices
+from portfolio_analysis import kpis as kpis_module
 from portfolio_analysis import moves as moves_module
-from portfolio_analysis import prices
 from portfolio_analysis.artifacts import MovesArtifact, write_moves
 from portfolio_analysis.collection import collect_events
 from portfolio_analysis.config import PROJECT_ROOT, Portfolio, load_portfolio
@@ -19,7 +21,16 @@ from portfolio_analysis.dashboard import render_dashboard
 from portfolio_analysis.event_dashboard import event_dashboard_data, render_event_dashboard
 from portfolio_analysis.events.macro import MacroSource
 from portfolio_analysis.events.reddit import collect_reddit_for_events
-from portfolio_analysis.http import CachedHttp, ProviderError, RateLimitLedger
+from portfolio_analysis.factor_dashboard import (
+    factor_dashboard_data,
+    render_factor_dashboard,
+)
+from portfolio_analysis.http import (
+    CachedHttp,
+    ProviderError,
+    QuotaExhausted,
+    RateLimitLedger,
+)
 from portfolio_analysis.render import render_chart
 from portfolio_analysis.store import Store
 
@@ -44,8 +55,13 @@ def _ingest_prices(args: argparse.Namespace) -> int:
 
     # The benchmark is fetched alongside the universe, never separately. Beta
     # cannot be computed without it, so an ingest that skips it leaves a store
-    # that looks complete and is not.
+    # that looks complete and is not. Industry benchmarks ride along the same
+    # way: the compare view cannot draw the third line without them.
     targets = [*symbols, portfolio.benchmark]
+    for symbol in symbols:
+        industry = portfolio.industry_benchmark(symbol)
+        if industry and industry not in targets:
+            targets.append(industry)
 
     store = Store.open(args.db or portfolio.path("db"))
     try:
@@ -55,6 +71,122 @@ def _ingest_prices(args: argparse.Namespace) -> int:
             first = bars[0]["date"] if bars else "-"
             last = bars[-1]["date"] if bars else "-"
             print(f"{symbol}: {written} bar(s) upserted, {first} .. {last}")
+    finally:
+        store.close()
+    return 0
+
+
+#: Fundamentals refresh interval. Quarterly EPS changes on earnings day;
+#: re-fetching daily keeps the store fresh without hammering the vendor.
+_FUNDAMENTALS_TTL = timedelta(hours=24)
+
+
+def _fundamentals_fresh(store: Store, symbol: str) -> bool:
+    fetched_at = store.eps_fetched_at(symbol)
+    if not fetched_at:
+        return False
+    try:
+        age = datetime.now(UTC) - datetime.fromisoformat(fetched_at)
+    except ValueError:
+        return False
+    return age < _FUNDAMENTALS_TTL
+
+
+def _kpi_fresh(store: Store, symbol: str, metric_keys: list[str]) -> bool:
+    if not metric_keys:
+        return True
+    fetched_at = store.kpi_fetched_at(symbol)
+    if not fetched_at:
+        return False
+    try:
+        age = datetime.now(UTC) - datetime.fromisoformat(fetched_at)
+    except ValueError:
+        return False
+    return age < _FUNDAMENTALS_TTL
+
+
+def _fetch_fundamentals(args: argparse.Namespace) -> int:
+    """Fetch quarterly fundamentals from SEC EDGAR for the universe.
+
+    One companyfacts fetch per ticker backs both the P/E panel (issue #28,
+    quarterly diluted EPS) and the business-KPI section (issue #29,
+    config/kpi_metrics.yaml). A network/provider failure keeps stored data
+    rather than crash, same as before.
+    """
+    portfolio = load_portfolio()
+    symbols = _selected_symbols(portfolio, args.ticker)
+    if symbols is None:
+        print(
+            f"{args.ticker!r} is not in the portfolio; add it to config/portfolio.yaml",
+            file=sys.stderr,
+        )
+        return 2
+
+    try:
+        kpi_config = kpis_module.load_kpi_config()
+    except kpis_module.ConfigError as exc:
+        # KPIs are additive: a broken KPI config must not take down EPS.
+        print(f"fetch-fundamentals: {exc}; continuing with EPS only")
+        kpi_config = {}
+
+    cache = portfolio.path("cache")
+    http = CachedHttp(cache, ledger=RateLimitLedger(cache / "quota.json"))
+    store = Store.open(args.db or portfolio.path("db"))
+    try:
+        for symbol in symbols:
+            metric_keys = kpi_config.get(symbol, [])
+            if (
+                not args.force
+                and _fundamentals_fresh(store, symbol)
+                and _kpi_fresh(store, symbol, metric_keys)
+            ):
+                print(f"{symbol}: fresh, skipping (use --force to refetch)")
+                continue
+            cik = portfolio.entry(symbol).cik
+            try:
+                facts = fundamentals.fetch_companyfacts(cik, http.get_json)
+                quarters = fundamentals.parse_quarterly_eps(facts)
+            except (
+                fundamentals.VendorResponseError,
+                ProviderError,
+                QuotaExhausted,
+            ) as exc:
+                print(f"{symbol}: fetch failed, keeping stored quarters: {exc}")
+                continue
+            rows = [
+                {
+                    "ticker": symbol,
+                    "quarter": q["quarter"],
+                    "filed": q["filed"],
+                    "eps": q["eps"],
+                    "source": "edgar",
+                }
+                for q in quarters
+            ]
+            written = store.upsert_eps_quarters(rows)
+            first = quarters[0]["quarter"] if quarters else "-"
+            last = quarters[-1]["quarter"] if quarters else "-"
+            print(f"{symbol}: {written} quarter(s) upserted, {first} .. {last}")
+            if metric_keys:
+                kpi_series = kpis_module.build_kpi_series(facts, metric_keys)
+                kpi_rows = [
+                    {
+                        "ticker": symbol,
+                        "metric": key,
+                        "quarter": q,
+                        "filed": f,
+                        "value": v,
+                        "source": "edgar",
+                    }
+                    for key, series in kpi_series.items()
+                    for q, f, v in series
+                ]
+                kpi_written = store.upsert_kpi_quarters(kpi_rows)
+                missing = sorted(k for k in metric_keys if k not in kpi_series)
+                detail = f" ({', '.join(sorted(kpi_series))})" if kpi_series else ""
+                if missing:
+                    detail += f"; no EDGAR data for {', '.join(missing)}"
+                print(f"{symbol}: {kpi_written} KPI quarter(s) upserted{detail}")
     finally:
         store.close()
     return 0
@@ -188,6 +320,27 @@ def _dashboard(args: argparse.Namespace) -> int:
     return 0
 
 
+def _factor_dashboard(args: argparse.Namespace) -> int:
+    portfolio = load_portfolio()
+    store = Store.open(args.db or portfolio.path("db"))
+    try:
+        data = factor_dashboard_data(portfolio, store)
+    except ValueError as exc:
+        print(f"factor-dashboard: {exc}", file=sys.stderr)
+        return 1
+    finally:
+        store.close()
+    try:
+        target = render_factor_dashboard(
+            data, Path(args.out_dir) if args.out_dir else portfolio.path("out")
+        )
+    except OSError as exc:
+        print(f"factor-dashboard: {exc}", file=sys.stderr)
+        return 1
+    print(f"factor dashboard written -> {target}")
+    return 0
+
+
 def _event_dashboard(args: argparse.Namespace) -> int:
     portfolio = load_portfolio()
     reddit_dir = (
@@ -256,8 +409,14 @@ def _chart(args: argparse.Namespace) -> int:
         return 2
     store = Store.open(args.db or portfolio.path("db"))
     try:
+        industry_tickers = [
+            ticker
+            for symbol in symbols
+            if (ticker := portfolio.industry_benchmark(symbol))
+        ]
         missing = any(
-            not store.price_bar_count(symbol) for symbol in [*symbols, portfolio.benchmark]
+            not store.price_bar_count(symbol)
+            for symbol in [*symbols, portfolio.benchmark, *industry_tickers]
         )
     finally:
         store.close()
@@ -297,6 +456,22 @@ def main(argv: list[str] | None = None) -> int:
     ingest.add_argument("--db", default=None, help="override the configured database")
     ingest.set_defaults(func=_ingest_prices)
 
+    fetch_fund = sub.add_parser(
+        "fetch-fundamentals",
+        help="fetch quarterly fundamentals: EPS for P/E and business KPIs (#28, #29)",
+    )
+    fetch_fund.add_argument(
+        "ticker",
+        nargs="?",
+        default=None,
+        help="ticker, company name, or alias; omit for the whole portfolio",
+    )
+    fetch_fund.add_argument("--db", default=None, help="override the configured database")
+    fetch_fund.add_argument(
+        "--force", action="store_true", help="refetch even if stored data is fresh"
+    )
+    fetch_fund.set_defaults(func=_fetch_fundamentals)
+
     detect = sub.add_parser("detect-moves", help="flag days whose abnormal return is large")
     detect.add_argument(
         "ticker",
@@ -332,6 +507,13 @@ def main(argv: list[str] | None = None) -> int:
     )
     dashboard.add_argument("--out-dir", default=None)
     dashboard.set_defaults(func=_dashboard)
+    factor_dashboard = sub.add_parser(
+        "factor-dashboard",
+        help="build a cross-stock beta/alpha comparison dashboard",
+    )
+    factor_dashboard.add_argument("--db", default=None)
+    factor_dashboard.add_argument("--out-dir", default=None)
+    factor_dashboard.set_defaults(func=_factor_dashboard)
     event_dashboard = sub.add_parser(
         "event-dashboard", help="compare returns around macro release dates"
     )
