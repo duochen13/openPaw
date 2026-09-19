@@ -12,6 +12,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from portfolio_analysis import fundamentals, prices
+from portfolio_analysis import kpis as kpis_module
 from portfolio_analysis import moves as moves_module
 from portfolio_analysis.artifacts import MovesArtifact, write_moves
 from portfolio_analysis.collection import collect_events
@@ -91,8 +92,27 @@ def _fundamentals_fresh(store: Store, symbol: str) -> bool:
     return age < _FUNDAMENTALS_TTL
 
 
+def _kpi_fresh(store: Store, symbol: str, metric_keys: list[str]) -> bool:
+    if not metric_keys:
+        return True
+    fetched_at = store.kpi_fetched_at(symbol)
+    if not fetched_at:
+        return False
+    try:
+        age = datetime.now(UTC) - datetime.fromisoformat(fetched_at)
+    except ValueError:
+        return False
+    return age < _FUNDAMENTALS_TTL
+
+
 def _fetch_fundamentals(args: argparse.Namespace) -> int:
-    """Fetch quarterly EPS actuals from SEC EDGAR for the universe (issue #28)."""
+    """Fetch quarterly fundamentals from SEC EDGAR for the universe.
+
+    One companyfacts fetch per ticker backs both the P/E panel (issue #28,
+    quarterly diluted EPS) and the business-KPI section (issue #29,
+    config/kpi_metrics.yaml). A network/provider failure keeps stored data
+    rather than crash, same as before.
+    """
     portfolio = load_portfolio()
     symbols = _selected_symbols(portfolio, args.ticker)
     if symbols is None:
@@ -102,12 +122,24 @@ def _fetch_fundamentals(args: argparse.Namespace) -> int:
         )
         return 2
 
+    try:
+        kpi_config = kpis_module.load_kpi_config()
+    except kpis_module.ConfigError as exc:
+        # KPIs are additive: a broken KPI config must not take down EPS.
+        print(f"fetch-fundamentals: {exc}; continuing with EPS only")
+        kpi_config = {}
+
     cache = portfolio.path("cache")
     http = CachedHttp(cache, ledger=RateLimitLedger(cache / "quota.json"))
     store = Store.open(args.db or portfolio.path("db"))
     try:
         for symbol in symbols:
-            if not args.force and _fundamentals_fresh(store, symbol):
+            metric_keys = kpi_config.get(symbol, [])
+            if (
+                not args.force
+                and _fundamentals_fresh(store, symbol)
+                and _kpi_fresh(store, symbol, metric_keys)
+            ):
                 print(f"{symbol}: fresh, skipping (use --force to refetch)")
                 continue
             cik = portfolio.entry(symbol).cik
@@ -135,6 +167,26 @@ def _fetch_fundamentals(args: argparse.Namespace) -> int:
             first = quarters[0]["quarter"] if quarters else "-"
             last = quarters[-1]["quarter"] if quarters else "-"
             print(f"{symbol}: {written} quarter(s) upserted, {first} .. {last}")
+            if metric_keys:
+                kpi_series = kpis_module.build_kpi_series(facts, metric_keys)
+                kpi_rows = [
+                    {
+                        "ticker": symbol,
+                        "metric": key,
+                        "quarter": q,
+                        "filed": f,
+                        "value": v,
+                        "source": "edgar",
+                    }
+                    for key, series in kpi_series.items()
+                    for q, f, v in series
+                ]
+                kpi_written = store.upsert_kpi_quarters(kpi_rows)
+                missing = sorted(k for k in metric_keys if k not in kpi_series)
+                detail = f" ({', '.join(sorted(kpi_series))})" if kpi_series else ""
+                if missing:
+                    detail += f"; no EDGAR data for {', '.join(missing)}"
+                print(f"{symbol}: {kpi_written} KPI quarter(s) upserted{detail}")
     finally:
         store.close()
     return 0
@@ -405,7 +457,8 @@ def main(argv: list[str] | None = None) -> int:
     ingest.set_defaults(func=_ingest_prices)
 
     fetch_fund = sub.add_parser(
-        "fetch-fundamentals", help="fetch quarterly EPS actuals for P/E (issue #28)"
+        "fetch-fundamentals",
+        help="fetch quarterly fundamentals: EPS for P/E and business KPIs (#28, #29)",
     )
     fetch_fund.add_argument(
         "ticker",

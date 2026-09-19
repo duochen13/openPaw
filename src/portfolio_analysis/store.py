@@ -63,6 +63,17 @@ CREATE TABLE IF NOT EXISTS eps_quarter (
     fetched_at TEXT NOT NULL,
     PRIMARY KEY (ticker, quarter)
 );
+
+CREATE TABLE IF NOT EXISTS kpi_quarter (
+    ticker     TEXT NOT NULL,
+    metric     TEXT NOT NULL,
+    quarter    TEXT NOT NULL CHECK (typeof(quarter) = 'text' AND quarter GLOB '{_ISO_DATE}'),
+    filed      TEXT NOT NULL CHECK (typeof(filed) = 'text' AND filed GLOB '{_ISO_DATE}'),
+    value      REAL NOT NULL,
+    source     TEXT NOT NULL,
+    fetched_at TEXT NOT NULL,
+    PRIMARY KEY (ticker, metric, quarter)
+);
 """
 
 _PRICE_COLUMNS = (
@@ -74,6 +85,7 @@ _MOVE_COLUMNS = (
     "beta", "alpha", "abnormal_return", "sigma_60", "z", "computed_at",
 )
 _EPS_COLUMNS = ("ticker", "quarter", "filed", "eps", "source", "fetched_at")
+_KPI_COLUMNS = ("ticker", "metric", "quarter", "filed", "value", "source", "fetched_at")
 
 
 def _migrate(conn: sqlite3.Connection) -> None:
@@ -125,7 +137,7 @@ class Store:
         table: str,
         columns: tuple[str, ...],
         rows: Iterable[Mapping[str, object]],
-        key_columns: tuple[str, str] = ("ticker", "date"),
+        key_columns: tuple[str, ...] = ("ticker", "date"),
     ) -> int:
         placeholders = ", ".join(f":{c}" for c in columns)
         updates = ", ".join(
@@ -171,6 +183,42 @@ class Store:
         """Newest fetch timestamp for ``ticker``'s EPS quarters, if any."""
         cursor = self._conn.execute(
             "SELECT MAX(fetched_at) AS latest FROM eps_quarter WHERE ticker = ?",
+            (ticker.upper(),),
+        )
+        row = cursor.fetchone()
+        return str(row["latest"]) if row and row["latest"] else None
+
+    def upsert_kpi_quarters(
+        self, quarters: Iterable[Mapping[str, object]]
+    ) -> int:
+        """Upsert quarterly business-KPI values (issue #29).
+
+        Keyed by (ticker, metric, quarter): a restated quarter is
+        legitimately rewritten by a later fetch, the same upsert-not-append
+        reasoning as price bars and EPS quarters.
+        """
+        return self._upsert(
+            "kpi_quarter",
+            _KPI_COLUMNS,
+            quarters,
+            key_columns=("ticker", "metric", "quarter"),
+        )
+
+    def kpi_quarters(self, ticker: str, metric: str) -> list[tuple[str, str, float]]:
+        """(quarter_end, filed, value) ascending for ``ticker``/``metric``."""
+        cursor = self._conn.execute(
+            "SELECT quarter, filed, value FROM kpi_quarter "
+            "WHERE ticker = ? AND metric = ? ORDER BY quarter",
+            (ticker.upper(), metric),
+        )
+        return [
+            (row["quarter"], row["filed"], float(row["value"])) for row in cursor
+        ]
+
+    def kpi_fetched_at(self, ticker: str) -> str | None:
+        """Newest fetch timestamp for ``ticker``'s KPI quarters, if any."""
+        cursor = self._conn.execute(
+            "SELECT MAX(fetched_at) AS latest FROM kpi_quarter WHERE ticker = ?",
             (ticker.upper(),),
         )
         row = cursor.fetchone()
