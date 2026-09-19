@@ -14,6 +14,7 @@ from urllib.parse import urlsplit
 from portfolio_analysis.artifacts import MovesArtifact, read_moves
 from portfolio_analysis.bundle import SCHEMA_VERSION, bundle_hash, move_payload
 from portfolio_analysis.config import Portfolio
+from portfolio_analysis.fundamentals import pe_series
 from portfolio_analysis.moves import aligned_returns, annualize_alpha, correlation, ols_regression
 from portfolio_analysis.naming import safe_ticker_component
 from portfolio_analysis.signals import (
@@ -243,6 +244,37 @@ def _regime_points(
     return out
 
 
+def _pe_panel(
+    asset: dict[str, float],
+    quarters: list[tuple[str, str, float]],
+) -> dict[str, object] | None:
+    """Rolling TTM P/E panel data (issue #28).
+
+    Daily adjusted close over the TTM EPS in effect that day. Returns None
+    when no quarter is stored at all - the template hides the section, the
+    same rule as the factor strips. Days before the fourth reported quarter
+    (or with non-positive TTM EPS) carry None: gaps, never invented numbers.
+    """
+    if not quarters:
+        return None
+    series = pe_series(asset, quarters)
+    dates = sorted(series)
+    pe = [series[d]["pe"] for d in dates]
+    ttm = [series[d]["ttm_eps"] for d in dates]
+    defined = [(d, v) for d, v in zip(dates, pe, strict=True) if v is not None]
+    current = defined[-1] if defined else (None, None)
+    current_ttm = ttm[dates.index(current[0])] if current[0] else None
+    return {
+        "dates": dates,
+        "pe": pe,
+        "ttm_eps": ttm,
+        "current_pe": current[1],
+        "current_ttm_eps": current_ttm,
+        "as_of": current[0],
+        "quarters_reported": len(quarters),
+    }
+
+
 def chart_data(
     artifact: MovesArtifact,
     asset: dict[str, float],
@@ -253,6 +285,7 @@ def chart_data(
     aliases: tuple[str, ...] = (),
     industry: dict[str, float] | None = None,
     industry_name: str | None = None,
+    eps_quarters: list[tuple[str, str, float]] | None = None,
 ) -> dict[str, Any]:
     dates = sorted(set(asset) & set(benchmark))
     if artifact.coverage.evaluated:
@@ -356,6 +389,7 @@ def chart_data(
         "factor": _trailing_factor(
             asset, benchmark, artifact.params.beta_window, artifact.benchmark
         ),
+        "pe": _pe_panel(asset, eps_quarters or []),
         "regime": {
             # The window switch (issue #19) offers 60/125/250-session OLS;
             # "250" is the default and matches artifact.params.beta_window.
@@ -418,6 +452,7 @@ def render_chart(
             aliases=portfolio.entry(symbol).aliases,
             industry=industry_series or None,
             industry_name=industry_ticker if industry_series else None,
+            eps_quarters=store.eps_quarters(symbol),
         )
     finally:
         store.close()
