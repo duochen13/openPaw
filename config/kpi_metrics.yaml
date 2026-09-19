@@ -1,0 +1,62 @@
+# Per-stock business KPIs (issue #29): ticker -> ordered list of metric keys.
+#
+# This file is the human-friendly layer: adding a ticker's metrics is a
+# config edit, no template or code changes. The XBRL semantics behind each
+# metric key (tags, units, YTD de-accumulation, margin derivations) live in
+# src/portfolio_analysis/kpis.py METRIC_DEFS, where they are covered by
+# unit tests - a wrong tag in a YAML file would otherwise silently produce
+# wrong numbers.
+#
+# Data reality, measured 2026-09-19 against SEC EDGAR companyfacts
+# (the same source issue #28 chose for P/E):
+# - Segment revenue (Search / YouTube / Cloud, Data Center / Gaming,
+#   Automotive) is NOT available: companyfacts carries no dimensional
+#   (segment) breakdowns, only company totals.
+# - DAU / MAU (META) are not XBRL-tagged by the filer at all.
+# - TSLA deliveries are not in XBRL.
+# - NOW's us-gaap:SubscriptionRevenue tag was abandoned after 2014, and
+#   META / GOOGL do not tag us-gaap:GrossProfit.
+# Only metrics with a live EDGAR source are listed below. When a source
+# appears for one of the omitted metrics, add the metric key to kpis.py
+# first, then list it here.
+
+kpis:
+  META:
+    - revenue
+    - operating_margin
+    - capex
+  NOW:
+    - revenue
+    - gross_margin
+    - operating_margin
+    - rpo
+    - capex
+  GOOGL:
+    - revenue
+    - operating_margin
+    - rpo
+    - capex
+  TSLA:
+    - revenue
+    - gross_margin
+    - operating_margin
+    - rpo
+    - capex
+  NVDA:
+    - revenue
+    - gross_margin
+    - operating_margin
+    - rpo
+    - capex
+  CRM:
+    - revenue
+    - gross_margin
+    - operating_margin
+    - rpo
+    - capex
+  ORCL:
+    - revenue
+    - gross_margin
+    - operating_margin
+    - rpo
+    - capex
