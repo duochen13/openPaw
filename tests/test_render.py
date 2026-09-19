@@ -156,3 +156,46 @@ def test_chart_offline_mode_does_not_collect(monkeypatch, setup):
     monkeypatch.setattr(cli, "_collect_events", lambda _: pytest.fail("unexpected collection"))
     monkeypatch.setattr(cli, "_render", lambda _: 0)
     assert cli.main(["chart", "META", "--skip-events"]) == 0
+
+
+def test_chart_data_defaults_kpis_to_none(tmp_path):
+    # Existing callers are unaffected: no KPIs means the template hides
+    # the business-metrics section, the same rule as the P/E panel.
+    assert data(tmp_path)["kpis"] is None
+
+
+def test_chart_data_carries_kpi_payload(tmp_path):
+    payload = {"metrics": [{"key": "revenue", "label": "Revenue"}]}
+    result = chart_data(
+        artifact(),
+        {"2024-04-24": 100, "2024-04-25": 90},
+        {"2024-04-24": 100, "2024-04-25": 99.5},
+        tmp_path,
+        name="Meta Platforms",
+        kpis=payload,
+    )
+    assert result["kpis"] is payload
+
+
+def test_render_html_embeds_kpi_section_and_payload(tmp_path):
+    payload = {
+        "metrics": [{
+            "key": "revenue", "label": "Revenue", "format": "currency",
+            "yoy_unit": "pct", "quarters": ["2024-03-31"], "values": [100.0],
+            "yoy": [None], "current": 100.0, "current_yoy": None,
+            "as_of": "2024-03-31", "quarters_reported": 1,
+            "blurb": "Quarterly revenue (SEC EDGAR).",
+        }]
+    }
+    result = chart_data(
+        artifact(),
+        {"2024-04-24": 100, "2024-04-25": 90},
+        {"2024-04-24": 100, "2024-04-25": 99.5},
+        tmp_path,
+        name="Meta Platforms",
+        kpis=payload,
+    )
+    html = render_html(result)
+    assert 'id="kpi-box"' in html
+    assert "renderKPIs();" in html
+    assert '"kpis": {"metrics": [{"key": "revenue"' in html
