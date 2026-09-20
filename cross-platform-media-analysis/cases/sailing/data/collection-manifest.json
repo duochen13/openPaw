@@ -1,0 +1,33 @@
+{
+  "collected_utc": "2026-09-17T07:32:52.261838+00:00",
+  "youtube": {
+    "video_id": "zxhsbfEgRiU",
+    "records": 175,
+    "unique_comments": 92,
+    "top": 83,
+    "newest": 92,
+    "overlap": 83,
+    "creator_comments": 0,
+    "reply_threads_collected": false,
+    "displayed_comments": 105,
+    "complete_corpus_claim": false,
+    "sample_limit": "Up to five pages per sort, anonymous web client; comment count may include replies."
+  },
+  "bilibili": {
+    "bvid": "BV1zYSvBHE3U",
+    "records": 124,
+    "top_level": 3,
+    "replies": 121,
+    "uploader_comments": 3,
+    "identified_other_participant_comments": 1,
+    "other_comments": 120,
+    "unique_author_keys": 117,
+    "displayed_comments": 1720,
+    "complete_corpus_claim": false,
+    "access_limit": "Hot endpoint exposed 3 roots. Newest and hot page 2 returned empty. Retrieved all 121 replies reported across those roots; some reply context may be missing or deleted.",
+    "danmaku_collected": false
+  },
+  "classification": "Single analyst manual primary-topic classification; one category per comment; no independent second coder. Language labels describe text, not nationality. Counts are comment frequencies in the retrieved sample, not population estimates.",
+  "selected_examples": 22,
+  "pair_verification": "Same named creator, corresponding Chinese titles/descriptions; duration differs by 5 seconds. Not verified frame-by-frame or subtitle-by-subtitle."
+}

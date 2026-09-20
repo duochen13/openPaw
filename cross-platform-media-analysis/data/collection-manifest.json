@@ -1,0 +1,40 @@
+{
+  "collected_utc": "2026-09-17T06:30:24.739970+00:00",
+  "timezone": "America/Vancouver",
+  "youtube": {
+    "sample_records": 200,
+    "unique_records": 199,
+    "unique_noncreator": 198,
+    "sort_pages": {
+      "top": 5,
+      "newest": 5
+    },
+    "reply_threads_collected": false,
+    "language_filtered": false
+  },
+  "bilibili": {
+    "root_comments": 3,
+    "replies": 13,
+    "metadata_reported_comments": 96,
+    "complete_corpus": false,
+    "root_endpoint": "https://api.bilibili.com/x/v2/reply?type=1&oid=116822389101051&sort=2&pn=1&ps=20",
+    "reply_endpoint_template": "https://api.bilibili.com/x/v2/reply/reply?type=1&oid=116822389101051&root={root}&pn=1&ps=20",
+    "unavailable": [
+      "sort=0 returned empty",
+      "sort=2 pn=2 returned empty",
+      "x/v2/reply/main returned -352"
+    ]
+  },
+  "danmaku": {
+    "returned": 28,
+    "metadata_reported": 108,
+    "endpoint": "https://comment.bilibili.com/39457981582.xml",
+    "complete_corpus": false,
+    "included_in_comment_counts": false
+  },
+  "annotations": {
+    "selected_examples": 23,
+    "exhaustive": false,
+    "method": "Qualitative assistant reading of original text; selected examples manually labeled; no independent second coder."
+  }
+}

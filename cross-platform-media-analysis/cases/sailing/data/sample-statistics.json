@@ -1,0 +1,63 @@
+{
+  "unique_youtube_comments": 92,
+  "languages": {
+    "Chinese (including mixed terms)": 90,
+    "Emoji only": 1,
+    "English": 1
+  },
+  "primary_topics": [
+    {
+      "key": "appreciation",
+      "label": "Appreciation of filming, people or experience",
+      "count": 23,
+      "percent": 25.0
+    },
+    {
+      "key": "aspiration",
+      "label": "Aspiration, envy or life comparison",
+      "count": 10,
+      "percent": 10.9
+    },
+    {
+      "key": "practical",
+      "label": "Practical questions, advice or expectations",
+      "count": 15,
+      "percent": 16.3
+    },
+    {
+      "key": "observation",
+      "label": "Travel, food or boat observations",
+      "count": 9,
+      "percent": 9.8
+    },
+    {
+      "key": "humor",
+      "label": "Fandom, jokes or character talk",
+      "count": 13,
+      "percent": 14.1
+    },
+    {
+      "key": "community",
+      "label": "Community support or minimal response",
+      "count": 10,
+      "percent": 10.9
+    },
+    {
+      "key": "criticism",
+      "label": "Criticism, correction or risk warning",
+      "count": 7,
+      "percent": 7.6
+    },
+    {
+      "key": "flag",
+      "label": "National flag / political identity",
+      "count": 5,
+      "percent": 5.4
+    }
+  ],
+  "top_unique": 83,
+  "newest_unique": 92,
+  "overlap": 83,
+  "newest_only": 9,
+  "method": "Single analyst manual primary-topic classification; one category per comment; no independent second coder. Language labels describe text, not nationality. Counts are comment frequencies in the retrieved sample, not population estimates."
+}
