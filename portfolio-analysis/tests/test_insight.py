@@ -19,6 +19,7 @@ from portfolio_analysis.insight_dashboard import (
     InsightDataError,
     insight_dashboard_data,
     load_cds_spreads,
+    load_revenue,
     load_spv_capex,
     render_insight_dashboard,
 )
@@ -28,12 +29,20 @@ DATA_DIR = DATA_DIR.resolve()
 
 SPV_HEADER = "year,reported_big4_usd_b,spv_est_usd_b,anchor_deals,chart_label,source,status\n"
 CDS_HEADER = "ticker,date,spread_bps,source,proxy_label,note\n"
+REV_HEADER = "year,revenue_big4_usd_b,source,status\n"
+REV_SEED = (
+    "2023,1244.7,SEC EDGAR companyfacts,verified\n"
+    "2024,1414.3,SEC EDGAR companyfacts,verified\n"
+    "2025,1626.2,SEC EDGAR companyfacts,verified\n"
+    "2026,1781.6,SEC EDGAR companyfacts,ttm-partial\n"
+)
 
 
 def _spv_dir(tmp_path: Path, rows: str) -> Path:
     d = tmp_path / "insight"
     d.mkdir()
     (d / "spv_capex.csv").write_text(SPV_HEADER + rows)
+    (d / "revenue_big4.csv").write_text(REV_HEADER + REV_SEED)
     (d / "cds_spreads.csv").write_text(
         CDS_HEADER + 'ORCL,2026-09,,Some press,cds-level:reported,A note\n'
     )
@@ -46,6 +55,7 @@ def _cds_dir(tmp_path: Path, rows: str) -> Path:
     (d / "spv_capex.csv").write_text(
         SPV_HEADER + '2023,141,0,,,company 10-Ks,verified\n'
     )
+    (d / "revenue_big4.csv").write_text(REV_HEADER + REV_SEED)
     (d / "cds_spreads.csv").write_text(CDS_HEADER + rows)
     return d
 
@@ -188,3 +198,73 @@ def test_render_with_real_prints_draws_spread_chart(tmp_path):
     target = render_insight_dashboard(data, tmp_path / "out")
     page = target.read_text()
     assert "5Y CDS spreads (bps)" in page
+
+
+# --------------------------------------------------------------------------
+# Section A, revenue layer: capex intensity (% of revenue)
+
+
+def test_shipped_revenue_csv_loads_edgar_values():
+    rows = load_revenue(DATA_DIR)
+    assert [(r.year, r.revenue, r.status) for r in rows] == [
+        ("2023", 1244.7, "verified"),
+        ("2024", 1414.3, "verified"),
+        ("2025", 1626.2, "verified"),
+        ("2026", 1781.6, "ttm-partial"),
+    ]
+
+
+def test_revenue_nonpositive_raises(tmp_path):
+    d = tmp_path / "insight"
+    d.mkdir()
+    (d / "revenue_big4.csv").write_text(REV_HEADER + "2023,0,EDGAR,verified\n")
+    with pytest.raises(InsightDataError, match="must be positive"):
+        load_revenue(d)
+    (d / "revenue_big4.csv").write_text(REV_HEADER + "2023,-5,EDGAR,verified\n")
+    with pytest.raises(InsightDataError, match="negative amount"):
+        load_revenue(d)
+
+
+def test_revenue_bad_status_raises(tmp_path):
+    d = tmp_path / "insight"
+    d.mkdir()
+    (d / "revenue_big4.csv").write_text(REV_HEADER + "2023,1244.7,EDGAR,whatever\n")
+    with pytest.raises(InsightDataError, match="not in"):
+        load_revenue(d)
+
+
+def test_revenue_missing_column_raises(tmp_path):
+    d = tmp_path / "insight"
+    d.mkdir()
+    (d / "revenue_big4.csv").write_text("year,revenue_big4_usd_b\n2023,1244.7\n")
+    with pytest.raises(InsightDataError, match="missing columns"):
+        load_revenue(d)
+
+
+def test_intensity_math_uses_reported_and_true():
+    data = insight_dashboard_data(DATA_DIR)
+    by_year = {r["year"]: r for r in data["spv"]}
+    r25 = by_year["2025"]
+    assert r25["intensity_reported"] == pytest.approx(100 * 375 / 1626.2)
+    assert r25["intensity_true"] == pytest.approx(100 * 435 / 1626.2)
+    assert r25["intensity_true"] > r25["intensity_reported"]
+
+
+def test_missing_revenue_year_raises(tmp_path):
+    d = _spv_dir(
+        tmp_path,
+        "2023,141,0,,,company 10-Ks,verified\n"
+        "2027,999,0,,,company 10-Ks,verified\n",
+    )
+    with pytest.raises(InsightDataError, match="no revenue row"):
+        insight_dashboard_data(d)
+
+
+def test_render_includes_intensity_panel(tmp_path):
+    data = insight_dashboard_data(DATA_DIR)
+    target = render_insight_dashboard(data, tmp_path / "out")
+    page = target.read_text()
+    assert "Capex intensity: share of revenue" in page
+    assert "Capex as percent of revenue" in page  # svg aria-label
+    assert "ttm-partial" not in page  # status stays in data, chart shows the "*" label
+    assert "2026E*" in page  # guidance capex on TTM revenue, labeled
