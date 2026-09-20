@@ -1,0 +1,53 @@
+# Manual per-quarter business metrics (issue #36).
+#
+# Schema: ticker -> metric key -> list of quarterly datapoints.
+#   - quarter:        quarter-end date, YYYY-MM-DD
+#   - value:          the number, copied from the cited source
+#   - source:         REQUIRED - where the number came from
+#                     (e.g. "NOW Q2 2026 earnings press release")
+#   - date_recorded:  REQUIRED - YYYY-MM-DD, when you entered it
+#
+# This file is the escape hatch for numbers SEC EDGAR never tags: NOW's
+# seat-count proxies (customers with >$1M ACV, current RPO, renewal / NRR)
+# live in earnings materials, not XBRL, so they are entered by hand here.
+# Panels built from this file render in the dashboard's Business metrics
+# section visibly labeled "manual source", with each value's source shown.
+#
+# RULES
+# - Real numbers only, copied from the cited source. Never invent a value.
+# - Metric keys are free-form; the dashboard knows display labels for the
+#   keys in KNOWN_MANUAL_METRICS (see src/portfolio_analysis/manual_kpis.py)
+#   and renders unknown keys with a generic label - they still show.
+# - A malformed file never crashes the dashboard: the render degrades to
+#   EDGAR-only panels. The parser raises ManualKpiError (unit-tested) so
+#   mistakes surface in tests / CLI runs instead of silently rendering.
+#
+# The example entries below are COMMENTED OUT on purpose: this file ships
+# with the schema documented and NO real numbers, so nothing fake renders.
+# Uncomment a block and fill in real figures from the cited source.
+
+alerts:
+  rpo_deceleration:
+    # Flag NOW when RPO YoY growth falls below this (percent) ...
+    yoy_floor_pct: 21.0
+    # ... or decelerates by more than this (percentage points) vs the
+    # prior quarter. Daniel's call 2026-09-20; tune freely.
+    pp_drop: 5.0
+
+manual_kpis:
+  # NOW:
+  #   customers_over_1m_acv:   # customers with >$1M ACV (count)
+  #     - quarter: "2026-06-30"
+  #       value: 500
+  #       source: "NOW Q2 2026 earnings press release"
+  #       date_recorded: "2026-09-20"
+  #   crpo:                    # current RPO, USD billions
+  #     - quarter: "2026-06-30"
+  #       value: 12.3
+  #       source: "NOW Q2 2026 earnings call transcript"
+  #       date_recorded: "2026-09-20"
+  #   renewal_rate:            # percent - only if disclosed
+  #     - quarter: "2026-06-30"
+  #       value: 98.0
+  #       source: "NOW Q2 2026 investor presentation"
+  #       date_recorded: "2026-09-20"
