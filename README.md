@@ -1,4 +1,32 @@
-# portfolio-analysis
+# openPaw
+
+## Research projects
+
+- [Portfolio Analysis](portfolio-analysis/README.md): stock charts, alpha/beta
+  comparisons, valuation panels, and dated event evidence.
+- [Bearish Challenger](bearish-challenger/README.md): research on Michael Burry,
+  Steve Eisman, and Jeremy Grantham, including reported short positions, AI-bubble
+  risk arguments, source links, and market-reaction context.
+
+### Run Bearish Challenger
+
+From the repository root:
+
+```bash
+./bearish-challenger/run build
+open bearish-challenger/index.html
+```
+
+This builds from saved research and locally available portfolio prices. To discover
+new public-feed leads, run `./bearish-challenger/run collect`, then rebuild. Leads
+require review before they become evidence or alerts.
+
+The bearish-confirmation track watches fresh commentary and attributed reactions
+relevant to NVDA, MSFT, GOOGL, META, and NOW. Run
+`./bearish-challenger/run alerts` to preview qualifying reviewed alerts; it prints
+nothing when none qualify. Automatic notification delivery is not configured.
+
+## Portfolio Analysis
 
 The package, configuration, scripts, and tests live in
 [`portfolio-analysis/`](portfolio-analysis/). The Python package is

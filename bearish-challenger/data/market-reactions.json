@@ -1,0 +1,399 @@
+{
+  "status": "read_only_saved_prices",
+  "benchmark": "QQQ",
+  "coverage": {
+    "FICO": {
+      "first": null,
+      "last": null,
+      "source": [],
+      "last_fetch": null
+    },
+    "MU": {
+      "first": null,
+      "last": null,
+      "source": [],
+      "last_fetch": null
+    },
+    "NBIS": {
+      "first": null,
+      "last": null,
+      "source": [],
+      "last_fetch": null
+    },
+    "NVDA": {
+      "first": "2020-09-14",
+      "last": "2026-09-14",
+      "source": [
+        "yahoo"
+      ],
+      "last_fetch": "2026-09-15T06:53:46.633201+00:00"
+    },
+    "ORCL": {
+      "first": "2020-09-14",
+      "last": "2026-09-14",
+      "source": [
+        "yahoo"
+      ],
+      "last_fetch": "2026-09-15T07:29:12.787631+00:00"
+    },
+    "PLTR": {
+      "first": null,
+      "last": null,
+      "source": [],
+      "last_fetch": null
+    },
+    "QQQ": {
+      "first": "2020-09-14",
+      "last": "2026-09-14",
+      "source": [
+        "yahoo"
+      ],
+      "last_fetch": "2026-09-15T07:29:12.900066+00:00"
+    }
+  },
+  "rows": [
+    {
+      "event": "scion-13f",
+      "label": "Scion 13F publication after close",
+      "investor": "burry",
+      "ticker": "NVDA",
+      "sessions": 1,
+      "sources": [
+        "sec-cover"
+      ],
+      "confounders": "Palantir earnings and broader market news; publication is not the trade date.",
+      "status": "available",
+      "baseline": "2025-11-03",
+      "first_session": "2025-11-04",
+      "end": "2025-11-04",
+      "stock_return": -0.039588238199265935,
+      "benchmark_return": -0.02029809145102246,
+      "excess_return": -0.019290146748243475,
+      "timing": "after-close publication; next session start"
+    },
+    {
+      "event": "scion-13f",
+      "label": "Scion 13F publication after close",
+      "investor": "burry",
+      "ticker": "NVDA",
+      "sessions": 5,
+      "sources": [
+        "sec-cover"
+      ],
+      "confounders": "Palantir earnings and broader market news; publication is not the trade date.",
+      "status": "available",
+      "baseline": "2025-11-03",
+      "first_session": "2025-11-04",
+      "end": "2025-11-10",
+      "stock_return": -0.037848067424908094,
+      "benchmark_return": -0.014001517690396925,
+      "excess_return": -0.02384654973451117,
+      "timing": "after-close publication; next session start"
+    },
+    {
+      "event": "scion-13f",
+      "label": "Scion 13F publication after close",
+      "investor": "burry",
+      "ticker": "NVDA",
+      "sessions": 20,
+      "sources": [
+        "sec-cover"
+      ],
+      "confounders": "Palantir earnings and broader market news; publication is not the trade date.",
+      "status": "available",
+      "baseline": "2025-11-03",
+      "first_session": "2025-11-04",
+      "end": "2025-12-02",
+      "stock_return": -0.12287312050170629,
+      "benchmark_return": -0.01594747589479284,
+      "excess_return": -0.10692564460691345,
+      "timing": "after-close publication; next session start"
+    },
+    {
+      "event": "scion-13f",
+      "label": "Scion 13F publication after close",
+      "investor": "burry",
+      "ticker": "PLTR",
+      "sessions": 1,
+      "sources": [
+        "sec-cover"
+      ],
+      "confounders": "Palantir earnings and broader market news; publication is not the trade date.",
+      "status": "unavailable",
+      "reason": "Missing or invalid prices in required session window"
+    },
+    {
+      "event": "scion-13f",
+      "label": "Scion 13F publication after close",
+      "investor": "burry",
+      "ticker": "PLTR",
+      "sessions": 5,
+      "sources": [
+        "sec-cover"
+      ],
+      "confounders": "Palantir earnings and broader market news; publication is not the trade date.",
+      "status": "unavailable",
+      "reason": "Missing or invalid prices in required session window"
+    },
+    {
+      "event": "scion-13f",
+      "label": "Scion 13F publication after close",
+      "investor": "burry",
+      "ticker": "PLTR",
+      "sessions": 20,
+      "sources": [
+        "sec-cover"
+      ],
+      "confounders": "Palantir earnings and broader market news; publication is not the trade date.",
+      "status": "unavailable",
+      "reason": "Missing or invalid prices in required session window"
+    },
+    {
+      "event": "burry-sep9",
+      "label": "September 9 options report (16:02 ET)",
+      "investor": "burry",
+      "ticker": "NVDA",
+      "sessions": 1,
+      "sources": [
+        "burry-options"
+      ],
+      "confounders": "Original post time unverified. Use report publication, not a presumed trade timestamp. Oracle September 10 earnings confound multi-day windows.",
+      "status": "available",
+      "baseline": "2026-09-09",
+      "first_session": "2026-09-10",
+      "end": "2026-09-10",
+      "stock_return": -0.0226479169280428,
+      "benchmark_return": -0.010637845546144553,
+      "excess_return": -0.012010071381898246,
+      "timing": "after-close publication; next session start"
+    },
+    {
+      "event": "burry-sep9",
+      "label": "September 9 options report (16:02 ET)",
+      "investor": "burry",
+      "ticker": "NVDA",
+      "sessions": 5,
+      "sources": [
+        "burry-options"
+      ],
+      "confounders": "Original post time unverified. Use report publication, not a presumed trade timestamp. Oracle September 10 earnings confound multi-day windows.",
+      "status": "unavailable",
+      "reason": "Full benchmark window not yet available"
+    },
+    {
+      "event": "burry-sep9",
+      "label": "September 9 options report (16:02 ET)",
+      "investor": "burry",
+      "ticker": "NVDA",
+      "sessions": 20,
+      "sources": [
+        "burry-options"
+      ],
+      "confounders": "Original post time unverified. Use report publication, not a presumed trade timestamp. Oracle September 10 earnings confound multi-day windows.",
+      "status": "unavailable",
+      "reason": "Full benchmark window not yet available"
+    },
+    {
+      "event": "burry-sep9",
+      "label": "September 9 options report (16:02 ET)",
+      "investor": "burry",
+      "ticker": "PLTR",
+      "sessions": 1,
+      "sources": [
+        "burry-options"
+      ],
+      "confounders": "Original post time unverified. Use report publication, not a presumed trade timestamp. Oracle September 10 earnings confound multi-day windows.",
+      "status": "unavailable",
+      "reason": "Missing or invalid prices in required session window"
+    },
+    {
+      "event": "burry-sep9",
+      "label": "September 9 options report (16:02 ET)",
+      "investor": "burry",
+      "ticker": "PLTR",
+      "sessions": 5,
+      "sources": [
+        "burry-options"
+      ],
+      "confounders": "Original post time unverified. Use report publication, not a presumed trade timestamp. Oracle September 10 earnings confound multi-day windows.",
+      "status": "unavailable",
+      "reason": "Full benchmark window not yet available"
+    },
+    {
+      "event": "burry-sep9",
+      "label": "September 9 options report (16:02 ET)",
+      "investor": "burry",
+      "ticker": "PLTR",
+      "sessions": 20,
+      "sources": [
+        "burry-options"
+      ],
+      "confounders": "Original post time unverified. Use report publication, not a presumed trade timestamp. Oracle September 10 earnings confound multi-day windows.",
+      "status": "unavailable",
+      "reason": "Full benchmark window not yet available"
+    },
+    {
+      "event": "burry-sep9",
+      "label": "September 9 options report (16:02 ET)",
+      "investor": "burry",
+      "ticker": "ORCL",
+      "sessions": 1,
+      "sources": [
+        "burry-options"
+      ],
+      "confounders": "Original post time unverified. Use report publication, not a presumed trade timestamp. Oracle September 10 earnings confound multi-day windows.",
+      "status": "available",
+      "baseline": "2026-09-09",
+      "first_session": "2026-09-10",
+      "end": "2026-09-10",
+      "stock_return": -0.05376478487213321,
+      "benchmark_return": -0.010637845546144553,
+      "excess_return": -0.043126939325988656,
+      "timing": "after-close publication; next session start"
+    },
+    {
+      "event": "burry-sep9",
+      "label": "September 9 options report (16:02 ET)",
+      "investor": "burry",
+      "ticker": "ORCL",
+      "sessions": 5,
+      "sources": [
+        "burry-options"
+      ],
+      "confounders": "Original post time unverified. Use report publication, not a presumed trade timestamp. Oracle September 10 earnings confound multi-day windows.",
+      "status": "unavailable",
+      "reason": "Full benchmark window not yet available"
+    },
+    {
+      "event": "burry-sep9",
+      "label": "September 9 options report (16:02 ET)",
+      "investor": "burry",
+      "ticker": "ORCL",
+      "sessions": 20,
+      "sources": [
+        "burry-options"
+      ],
+      "confounders": "Original post time unverified. Use report publication, not a presumed trade timestamp. Oracle September 10 earnings confound multi-day windows.",
+      "status": "unavailable",
+      "reason": "Full benchmark window not yet available"
+    },
+    {
+      "event": "burry-sep9",
+      "label": "September 9 options report (16:02 ET)",
+      "investor": "burry",
+      "ticker": "NBIS",
+      "sessions": 1,
+      "sources": [
+        "burry-options"
+      ],
+      "confounders": "Original post time unverified. Use report publication, not a presumed trade timestamp. Oracle September 10 earnings confound multi-day windows.",
+      "status": "unavailable",
+      "reason": "Missing or invalid prices in required session window"
+    },
+    {
+      "event": "burry-sep9",
+      "label": "September 9 options report (16:02 ET)",
+      "investor": "burry",
+      "ticker": "NBIS",
+      "sessions": 5,
+      "sources": [
+        "burry-options"
+      ],
+      "confounders": "Original post time unverified. Use report publication, not a presumed trade timestamp. Oracle September 10 earnings confound multi-day windows.",
+      "status": "unavailable",
+      "reason": "Full benchmark window not yet available"
+    },
+    {
+      "event": "burry-sep9",
+      "label": "September 9 options report (16:02 ET)",
+      "investor": "burry",
+      "ticker": "NBIS",
+      "sessions": 20,
+      "sources": [
+        "burry-options"
+      ],
+      "confounders": "Original post time unverified. Use report publication, not a presumed trade timestamp. Oracle September 10 earnings confound multi-day windows.",
+      "status": "unavailable",
+      "reason": "Full benchmark window not yet available"
+    },
+    {
+      "event": "burry-sep9",
+      "label": "September 9 options report (16:02 ET)",
+      "investor": "burry",
+      "ticker": "MU",
+      "sessions": 1,
+      "sources": [
+        "burry-options"
+      ],
+      "confounders": "Original post time unverified. Use report publication, not a presumed trade timestamp. Oracle September 10 earnings confound multi-day windows.",
+      "status": "unavailable",
+      "reason": "Missing or invalid prices in required session window"
+    },
+    {
+      "event": "burry-sep9",
+      "label": "September 9 options report (16:02 ET)",
+      "investor": "burry",
+      "ticker": "MU",
+      "sessions": 5,
+      "sources": [
+        "burry-options"
+      ],
+      "confounders": "Original post time unverified. Use report publication, not a presumed trade timestamp. Oracle September 10 earnings confound multi-day windows.",
+      "status": "unavailable",
+      "reason": "Full benchmark window not yet available"
+    },
+    {
+      "event": "burry-sep9",
+      "label": "September 9 options report (16:02 ET)",
+      "investor": "burry",
+      "ticker": "MU",
+      "sessions": 20,
+      "sources": [
+        "burry-options"
+      ],
+      "confounders": "Original post time unverified. Use report publication, not a presumed trade timestamp. Oracle September 10 earnings confound multi-day windows.",
+      "status": "unavailable",
+      "reason": "Full benchmark window not yet available"
+    },
+    {
+      "event": "eisman-fico",
+      "label": "Eisman September 18 FICO disclosure",
+      "investor": "eisman",
+      "ticker": "FICO",
+      "sessions": 1,
+      "sources": [
+        "eisman-latest"
+      ],
+      "confounders": "Intraday publication time unknown; no causal attribution.",
+      "status": "unavailable",
+      "reason": "No benchmark sessions after publication"
+    },
+    {
+      "event": "eisman-fico",
+      "label": "Eisman September 18 FICO disclosure",
+      "investor": "eisman",
+      "ticker": "FICO",
+      "sessions": 5,
+      "sources": [
+        "eisman-latest"
+      ],
+      "confounders": "Intraday publication time unknown; no causal attribution.",
+      "status": "unavailable",
+      "reason": "No benchmark sessions after publication"
+    },
+    {
+      "event": "eisman-fico",
+      "label": "Eisman September 18 FICO disclosure",
+      "investor": "eisman",
+      "ticker": "FICO",
+      "sessions": 20,
+      "sources": [
+        "eisman-latest"
+      ],
+      "confounders": "Intraday publication time unknown; no causal attribution.",
+      "status": "unavailable",
+      "reason": "No benchmark sessions after publication"
+    }
+  ],
+  "method": "Adjusted-close cumulative return minus QQQ cumulative return over the same 1/5/20 trading sessions. This is simple benchmark excess, not beta-adjusted abnormal return, causation or investor P&L."
+}

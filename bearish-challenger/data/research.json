@@ -1,0 +1,764 @@
+{
+  "schema_version": 1,
+  "research_as_of": "2026-09-19",
+  "title": "Bearish Challenger",
+  "scope": "Bearish-confirmation research on AI-bubble, AI-capex and economic-collapse risks. The archive supports the thesis; alerts require fresh substantive statements or explicitly attributed market reactions.",
+  "sources": [
+    {
+      "id": "sec-cover",
+      "title": "Scion 13F: quarter ended September 30, 2025",
+      "url": "https://www.sec.gov/Archives/edgar/data/1649339/000164933925000007/xslForm13F_X02/primary_doc.xml",
+      "kind": "filing",
+      "published": "2025-11-03",
+      "access": "read",
+      "checked": "2026-09-19"
+    },
+    {
+      "id": "sec-table",
+      "title": "Scion 13F information table",
+      "url": "https://www.sec.gov/Archives/edgar/data/1649339/000164933925000007/xslForm13F_X02/infotable.xml",
+      "kind": "filing",
+      "published": "2025-11-03",
+      "access": "read",
+      "checked": "2026-09-19"
+    },
+    {
+      "id": "sec-rules",
+      "title": "SEC Form 13F FAQ: shorts and options",
+      "url": "https://www.sec.gov/rules-regulations/staff-guidance/division-investment-management-frequently-asked-questions/frequently-asked-questions-about-form-13f",
+      "kind": "methodology",
+      "published": "2026-03-06",
+      "access": "read",
+      "checked": "2026-09-19"
+    },
+    {
+      "id": "burry-primary",
+      "title": "Burry: Trading Post September 9",
+      "url": "https://michaeljburry.substack.com/p/trading-post-september-9-2026",
+      "kind": "investor",
+      "published": "2026-09-09",
+      "access": "public preview only; trade details paywalled",
+      "checked": "2026-09-19"
+    },
+    {
+      "id": "burry-newer",
+      "title": "Burry trading-post index includes September 11 update",
+      "url": "https://michaeljburry.substack.com/t/trading-posts",
+      "kind": "investor",
+      "published": null,
+      "access": "index only; newer trading details not reviewed",
+      "checked": "2026-09-19"
+    },
+    {
+      "id": "burry-options",
+      "title": "Benzinga: December puts closed; 2027 PLTR/QQQ puts retained",
+      "url": "https://www.benzinga.com/markets/options/26/09/61700205/quick-spark-michael-burry-sells-all-nvidia-palantir-december-2026-dated-puts",
+      "kind": "reporting",
+      "published": "2026-09-09",
+      "access": "read",
+      "checked": "2026-09-19"
+    },
+    {
+      "id": "burry-x",
+      "title": "Burry Stock Tracker post cited by Benzinga (not Burry)",
+      "url": "https://x.com/burrytracker/status/2097700797748330877",
+      "kind": "third_party_x",
+      "published": "2026-09-09",
+      "access": "direct request returned 403; contents reported by Benzinga",
+      "checked": "2026-09-19"
+    },
+    {
+      "id": "burry-account",
+      "title": "Burry X profile",
+      "url": "https://x.com/michaeljburry",
+      "kind": "investor_x",
+      "published": null,
+      "access": "direct page unavailable; no original post verified",
+      "checked": "2026-09-19"
+    },
+    {
+      "id": "burry-list",
+      "title": "Reddit: reported September 9 short list",
+      "url": "https://www.reddit.com/r/WallstreetWhales/comments/1wbpomo/report_michael_burry_has_disclosed_updated/",
+      "kind": "reddit",
+      "published": "2026-09-09",
+      "access": "read",
+      "checked": "2026-09-19"
+    },
+    {
+      "id": "burry-adds",
+      "title": "Benzinga: additions to ORCL, MU and NBIS shorts",
+      "url": "https://www.benzinga.com/markets/prediction-markets/26/08/61210492/michael-burry-ai-shorts-oracle-micron-nebius",
+      "kind": "reporting",
+      "published": "2026-08-13",
+      "access": "search-index excerpt",
+      "checked": "2026-09-19"
+    },
+    {
+      "id": "burry-scorecard",
+      "title": "Reddit: Burry scorecard and timing debate",
+      "url": "https://www.reddit.com/r/Burryology/comments/1w8gxgg/honest_scorecard_for_burry_202526_biggest_long/",
+      "kind": "reddit",
+      "published": "2026-09-06",
+      "access": "read",
+      "checked": "2026-09-19"
+    },
+    {
+      "id": "eisman-latest",
+      "title": "Eisman September 18 weekly wrap: FICO position",
+      "url": "https://realeismanplaybook.substack.com/p/why-dario-amodei-and-sam-altman-are",
+      "kind": "investor",
+      "published": "2026-09-18",
+      "access": "public preview includes FICO disclosure; later sections paywalled",
+      "checked": "2026-09-19"
+    },
+    {
+      "id": "eisman-ai",
+      "title": "Eisman: AI Achilles heel episode",
+      "url": "https://realeismanplaybook.substack.com/p/the-ai-achilles-heel-why-everything",
+      "kind": "investor",
+      "published": "2026-08-14",
+      "access": "public preview; full episode not transcribed",
+      "checked": "2026-09-19"
+    },
+    {
+      "id": "eisman-report",
+      "title": "Benzinga: Eisman discusses AI customer concentration and remains long",
+      "url": "https://www.benzinga.com/markets/prediction-markets/26/08/61246697/steve-eisman-ai-achilles-heel",
+      "kind": "reporting",
+      "published": "2026-08-17",
+      "access": "read",
+      "checked": "2026-09-19"
+    },
+    {
+      "id": "eisman-guests",
+      "title": "Eisman episode list: guest discusses FICO, DoorDash, AeroVironment",
+      "url": "https://realeismanplaybook.substack.com/",
+      "kind": "investor",
+      "published": null,
+      "access": "episode metadata; guest positions not attributed to host",
+      "checked": "2026-09-19"
+    },
+    {
+      "id": "eisman-reddit",
+      "title": "Reddit discussion of Eisman AI concentration argument",
+      "url": "https://www.reddit.com/r/BetterOffline/comments/1vnlbre/big_short_investor_steve_eisman_sees_an_achilles/",
+      "kind": "reddit",
+      "published": "2026-08-13",
+      "access": "read",
+      "checked": "2026-09-19"
+    },
+    {
+      "id": "eisman-reddit-new",
+      "title": "Reddit: September 18 Eisman clip and regulatory-moat claim",
+      "url": "https://www.reddit.com/r/XGramatikInsights/comments/1wjlqz8/steve_eisman_these_companies_are_very_nervous/",
+      "kind": "reddit",
+      "published": "2026-09-18",
+      "access": "read",
+      "checked": "2026-09-19"
+    },
+    {
+      "id": "grantham",
+      "title": "GMO: Valuing AI, Extreme Bubble, New Golden Era, or Both",
+      "url": "https://www.gmo.com/asia/research-library/valuing-ai-extreme-bubble-new-golden-era-or-both_viewpoints/",
+      "kind": "investor",
+      "published": "2026-01",
+      "access": "Grantham essay and separately attributed Chancellor section",
+      "checked": "2026-09-19"
+    },
+    {
+      "id": "grantham-reddit",
+      "title": "Reddit: Grantham warning and portfolio responses",
+      "url": "https://www.reddit.com/r/investingUK/comments/1uj2p7l/are_you_changing_your_investing_strategy_because/",
+      "kind": "reddit",
+      "published": "2026-06-29",
+      "access": "read",
+      "checked": "2026-09-19"
+    },
+    {
+      "id": "reaction-news",
+      "title": "Cinco Días: September 14 AI-related market moves",
+      "url": "https://cincodias.elpais.com/mercados-financieros/2026-09-14/las-tecnologicas-asiaticas-caen-con-fuerza-en-bolsa-ante-el-temor-a-un-frenazo-en-las-inversiones-en-ia.html",
+      "kind": "reporting",
+      "published": "2026-09-14",
+      "access": "read",
+      "checked": "2026-09-19"
+    },
+    {
+      "id": "nvda-facts",
+      "title": "NVIDIA Q2 FY2027 Form 10-Q",
+      "url": "https://investor.nvidia.com/files/doc_financials/2027/NVDA-2027-Q2-10Q-Final-including-exhibits.pdf",
+      "kind": "company_filing",
+      "published": "2026-08-27",
+      "access": "search-index financial table",
+      "checked": "2026-09-19"
+    },
+    {
+      "id": "oracle-facts",
+      "title": "Oracle Q1 FY2027 earnings results",
+      "url": "https://investor.oracle.com/investor-news/news-details/2026/Oracle-Announces-Q1-Results-Driven-by-Triple-Digit-Growth-in-Cloud-Infrastructure-Revenues/default.aspx",
+      "kind": "company_release",
+      "published": "2026-09-10",
+      "access": "search-index financial tables",
+      "checked": "2026-09-19"
+    }
+  ],
+  "investors": [
+    {
+      "id": "burry",
+      "name": "Michael Burry",
+      "stance": "AI bear; current positions incompletely observable",
+      "summary": "Historical NVDA/PLTR puts are in an SEC filing. September exposures are relayed by third parties; the public primary trade-post preview does not reveal the holdings. A September 11 update is newer than the position list.",
+      "sources": [
+        "sec-table",
+        "burry-options",
+        "burry-primary",
+        "burry-newer"
+      ]
+    },
+    {
+      "id": "eisman",
+      "name": "Steve Eisman",
+      "stance": "AI risk critic; distinguish thesis from trades",
+      "summary": "September 18: directly disclosed FICO short. August AI commentary describes customer concentration and price-war risk while reporting that he remained long. No primary AI-stock short disclosure verified here. Guest discussions of DASH/AVAV do not establish his positions.",
+      "sources": [
+        "eisman-latest",
+        "eisman-report",
+        "eisman-guests"
+      ]
+    },
+    {
+      "id": "grantham",
+      "name": "Jeremy Grantham",
+      "stance": "Valuation and overinvestment warning",
+      "summary": "January GMO essay argues that technological progress and a financial bubble can coexist. No specific current personal short verified in this review. GMO portfolios and other authors are not automatically Grantham personal trades.",
+      "sources": [
+        "grantham"
+      ]
+    }
+  ],
+  "positions": [
+    {
+      "id": "eisman-fico",
+      "investor": "eisman",
+      "ticker": "FICO",
+      "instrument": "short stock",
+      "status": "self_disclosed",
+      "as_of": "2026-09-18",
+      "sources": [
+        "eisman-latest"
+      ],
+      "note": "Eisman explicitly says he remains short. Size and entry price unknown. Competition/regulatory thesis, not an AI-bubble position.",
+      "ai_related": false
+    },
+    {
+      "id": "scion-NVDA",
+      "investor": "burry",
+      "ticker": "NVDA",
+      "instrument": "long put",
+      "status": "historical_filing",
+      "as_of": "2025-09-30",
+      "sources": [
+        "sec-cover",
+        "sec-table"
+      ],
+      "note": "Scion holdings at quarter-end, disclosed November 3, 2025. Not evidence of a current position. Underlying-share value is not option premium, capital at risk or net exposure.",
+      "ai_related": true
+    },
+    {
+      "id": "scion-PLTR",
+      "investor": "burry",
+      "ticker": "PLTR",
+      "instrument": "long put",
+      "status": "historical_filing",
+      "as_of": "2025-09-30",
+      "sources": [
+        "sec-cover",
+        "sec-table"
+      ],
+      "note": "Scion holdings at quarter-end, disclosed November 3, 2025. Not evidence of a current position. Underlying-share value is not option premium, capital at risk or net exposure.",
+      "ai_related": true
+    },
+    {
+      "id": "burry-2027-PLTR",
+      "investor": "burry",
+      "ticker": "PLTR",
+      "instrument": "2027 long put",
+      "status": "reported_unverified",
+      "as_of": "2026-09-09",
+      "sources": [
+        "burry-options",
+        "burry-x",
+        "burry-primary",
+        "burry-newer"
+      ],
+      "note": "Reported retained. Source chain leads to third-party tracker; primary trade details inaccessible. A newer September 11 trading post exists. Current size/strike/expiry month unknown.",
+      "ai_related": true
+    },
+    {
+      "id": "burry-2027-QQQ",
+      "investor": "burry",
+      "ticker": "QQQ",
+      "instrument": "2027 long put",
+      "status": "reported_unverified",
+      "as_of": "2026-09-09",
+      "sources": [
+        "burry-options",
+        "burry-x",
+        "burry-primary",
+        "burry-newer"
+      ],
+      "note": "Reported retained. Source chain leads to third-party tracker; primary trade details inaccessible. A newer September 11 trading post exists. Current size/strike/expiry month unknown.",
+      "ai_related": true
+    },
+    {
+      "id": "burry-list-ORCL",
+      "investor": "burry",
+      "ticker": "ORCL",
+      "instrument": "bearish exposure; instrument unverified",
+      "status": "reported_unverified",
+      "as_of": "2026-09-09",
+      "sources": [
+        "burry-adds",
+        "burry-list",
+        "burry-primary",
+        "burry-newer"
+      ],
+      "note": "Appears in third-party September 9 short list. Exact instrument and current status unverified; do not infer from the 2025 filing.",
+      "ai_related": true
+    },
+    {
+      "id": "burry-list-NBIS",
+      "investor": "burry",
+      "ticker": "NBIS",
+      "instrument": "bearish exposure; instrument unverified",
+      "status": "reported_unverified",
+      "as_of": "2026-09-09",
+      "sources": [
+        "burry-adds",
+        "burry-list",
+        "burry-primary",
+        "burry-newer"
+      ],
+      "note": "Appears in third-party September 9 short list. Exact instrument and current status unverified; do not infer from the 2025 filing.",
+      "ai_related": true
+    },
+    {
+      "id": "burry-list-MU",
+      "investor": "burry",
+      "ticker": "MU",
+      "instrument": "bearish exposure; instrument unverified",
+      "status": "reported_unverified",
+      "as_of": "2026-09-09",
+      "sources": [
+        "burry-adds",
+        "burry-list",
+        "burry-primary",
+        "burry-newer"
+      ],
+      "note": "Appears in third-party September 9 short list. Exact instrument and current status unverified; do not infer from the 2025 filing.",
+      "ai_related": true
+    },
+    {
+      "id": "burry-list-CAT",
+      "investor": "burry",
+      "ticker": "CAT",
+      "instrument": "bearish exposure; instrument unverified",
+      "status": "reported_unverified",
+      "as_of": "2026-09-09",
+      "sources": [
+        "burry-list",
+        "burry-primary",
+        "burry-newer"
+      ],
+      "note": "Appears in third-party September 9 short list. Exact instrument and current status unverified; do not infer from the 2025 filing.",
+      "ai_related": true
+    },
+    {
+      "id": "burry-list-CRWV",
+      "investor": "burry",
+      "ticker": "CRWV",
+      "instrument": "bearish exposure; instrument unverified",
+      "status": "reported_unverified",
+      "as_of": "2026-09-09",
+      "sources": [
+        "burry-list",
+        "burry-primary",
+        "burry-newer"
+      ],
+      "note": "Appears in third-party September 9 short list. Exact instrument and current status unverified; do not infer from the 2025 filing.",
+      "ai_related": true
+    },
+    {
+      "id": "burry-list-SOXX",
+      "investor": "burry",
+      "ticker": "SOXX",
+      "instrument": "bearish exposure; instrument unverified",
+      "status": "reported_unverified",
+      "as_of": "2026-09-09",
+      "sources": [
+        "burry-list",
+        "burry-primary",
+        "burry-newer"
+      ],
+      "note": "Appears in third-party September 9 short list. Not independently verified against the paid trading post; no reliable current size or net exposure. SOXX is an ETF.",
+      "ai_related": true
+    },
+    {
+      "id": "burry-list-NVDA",
+      "investor": "burry",
+      "ticker": "NVDA",
+      "instrument": "bearish exposure; instrument unverified",
+      "status": "reported_unverified",
+      "as_of": "2026-09-09",
+      "sources": [
+        "burry-list",
+        "burry-primary",
+        "burry-newer"
+      ],
+      "note": "Appears in third-party September 9 short list. Exact instrument and current status unverified; do not infer from the 2025 filing.",
+      "ai_related": true
+    },
+    {
+      "id": "burry-list-PLTR",
+      "investor": "burry",
+      "ticker": "PLTR",
+      "instrument": "bearish exposure; instrument unverified",
+      "status": "reported_unverified",
+      "as_of": "2026-09-09",
+      "sources": [
+        "burry-list",
+        "burry-primary",
+        "burry-newer"
+      ],
+      "note": "Appears in third-party September 9 short list. Exact instrument and current status unverified; do not infer from the 2025 filing.",
+      "ai_related": true
+    },
+    {
+      "id": "burry-closed-NVDA",
+      "investor": "burry",
+      "ticker": "NVDA",
+      "instrument": "December 2026 long put",
+      "status": "reported_closed",
+      "as_of": "2026-09-09",
+      "sources": [
+        "burry-options",
+        "burry-x"
+      ],
+      "note": "This reported closure applies to this expiry only. It does not establish that all bearish exposure in the ticker was closed.",
+      "ai_related": true
+    },
+    {
+      "id": "burry-closed-PLTR",
+      "investor": "burry",
+      "ticker": "PLTR",
+      "instrument": "December 2026 long put",
+      "status": "reported_closed",
+      "as_of": "2026-09-09",
+      "sources": [
+        "burry-options",
+        "burry-x"
+      ],
+      "note": "This reported closure applies to this expiry only. It does not establish that all bearish exposure in the ticker was closed.",
+      "ai_related": true
+    }
+  ],
+  "risks": [
+    {
+      "id": "funding",
+      "title": "Funding dependency → delayed buildout → supplier pressure",
+      "investors": [
+        "burry",
+        "eisman"
+      ],
+      "tickers": [
+        "ORCL",
+        "NBIS",
+        "CRWV",
+        "NVDA",
+        "MU",
+        "SOXX",
+        "CAT"
+      ],
+      "fact": "Oracle reports Q1 FY2027 revenue of $19.345bn (+30% YoY) and interest expense of $1.428bn (+55%). Growth and funding cost are both observable.",
+      "argument": "The bearish scenario is that AI customers cannot finance commitments at acceptable returns.",
+      "chain": [
+        "Customer funding becomes harder",
+        "Cloud commitments are delayed or renegotiated",
+        "Utilization and cash conversion fall",
+        "Debt service and fixed commitments absorb cash",
+        "Infrastructure orders and supplier earnings weaken"
+      ],
+      "watch": [
+        "Cash collected versus booked revenue and remaining performance obligations",
+        "Debt maturities, funding rates and lease commitments",
+        "Customer concentration and contracted versus utilized capacity"
+      ],
+      "sources": [
+        "oracle-facts",
+        "eisman-report",
+        "burry-adds"
+      ],
+      "attribution": "Analyst synthesis of the cited arguments; not a verbatim investor forecast."
+    },
+    {
+      "id": "moat",
+      "title": "Model competition → lower prices → weaker infrastructure economics",
+      "investors": [
+        "eisman"
+      ],
+      "tickers": [
+        "ORCL",
+        "MSFT",
+        "AMZN",
+        "GOOGL"
+      ],
+      "fact": "Eisman discussed OpenAI/Anthropic concentration and model substitutability; the numerical concentration estimates are his cited estimates, not verified company disclosures here.",
+      "argument": "If switching costs are low, pricing power may erode faster than compute cost.",
+      "chain": [
+        "Models become easier to substitute",
+        "Price competition reduces revenue per workload",
+        "Volume growth fails to offset margin loss",
+        "Labs seek more funding or slow compute commitments",
+        "Cloud suppliers face weaker returns"
+      ],
+      "watch": [
+        "Realized revenue per workload versus inference cost",
+        "Retention and paid enterprise usage",
+        "Model-provider funding and supplier receivables"
+      ],
+      "sources": [
+        "eisman-report",
+        "eisman-ai"
+      ],
+      "attribution": "Conditional risk chain; no current AI short attributed to Eisman."
+    },
+    {
+      "id": "valuation",
+      "title": "Useful technology → overinvestment → disappointing investor returns",
+      "investors": [
+        "grantham"
+      ],
+      "tickers": [
+        "QQQ",
+        "NVDA",
+        "PLTR"
+      ],
+      "fact": "Grantham’s January essay calls AI a valuation bubble while allowing major technological benefits.",
+      "argument": "Expected growth and eventual shareholder returns can diverge when too much capital competes for the same profits.",
+      "chain": [
+        "High expectations attract excess capital",
+        "Capacity and competition grow",
+        "Returns on incremental investment disappoint",
+        "Earnings expectations and valuation multiples fall together"
+      ],
+      "watch": [
+        "Return on incremental invested capital",
+        "Margins as new capacity arrives",
+        "Valuation relative to sustainable cash flows"
+      ],
+      "sources": [
+        "grantham"
+      ],
+      "attribution": "Scenario synthesis; these tickers are research exposures, not Grantham disclosed shorts."
+    },
+    {
+      "id": "fico",
+      "title": "FICO pricing → customer pushback → competing score adoption",
+      "investors": [
+        "eisman"
+      ],
+      "tickers": [
+        "FICO"
+      ],
+      "fact": "Eisman’s September 18 public preview explicitly states that he remains short FICO.",
+      "argument": "He argues that pricing increases encourage regulatory pressure and adoption of competing credit scores. The competitive outcome remains a thesis.",
+      "chain": [
+        "Customers resist pricing",
+        "Regulators encourage alternatives",
+        "Lenders adopt competing scores",
+        "FICO pricing power and expected profits weaken"
+      ],
+      "watch": [
+        "Lender adoption and actual scoring volumes",
+        "FICO pricing disclosures and score revenue",
+        "Implementation dates for competing-score rules"
+      ],
+      "sources": [
+        "eisman-latest"
+      ],
+      "attribution": "Non-AI short. Position is self-disclosed, not independently audited."
+    }
+  ],
+  "discussions": [
+    {
+      "investor": "burry",
+      "date": "2026-09-09",
+      "platform": "X / reporting",
+      "title": "Tracker reports options changes",
+      "summary": "Benzinga links @burrytracker, not Burry. Direct X access returned 403. Treat the relay and its reposts as one source chain.",
+      "sources": [
+        "burry-options",
+        "burry-x"
+      ],
+      "quality": "third-party relay; direct post inaccessible"
+    },
+    {
+      "investor": "burry",
+      "date": "2026-09-09",
+      "platform": "Reddit",
+      "title": "Position list versus the meaning of “closed”",
+      "summary": "Thread lists eight bearish tickers and December-put sales. Replies dispute his track record. Neither vote totals nor repeated lists verify holdings or profitability.",
+      "sources": [
+        "burry-list"
+      ],
+      "quality": "community claims"
+    },
+    {
+      "investor": "burry",
+      "date": "2026-09-06",
+      "platform": "Reddit",
+      "title": "Was the thesis wrong, or was the timing wrong?",
+      "summary": "Discussion contrasts a bearish AI thesis with rallies in target stocks. Investor P&L cannot be reconstructed from spot returns without entry dates, instruments, hedges and sizing.",
+      "sources": [
+        "burry-scorecard"
+      ],
+      "quality": "community interpretation; performance claims unverified"
+    },
+    {
+      "investor": "eisman",
+      "date": "2026-08-13",
+      "platform": "Reddit",
+      "title": "Concentration and circular financing debate",
+      "summary": "Participants discuss whether AI supplier demand depends on continued lab financing. Claims about payment loops need company disclosures before promotion to facts.",
+      "sources": [
+        "eisman-reddit"
+      ],
+      "quality": "community interpretation"
+    },
+    {
+      "investor": "eisman",
+      "date": "2026-09-18",
+      "platform": "Reddit",
+      "title": "Regulatory moat interpretation",
+      "summary": "A shared clip attributes a regulatory-moat argument to Eisman. The interpretation does not prove corporate motives or identify a short position.",
+      "sources": [
+        "eisman-reddit-new",
+        "eisman-latest"
+      ],
+      "quality": "shared clip; incomplete context"
+    },
+    {
+      "investor": "grantham",
+      "date": "2026-06-29",
+      "platform": "Reddit",
+      "title": "Bubble warning versus continued index investing",
+      "summary": "Replies disagree about historical comparisons, modern cash flows and whether to change allocations. This is a small selected discussion, not a representative sentiment survey.",
+      "sources": [
+        "grantham-reddit"
+      ],
+      "quality": "community opinion"
+    }
+  ],
+  "coverage": [
+    {
+      "channel": "X",
+      "status": "partial / blocked",
+      "detail": "Attempted Burry profile and linked tracker post. No original investor X post authenticated. X trend summaries and lookalike accounts are excluded as evidence."
+    },
+    {
+      "channel": "Reddit",
+      "status": "selected threads reviewed",
+      "detail": "Public indexed threads for all three investors; not exhaustive, representative or independent confirmation of positions."
+    },
+    {
+      "channel": "Primary investor publications",
+      "status": "partial",
+      "detail": "Eisman FICO disclosure and Grantham essay accessible. Burry trade details paywalled; newer September 11 trading update not reviewed."
+    },
+    {
+      "channel": "Market prices",
+      "status": "local saved data",
+      "detail": "Read-only access to portfolio-analysis prices; coverage dates shown per ticker. Missing tickers/windows stay unavailable."
+    },
+    {
+      "channel": "Delivery",
+      "status": "not activated",
+      "detail": "Short English alerts only when a reviewed fresh signal qualifies. Channel and schedule awaiting the existing-track details; no scheduled pings are running."
+    }
+  ],
+  "events": [
+    {
+      "id": "scion-13f",
+      "label": "Scion 13F publication after close",
+      "investor": "burry",
+      "date": "2025-11-03",
+      "timing": "after_close",
+      "tickers": [
+        "NVDA",
+        "PLTR"
+      ],
+      "sources": [
+        "sec-cover"
+      ],
+      "confounders": "Palantir earnings and broader market news; publication is not the trade date."
+    },
+    {
+      "id": "burry-sep9",
+      "label": "September 9 options report (16:02 ET)",
+      "investor": "burry",
+      "date": "2026-09-09",
+      "timing": "after_close",
+      "tickers": [
+        "NVDA",
+        "PLTR",
+        "ORCL",
+        "NBIS",
+        "MU"
+      ],
+      "sources": [
+        "burry-options"
+      ],
+      "confounders": "Original post time unverified. Use report publication, not a presumed trade timestamp. Oracle September 10 earnings confound multi-day windows."
+    },
+    {
+      "id": "eisman-fico",
+      "label": "Eisman September 18 FICO disclosure",
+      "investor": "eisman",
+      "date": "2026-09-18",
+      "timing": "unknown",
+      "tickers": [
+        "FICO"
+      ],
+      "sources": [
+        "eisman-latest"
+      ],
+      "confounders": "Intraday publication time unknown; no causal attribution."
+    }
+  ],
+  "reported_reactions": [
+    {
+      "date": "2026-09-14",
+      "summary": "Cinco Días reported NVDA −3.36%, ORCL −3.64% and MU −5.25% amid AI slowdown concerns. These are media-reported moves, not independently recomputed here; this does not establish an investor post caused the moves.",
+      "sources": [
+        "reaction-news"
+      ]
+    }
+  ],
+  "rules": [
+    "An investor statement verifies a disclosure, not the broker account or present holdings.",
+    "Short stock, long puts, ETF hedges and broad bearish opinions are distinct.",
+    "13F is a historical long-holdings/options snapshot; short equity is excluded. Option underlying values are not premium spent or net exposure.",
+    "Syndicated stories, tracker posts and Reddit reposts can share one source; do not count them as independent confirmations.",
+    "Returns after publication describe timing, not causation or investor P&L. Missing data never becomes a zero return.",
+    "Directional selection: bearish-confirmation only. Exclude neutral coverage and bullish rebuttals from alerts; factual verification still applies."
+  ],
+  "direction": "bearish-confirmation",
+  "holdings": [
+    "NVDA",
+    "MSFT",
+    "GOOGL",
+    "META",
+    "NOW"
+  ]
+}

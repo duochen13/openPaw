@@ -1,0 +1,4 @@
+__pycache__/
+data/inbox.json
+data/collection-status.json
+data/delivered.json

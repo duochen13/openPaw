@@ -1,0 +1,20 @@
+{
+  "id": "bearish-confirmation",
+  "direction": "bearish_confirmation",
+  "language": "English",
+  "investors": ["burry", "eisman", "grantham"],
+  "holdings": ["NVDA", "MSFT", "GOOGL", "META", "NOW"],
+  "topics": ["ai_bubble", "ai_capex", "economic_collapse"],
+  "signals": ["new_commentary", "attributed_market_reaction"],
+  "max_age_hours": 72,
+  "freshness_basis": "original statement or reaction timestamp, never repost timestamp",
+  "require_review": true,
+  "exclude": ["recycled_quotes", "bullish_rebuttals", "neutral_roundups", "unrelated_short_positions", "unverified_social_claims", "coincident_moves_without_attribution"],
+  "delivery": {
+    "mode": "pending_existing_track_details",
+    "channel": null,
+    "schedule": null,
+    "silent_when_empty": true,
+    "format": "What happened. Source link. One line: why it matters for the named AI-exposed holdings."
+  }
+}
