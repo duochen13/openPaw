@@ -52,11 +52,11 @@ The foundation is committed. Read these before starting:
 
 ## The corpus situation
 
-`market-research/data/raw/` no longer exists and was never committed, so the 3,104-comment
-ServiceNow corpus behind `market-research/reports/servicenow_stock_report_2026-09-07.md` is
+`community-discussion-analysis/data/raw/` no longer exists and was never committed, so the 3,104-comment
+ServiceNow corpus behind `community-discussion-analysis/reports/servicenow_stock_report_2026-09-07.md` is
 gone. Task 11 collects a fresh one.
 
-`market-research/scripts/collect_hn.py` uses the free HN Algolia API and works.
+`community-discussion-analysis/scripts/collect_hn.py` uses the free HN Algolia API and works.
 `collect_reddit_new.py` drives the gstack `browse` headless browser and is fragile — Reddit has
 already broken it once by gating `old.reddit.com` behind login. **Treat Reddit as optional in
 this plan.** HN alone is enough to build and test against, and the source-mix sensitivity
@@ -453,7 +453,7 @@ Create `stock-trading-bot/src/stock_trading_bot/ingest/social.py`:
 ```python
 """Normalize collector output into point-in-time store rows (spec §6.1).
 
-The HN and Reddit collectors in market-research/scripts/ emit the same record
+The HN and Reddit collectors in community-discussion-analysis/scripts/ emit the same record
 shape. This module turns one discussion - a post plus its comments - into
 `social_document` rows carrying the four timestamps.
 
@@ -1737,7 +1737,7 @@ git commit -m "test(stock-trading-bot): engagement counts may only feed attentio
 - Test: `tests/test_ingest_hackernews.py`
 
 **A deliberate deviation from the spec.** §6.1 said "reuse `collect_hn.py`, wrapped". On
-inspection, that script writes timestamped files into `market-research/data/raw/` as a side
+inspection, that script writes timestamped files into `community-discussion-analysis/data/raw/` as a side
 effect and is driven by CLI arguments — wrapping it would mean shelling out, writing files
 into another project's tree, and reading them back, none of which is mockable. The collection
 *strategy* is what was worth reusing, and it is small:
@@ -1855,7 +1855,7 @@ Create `stock-trading-bot/src/stock_trading_bot/ingest/hackernews.py`:
 ```python
 """HackerNews collection via the free Algolia API (spec §6.1).
 
-Emits the same record shape as market-research/scripts/collect_hn.py, which
+Emits the same record shape as community-discussion-analysis/scripts/collect_hn.py, which
 ingest/social.py normalizes. The collection strategy is carried over from that
 script; the transport is reimplemented so it can be mocked and so collection
 does not write files into another project's tree as a side effect.
@@ -1978,7 +1978,7 @@ Expected: PASS, 7 passed
 git add stock-trading-bot/src/stock_trading_bot/ingest/hackernews.py stock-trading-bot/tests/test_ingest_hackernews.py
 git commit -m "feat(stock-trading-bot): HackerNews collector via Algolia
 
-Deviation from spec §6.1, which said to wrap market-research/collect_hn.py.
+Deviation from spec §6.1, which said to wrap community-discussion-analysis/collect_hn.py.
 That script writes timestamped files into another project's tree as a side
 effect and is CLI-driven, so wrapping it would mean shelling out and reading
 files back - not mockable, and the suite must run offline. The collection

@@ -1011,7 +1011,7 @@ git commit -m "test(stock-trading-bot): enforce one-way dependency direction"
 - [ ] **Step 1: Write `config/watchlist.yaml`**
 
 Starter universe of enterprise software and semis, matching the existing
-ServiceNow research in `market-research/reports/`.
+ServiceNow research in `community-discussion-analysis/reports/`.
 
 ```yaml
 tickers:

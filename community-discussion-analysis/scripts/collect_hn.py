@@ -15,11 +15,11 @@ import urllib.request, urllib.parse, json, re, time, os, argparse
 from datetime import datetime, timezone
 
 DATA_RAW = os.environ.get("MR_DATA_RAW",
-    "/Users/duochen/Desktop/career/workflow/claude_code/data/raw")
+    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "raw"))
 
 
 def fetch_json(url):
-    req = urllib.request.Request(url, headers={"User-Agent": "market-research/1.0"})
+    req = urllib.request.Request(url, headers={"User-Agent": "community-discussion-analysis/1.0"})
     with urllib.request.urlopen(req, timeout=30) as r:
         return json.loads(r.read().decode())
 

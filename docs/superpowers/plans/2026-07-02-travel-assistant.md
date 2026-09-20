@@ -4,7 +4,7 @@
 
 **Goal:** Ship a Claude Code skill `/travel-research <destination>` that mines rednote (Xiaohongshu) for places/restaurants people love, deduplicates and ranks them with cited quotes, publishes one row per place to a Notion database, and marks every place as a pin on a Google Map (My Maps via KML import).
 
-**Architecture:** Mirrors the existing `market-research` skill exactly — a `SKILL.md` orchestration doc plus Python helper scripts that drive the gstack `browse` headless-browser binary. Collection is a Python script (`collect_rednote.py`); analysis is a dispatched general-purpose subagent (LLM, documented in SKILL.md); the Google Map is built by `build_map.py` (geocode via Nominatim → KML for Google My Maps); publishing uses the connected `notion` MCP tools driven by Claude. Two small pure-Python units carry automated tests: the schema validator (`validate_places.py`) that gates analyzer output before publish, and the KML builder (`build_map.py`).
+**Architecture:** Mirrors the existing `community-discussion-analysis` skill exactly — a `SKILL.md` orchestration doc plus Python helper scripts that drive the gstack `browse` headless-browser binary. Collection is a Python script (`collect_rednote.py`); analysis is a dispatched general-purpose subagent (LLM, documented in SKILL.md); the Google Map is built by `build_map.py` (geocode via Nominatim → KML for Google My Maps); publishing uses the connected `notion` MCP tools driven by Claude. Two small pure-Python units carry automated tests: the schema validator (`validate_places.py`) that gates analyzer output before publish, and the KML builder (`build_map.py`).
 
 **Tech Stack:** Python 3 (stdlib only — `subprocess`, `json`, `urllib`), gstack `browse` binary at `~/.claude/skills/gstack/browse/dist/browse`, `notion` MCP tools, `WebSearch`. No test framework — tests are plain runnable `assert` scripts (matching the repo's zero-framework convention for skills).
 
@@ -288,7 +288,7 @@ def goto(url, timeout=70):
 
 # This browse binary's `eval` takes a FILE PATH (not inline JS) and prints result
 # lines to stdout; write JS to a temp file, eval it, parse the last line starting
-# with `prefix`. Mirrors market-research/collect_reddit.py (verified convention).
+# with `prefix`. Mirrors community-discussion-analysis/collect_reddit.py (verified convention).
 EVAL_TMP = os.path.join(tempfile.gettempdir(), "_ta_eval.js")
 
 def eval_js(js, prefix):
@@ -975,7 +975,7 @@ git commit -m "docs(travel): README + dry-run verification"
 - Notion schema (all 10 fields) → Task 7 Step 1 matches the spec table. ✓
 - Google Map marking (My Maps via KML, geocode via Nominatim, colored pins) → Task 8 (build_map.py + KML), Task 9 (SKILL import step), Task 10 README. ✓
 - Error handling (login-wall fallback, thin coverage, Notion failure keeps JSON, geocode miss skips pin, `--no-publish` still builds KML) → Task 5 Step 2, Task 7 Step 6.4, Task 8 `build_kml` skips null coords, Task 9 note. ✓
-- Testing (collector helpers, validator, KML builder, e2e dry run) → Tasks 2, 4, 8, 10. Collector's browser layer, the analyzer subagent, Notion MCP, and live Nominatim/geocoding are verified via the dry run (Task 3 Step 2, Task 10 Step 3) because they depend on live login/LLM/MCP/network and the repo has no mocking harness — matching `market-research`'s zero-framework convention. ✓
+- Testing (collector helpers, validator, KML builder, e2e dry run) → Tasks 2, 4, 8, 10. Collector's browser layer, the analyzer subagent, Notion MCP, and live Nominatim/geocoding are verified via the dry run (Task 3 Step 2, Task 10 Step 3) because they depend on live login/LLM/MCP/network and the repo has no mocking harness — matching `community-discussion-analysis`'s zero-framework convention. ✓
 - Out-of-scope (booking, multi-day route *sequencing*) explicitly deferred → Task 1 overview, README. ✓
 
 **Placeholder scan:** No TBD/TODO; every code step shows complete code; every verify step shows an exact command + expected output.

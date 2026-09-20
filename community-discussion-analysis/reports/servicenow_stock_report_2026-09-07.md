@@ -426,14 +426,14 @@ Reddit subreddit breakdown: r/servicenow (18), r/ValueInvesting (5), r/ServiceNo
 
 | Type | Path |
 |---|---|
-| Report | `market-research/reports/servicenow_stock_report_2026-09-07.md` |
-| HN raw (merged) | `market-research/data/raw/servicenow_stock_hn_merged_2026-09-08.json` |
-| HN raw (pass 1) | `market-research/data/raw/servicenow_stock_hn_2026-09-08_05-00-17.json` |
-| HN raw (pass 2) | `market-research/data/raw/servicenow_stock_p2_hn_2026-09-08_05-02-57.json` |
-| Reddit raw | `market-research/data/raw/servicenow_stock_reddit_2026-09-08_05-07-43.json` |
-| HN analysis | `market-research/data/analysis/servicenow_stock_hn_analysis.json` |
-| Reddit analysis | `market-research/data/analysis/servicenow_stock_reddit_analysis.json` |
-| Reddit config | `market-research/scripts/reddit_servicenow_stock.json` |
+| Report | `community-discussion-analysis/reports/servicenow_stock_report_2026-09-07.md` |
+| HN raw (merged) | `community-discussion-analysis/data/raw/servicenow_stock_hn_merged_2026-09-08.json` |
+| HN raw (pass 1) | `community-discussion-analysis/data/raw/servicenow_stock_hn_2026-09-08_05-00-17.json` |
+| HN raw (pass 2) | `community-discussion-analysis/data/raw/servicenow_stock_p2_hn_2026-09-08_05-02-57.json` |
+| Reddit raw | `community-discussion-analysis/data/raw/servicenow_stock_reddit_2026-09-08_05-07-43.json` |
+| HN analysis | `community-discussion-analysis/data/analysis/servicenow_stock_hn_analysis.json` |
+| Reddit analysis | `community-discussion-analysis/data/analysis/servicenow_stock_reddit_analysis.json` |
+| Reddit config | `community-discussion-analysis/scripts/reddit_servicenow_stock.json` |
 
 ### Key external sources
 

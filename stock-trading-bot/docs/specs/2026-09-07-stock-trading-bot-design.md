@@ -244,7 +244,7 @@ Costs are then applied: spread, slippage, commission, and borrow where relevant.
 ### 6.1 Ingestion
 
 Three collectors behind a `MarketDataProvider` / `SocialProvider` interface pair.
-The existing `market-research/scripts/collect_hn.py` and `collect_reddit_new.py` are reused,
+The existing `community-discussion-analysis/scripts/collect_hn.py` and `collect_reddit_new.py` are reused,
 wrapped to emit the four-timestamp row shape.
 
 `safe_ticker_component()` sanitizes every ticker before it reaches a filesystem path or cache key.
@@ -461,7 +461,7 @@ Enforced: the paired comparison must clear MDE before any strategy result render
 
 ## 10. Invocation surface
 
-Shipped as `SKILL.md` (the procedure, matching the `market-research` and `travel-research`
+Shipped as `SKILL.md` (the procedure, matching the `community-discussion-analysis` and `travel-research`
 convention) wrapped by `.claude/agents/stock-trading.md`, which runs it in its own context window.
 
 The pipeline pulls thousands of comments and runs many extractions.

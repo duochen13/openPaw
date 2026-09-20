@@ -30,7 +30,7 @@ import subprocess, json, time, os, urllib.parse, argparse, glob
 from datetime import datetime, timezone
 
 DATA_RAW = os.environ.get("MR_DATA_RAW",
-    "/Users/duochen/Desktop/career/workflow/claude_code/data/raw")
+    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "raw"))
 
 def find_browse():
     for p in [os.path.expanduser("~/.claude/skills/gstack/browse/dist/browse")]:

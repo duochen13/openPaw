@@ -1,9 +1,9 @@
 ---
-name: market-research
-description: Use when asked to "market research", "/market-research", research a market/industry/product category, find top companies and what they do, gather user pain points or feedback on a topic, validate a startup idea, or size demand from real user discussion. Pulls HackerNews + Reddit + web, analyzes, writes a report.
+name: community-discussion-analysis
+description: Use when asked to "market research", "/community-discussion-analysis", research a market/industry/product category, find top companies and what they do, gather user pain points or feedback on a topic, validate a startup idea, or size demand from real user discussion. Pulls HackerNews + Reddit + web, analyzes, writes a report.
 ---
 
-# Market Research
+# Community Discussion Analysis
 
 ## Overview
 
@@ -15,7 +15,7 @@ HackerNews (Algolia API), Reddit (headless browser), and web search — never fr
 **Core principle: every claim traces to a real quote, post, or source URL.**
 
 ## When to use
-- "Do market research on X" / "/market-research X"
+- "Do market research on X" / "/community-discussion-analysis X"
 - "Find the top companies in X and what users say about them"
 - "What do people complain about with X?" / pain-point discovery
 - Startup idea validation, demand signal, competitor sentiment

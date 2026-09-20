@@ -32,7 +32,7 @@ Output: $MR_DATA_RAW/{domain}_{timestamp}.json
 import subprocess, json, time, os, urllib.parse, argparse, glob
 from datetime import datetime, timezone
 
-DATA_RAW = os.environ.get("MR_DATA_RAW", os.path.join(os.getcwd(), "data/raw"))
+DATA_RAW = os.environ.get("MR_DATA_RAW", os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "raw"))
 UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
 

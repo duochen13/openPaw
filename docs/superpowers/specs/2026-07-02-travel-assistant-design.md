@@ -31,7 +31,7 @@ as a pin on a Google Map** the user can open on the trip.
 Xiaohongshu / RED (rednote) offers **no public content API**. It is heavily
 bot-protected: requests need signed `x-s`/`x-t` headers, most content is
 login-walled, and scraping violates ToS (account-ban risk). This is the same
-class of problem the existing `market-research` skill solved for Reddit — which
+class of problem the existing `community-discussion-analysis` skill solved for Reddit — which
 uses the gstack `browse` headless browser against a real logged-in session and
 supplements with `WebSearch` when coverage is thin.
 
@@ -47,7 +47,7 @@ the fallback is designed in from the start because rednote blocking is expected.
 
 ## Shape
 
-A **Claude Code skill** (mirrors `market-research`), not a deployed Lambda.
+A **Claude Code skill** (mirrors `community-discussion-analysis`), not a deployed Lambda.
 Trip research is ad-hoc and interactive, run when planning a trip — unlike the
 scheduled `daily-report` Lambda.
 
@@ -80,7 +80,7 @@ Invocation:
   `{ post_url, text, images_alt }`.
 - **analyzer** (subagent) — `raw posts JSON → places JSON`. Dedup, cluster,
   rank, extract quotes. Never reads the whole corpus in the main context —
-  dispatched as a general-purpose Agent like `market-research` does.
+  dispatched as a general-purpose Agent like `community-discussion-analysis` does.
   Output: array of place records (schema below).
 - **geocoder** — `place name + destination → { lat, lng, map_link, neighborhood }`.
   Uses Nominatim (OpenStreetMap) — free, no API key, 1 req/sec, descriptive UA.
@@ -89,7 +89,7 @@ Invocation:
 - **publisher** — `places JSON → Notion rows`. Knows nothing about rednote.
   Uses the connected `notion` MCP tools.
 
-**Core principle (inherited from market-research):** every place traces to a
+**Core principle (inherited from community-discussion-analysis):** every place traces to a
 real rednote post / source URL. No place is invented from model memory.
 
 ## Notion schema (one row per place)
@@ -133,7 +133,7 @@ Google map.
 The installed gstack `browse` binary uses `useragent <str>` (not `set-ua`) and
 `eval <file-path>` that prints result lines to stdout (not inline JS). The
 collector writes its JS to a temp file, evals the file, and parses the last
-stdout line starting with `[`/`{` — mirroring `market-research/collect_reddit.py`.
+stdout line starting with `[`/`{` — mirroring `community-discussion-analysis/collect_reddit.py`.
 (The DOM selectors for rednote remain best-effort and need a one-time live
 verification against a logged-in session.)
 
@@ -145,7 +145,7 @@ Name); otherwise create the database first.
 - **rednote login-walled / blocked:** log it, switch to WebSearch fallback,
   and note in the run summary that results came from fallback (not pure rednote).
 - **Thin coverage for a place:** supplement from WebSearch + maps; mark the
-  source in the record. (Mirrors market-research's "thin Reddit coverage" rule.)
+  source in the record. (Mirrors community-discussion-analysis's "thin Reddit coverage" rule.)
 - **Notion publish failure:** keep the local places JSON so nothing is lost;
   report the error and the JSON path.
 - **Geocode miss:** if Nominatim returns no hit for a place, skip its pin (keep

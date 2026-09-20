@@ -2,6 +2,8 @@
 
 ## Research projects
 
+- [Community Discussion Analysis](community-discussion-analysis/SKILL.md): Reddit
+  and Hacker News discussion research, user feedback, and cited reports.
 - [Portfolio Analysis](portfolio-analysis/README.md): stock charts, alpha/beta
   comparisons, valuation panels, and dated event evidence.
 - [Bearish Challenger](bearish-challenger/README.md): research on Michael Burry,
