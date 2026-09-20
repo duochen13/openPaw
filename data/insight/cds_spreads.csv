@@ -1,0 +1,5 @@
+ticker,date,spread_bps,source,proxy_label,note
+ORCL,2026-09,,"Press reports, Sep-2026 (after Blue Owl Michigan exit)",cds-level:reported,"5Y CDS cost widest since 2008 GFC - reported level, not a numeric print"
+ORCL,2026-09,,"FT via Reuters, Sep-2026",credit-proxy:loan-price,$18B Project Jupiter loans quoted 89-91c - stressed secondary pricing
+ORCL,2026-07,,"S&P, Jul-2026",credit-proxy:rating-action,S&P downgraded ORCL to one notch above junk
+ORCL,2025-11,,"Company disclosure, Nov-2025",credit-proxy:balance-sheet,$248B lease commitments; $124B debt; $38B Vantage package off-balance-sheet
