@@ -5,7 +5,10 @@ One self-contained offline page, following the factor_dashboard.py pattern:
 - Section A (#34): annual reported Big-4 AI capex vs reported + SPV /
   off-balance-sheet combined, from ``data/insight/spv_capex.csv``. Every
   estimate row is anchored to a named deal; the SPV layer renders shaded
-  between the two lines with anchor labels. The chart regenerates from
+  between the two lines with anchor labels. A second panel scales both
+  series by Big-4 revenue (``data/insight/revenue_big4.csv``, EDGAR
+  companyfacts) as capex intensity - the reported-vs-true gap in
+  percentage-of-revenue terms. The chart regenerates from
   the CSV on every render - no checked-in images, no hand-drawn numbers.
 - Section B (#35): hyperscaler 5Y CDS spreads. Real CDS history is
   paywalled, so the seed data is an annotated event timeline of verified
@@ -43,7 +46,9 @@ _SPv_REQUIRED = {
     "status",
 }
 _CDS_REQUIRED = {"ticker", "date", "spread_bps", "source", "proxy_label", "note"}
+_REV_REQUIRED = {"year", "revenue_big4_usd_b", "source", "status"}
 _SPV_STATUSES = {"verified", "estimated", "guidance"}
+_REV_STATUSES = {"verified", "ttm-partial", "estimated"}
 _DATE_RE = re.compile(r"^\d{4}-\d{2}(-\d{2})?$")
 
 #: Badge colors per proxy type on the Section B timeline.
@@ -88,6 +93,22 @@ class CdsPoint:
     source: str
     proxy_label: str
     note: str
+
+
+@dataclass(frozen=True)
+class RevenueRow:
+    """One annual row: Big-4 (MSFT+AMZN+GOOGL+META) revenue, USD billions.
+
+    Calendar-year sums of quarterly ``us-gaap:Revenues`` from SEC EDGAR
+    companyfacts. The latest year may be ``ttm-partial``: trailing twelve
+    months to the latest reported quarter, paired against full-year
+    guidance capex - always labeled as such on the chart.
+    """
+
+    year: str
+    revenue: float  # Big-4 revenue, USD billions
+    source: str
+    status: str  # verified | ttm-partial | estimated
 
 
 def _read_csv(path: Path, required: set[str]) -> list[dict[str, str]]:
@@ -149,6 +170,38 @@ def load_spv_capex(data_dir: Path | None = None) -> list[SpvRow]:
     return rows
 
 
+def load_revenue(data_dir: Path | None = None) -> list[RevenueRow]:
+    """Validated annual Big-4 revenue rows.
+
+    The honesty rule: revenue must be positive and carry a source; a
+    ``ttm-partial`` year is allowed but must say so, so the chart can
+    label the capex-vs-revenue mismatch instead of hiding it.
+    """
+    path = (data_dir or DATA_DIR) / "revenue_big4.csv"
+    rows = []
+    for i, r in enumerate(_read_csv(path, _REV_REQUIRED), 1):
+        where = f"{path}:{i}"
+        revenue = _parse_amount(r["revenue_big4_usd_b"], where=where)
+        if revenue <= 0:
+            raise InsightDataError(f"{where}: revenue must be positive")
+        if not r["source"].strip():
+            raise InsightDataError(f"{where}: revenue without source")
+        status = r["status"].strip().lower()
+        if status not in _REV_STATUSES:
+            raise InsightDataError(
+                f"{where}: status {r['status']!r} not in {sorted(_REV_STATUSES)}"
+            )
+        rows.append(
+            RevenueRow(
+                year=r["year"].strip(),
+                revenue=revenue,
+                source=r["source"].strip(),
+                status=status,
+            )
+        )
+    return rows
+
+
 def load_cds_spreads(data_dir: Path | None = None) -> list[CdsPoint]:
     """Validated credit-stress timeline points.
 
@@ -188,28 +241,40 @@ def load_cds_spreads(data_dir: Path | None = None) -> list[CdsPoint]:
 
 
 def insight_dashboard_data(data_dir: Path | None = None) -> dict[str, Any]:
-    """Section A rows, Section B timeline, and any real CDS prints."""
+    """Section A rows, revenue-scaled intensity, Section B timeline, real CDS prints."""
     spv = load_spv_capex(data_dir)
+    rev = {r.year: r for r in load_revenue(data_dir)}
     cds = load_cds_spreads(data_dir)
     prints: dict[str, list[tuple[str, float]]] = {}
     for p in cds:
         if p.spread_bps is not None:
             prints.setdefault(p.ticker, []).append((p.date, p.spread_bps))
     data_dates = [r.year for r in spv] + [p.date for p in cds]
-    return {
-        "spv": [
+    spv_rows = []
+    for r in spv:
+        rev_row = rev.get(r.year)
+        if rev_row is None:
+            raise InsightDataError(
+                f"revenue_big4.csv: no revenue row for capex year {r.year!r}"
+            )
+        spv_rows.append(
             {
                 "year": r.year,
                 "reported": r.reported,
                 "spv": r.spv,
                 "combined": r.combined,
+                "revenue": rev_row.revenue,
+                "revenue_status": rev_row.status,
+                "intensity_reported": 100.0 * r.reported / rev_row.revenue,
+                "intensity_true": 100.0 * r.combined / rev_row.revenue,
                 "anchor_deals": r.anchor_deals,
                 "chart_label": r.chart_label,
                 "source": r.source,
                 "status": r.status,
             }
-            for r in spv
-        ],
+        )
+    return {
+        "spv": spv_rows,
         "cds": [
             {
                 "ticker": p.ticker,
@@ -331,6 +396,72 @@ def _svg_spv_chart(rows: list[dict[str, Any]]) -> str:
     return "".join(parts)
 
 
+def _svg_intensity_chart(rows: list[dict[str, Any]]) -> str:
+    """Grouped bars: reported capex % of revenue vs true (reported+SPV) %."""
+    W, H = 1000, 450
+    pad_l, pad_r, pad_t, pad_b = 70, 30, 46, 84
+    ymax: float = float(max(r["intensity_true"] for r in rows)) * 1.18
+    n = len(rows)
+    slot = (W - pad_l - pad_r) / n
+    bw = min(64.0, slot * 0.28)
+
+    def y(v: float) -> float:
+        return pad_t + (H - pad_t - pad_b) * (1 - v / ymax)
+
+    esc = html.escape
+    parts = [f'<svg viewBox="0 0 {W} {H}" role="img" aria-label="Capex as percent of revenue">']
+    g = 10.0
+    while g < ymax:
+        parts.append(
+            f'<line x1="{pad_l}" y1="{y(g):.1f}" x2="{W - pad_r}" y2="{y(g):.1f}" '
+            f'stroke="#e5e4da" stroke-width="1"/>'
+            f'<text x="{pad_l - 10}" y="{y(g) + 5:.1f}" text-anchor="end" '
+            f'font-size="13" fill="#65685f">{g:.0f}%</text>'
+        )
+        g += 10.0
+    for i, r in enumerate(rows):
+        cx = pad_l + slot * (i + 0.5)
+        for j, (key, color) in enumerate(
+            (("intensity_reported", "#1f6feb"), ("intensity_true", "#16a34a"))
+        ):
+            v = r[key]
+            bx = cx + (j - 0.5) * bw - bw / 2
+            parts.append(
+                f'<rect x="{bx:.1f}" y="{y(v):.1f}" width="{bw:.1f}" '
+                f'height="{y(0) - y(v):.1f}" fill="{color}" opacity="0.85" rx="3"/>'
+            )
+            parts.append(
+                f'<text x="{bx + bw / 2:.1f}" y="{y(v) - 8:.1f}" text-anchor="middle" '
+                f'font-size="13.5" font-weight="700" fill="{color}">{v:.1f}%</text>'
+            )
+        star = "*" if r["revenue_status"] == "ttm-partial" else ""
+        year_label = r["year"] + ("E" if r["status"] == "guidance" else "") + star
+        parts.append(
+            f'<text x="{cx:.1f}" y="{H - pad_b + 26:.1f}" text-anchor="middle" '
+            f'font-size="14" fill="#21231f">{esc(year_label)}</text>'
+        )
+        parts.append(
+            f'<text x="{cx:.1f}" y="{H - pad_b + 46:.1f}" text-anchor="middle" '
+            f'font-size="11.5" fill="#65685f">rev ${r["revenue"]:.0f}B</text>'
+        )
+    lx = pad_l + 10
+    parts.append(
+        f'<rect x="{lx}" y="8" width="14" height="10" fill="#1f6feb" opacity="0.85"/>'
+        f'<text x="{lx + 20}" y="17" font-size="13" fill="#65685f">Reported capex / revenue</text>'
+        f'<rect x="{lx + 220}" y="8" width="14" height="10" fill="#16a34a" opacity="0.85"/>'
+        f'<text x="{lx + 240}" y="17" font-size="13" fill="#65685f">True spend (reported + SPV) / revenue</text>'
+    )
+    parts.append(
+        f'<text x="{pad_l}" y="{H - 10}" font-size="12" fill="#65685f">'
+        "Revenue: Big-4 calendar-year revenue from SEC EDGAR companyfacts. "
+        "*2026 revenue is trailing-12-months to 2026-Q2 (latest reported); "
+        "2026 capex is full-year guidance - the pair is a run-rate read, not audited."
+        "</text>"
+    )
+    parts.append("</svg>")
+    return "".join(parts)
+
+
 def _svg_cds_chart(prints: dict[str, list[tuple[str, float]]]) -> str:
     """Line chart of real weekly 5Y CDS prints, one series per ticker."""
     palette = ["#16a34a", "#1f6feb", "#d97706", "#dc2626", "#7c3aed", "#0891b2"]
@@ -441,11 +572,14 @@ table.src td,table.src th{border:1px solid var(--line);padding:4px 8px;text-alig
 <p class="cap">Annual Big-4 (MSFT + AMZN + GOOGL + META) capex vs reported + SPV/off-balance-sheet. The shaded gap is the hidden leverage - every estimate anchored to a named deal (hover the labels).</p>
 <div class="chart">__SPV_SVG__</div>
 __SPV_TABLE__</div>
+<div class="chart-block"><h2>Capex intensity: share of revenue</h2>
+<p class="cap">The same two series as a percentage of Big-4 revenue - this is the leverage ratio that matters. The green-over-blue gap is the reinvestment the income statement never shows.</p>
+<div class="chart">__INTENSITY_SVG__</div></div>
 <div class="chart-block"><h2>Hyperscaler credit stress</h2>
 <p class="cap">5Y CDS history is paywalled, so this is an annotated timeline of verified credit-stress anchors - each point labeled with its proxy type. A proxy is never a CDS print.</p>
 __CDS_CHART__
 <div class="tl">__TIMELINE__</div></div>
-<p class="note">Method: SPV estimates are anchored to named deals and spread over build years (see data/insight/spv_capex.csv); reported capex from company filings. CDS timeline points carry source + proxy labels (see data/insight/cds_spreads.csv) - add real weekly 5Y prints there with proxy_label <code>cds-print:5y</code> to grow the spread chart. Reported history, not a forecast.</p>
+<p class="note">Method: SPV estimates are anchored to named deals and spread over build years (see data/insight/spv_capex.csv); reported capex from company filings. Revenue is the calendar-year sum of quarterly us-gaap Revenues for MSFT+AMZN+GOOGL+META from SEC EDGAR companyfacts (see data/insight/revenue_big4.csv). CDS timeline points carry source + proxy labels (see data/insight/cds_spreads.csv) - add real weekly 5Y prints there with proxy_label <code>cds-print:5y</code> to grow the spread chart. Reported history, not a forecast.</p>
 </main></body></html>"""
 
 
@@ -479,6 +613,7 @@ def render_insight_dashboard(data: dict[str, Any], out_dir: Path) -> Path:
     page = (
         _PAGE.replace("__ASOF__", html.escape(str(data["asof"])))
         .replace("__SPV_SVG__", _svg_spv_chart(data["spv"]))
+        .replace("__INTENSITY_SVG__", _svg_intensity_chart(data["spv"]))
         .replace("__SPV_TABLE__", _spv_table(data["spv"]))
         .replace("__CDS_CHART__", cds_chart)
         .replace("__TIMELINE__", _timeline_html(data["cds"]))
