@@ -1,0 +1,5 @@
+year,revenue_big4_usd_b,source,status
+2023,1244.7,SEC EDGAR companyfacts: calendar-year sum of quarterly us-gaap Revenues for MSFT+AMZN+GOOGL+META,verified
+2024,1414.3,SEC EDGAR companyfacts: calendar-year sum of quarterly us-gaap Revenues for MSFT+AMZN+GOOGL+META,verified
+2025,1626.2,SEC EDGAR companyfacts: calendar-year sum of quarterly us-gaap Revenues for MSFT+AMZN+GOOGL+META,verified
+2026,1781.6,SEC EDGAR companyfacts: trailing-12-month revenue to 2026-Q2 (latest reported quarter) for MSFT+AMZN+GOOGL+META,ttm-partial
