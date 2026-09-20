@@ -2,7 +2,11 @@
 #
 # Schema: ticker -> metric key -> list of quarterly datapoints.
 #   - quarter:        quarter-end date, YYYY-MM-DD
-#   - value:          the number, copied from the cited source
+#   - value:          the number, copied from the cited source.
+#                     UNITS MATTER: currency metrics take raw USD
+#                     (12300000000, not 12.3); percent metrics take a
+#                     fraction (0.98, not 98.0); counts take the plain
+#                     number. The dashboard formats accordingly.
 #   - source:         REQUIRED - where the number came from
 #                     (e.g. "NOW Q2 2026 earnings press release")
 #   - date_recorded:  REQUIRED - YYYY-MM-DD, when you entered it
@@ -41,13 +45,15 @@ manual_kpis:
   #       value: 500
   #       source: "NOW Q2 2026 earnings press release"
   #       date_recorded: "2026-09-20"
-  #   crpo:                    # current RPO, USD billions
+  #   crpo:                    # current RPO, RAW USD (not billions):
+  #                            # 12300000000 renders as $12.3B
   #     - quarter: "2026-06-30"
-  #       value: 12.3
+  #       value: 12300000000
   #       source: "NOW Q2 2026 earnings call transcript"
   #       date_recorded: "2026-09-20"
-  #   renewal_rate:            # percent - only if disclosed
+  #   renewal_rate:            # FRACTION, not percent: 0.98 renders as 98%.
+  #                            # Only if disclosed.
   #     - quarter: "2026-06-30"
-  #       value: 98.0
+  #       value: 0.98
   #       source: "NOW Q2 2026 investor presentation"
   #       date_recorded: "2026-09-20"
