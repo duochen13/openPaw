@@ -275,6 +275,7 @@ def test_chart_data_with_short_series_omits_factor_and_regime(tmp_path):
         "r_squared": [],
         "alpha_annualized": [],
         "alpha_slope": [],
+        "alpha_slope_display": [],
         "signals": [],
     }
     assert data["regime"]["default_window"] == "250"
@@ -352,7 +353,7 @@ def test_tldr_is_under_100_words_and_states_missing_events(tmp_path):
     assert len(tldr.split()) < 100
     # No evidence bundles were collected for these moves: the TLDR must say
     # so instead of inventing drivers.
-    assert "No event windows have been collected" in tldr
+    assert "No dated events were collected" in tldr
     # The forward read is explicitly labeled as interpretation.
     assert "Interpretation:" in tldr
 
