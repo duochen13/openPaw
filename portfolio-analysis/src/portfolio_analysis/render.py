@@ -438,8 +438,17 @@ def render_html(data: dict[str, Any]) -> str:
         f"<td>{m['abnormal_return']:+.2%}</td><td>{m['z']:+.2f}</td></tr>"
         for m in data["moves"]
     )
+    stocks = data.get("stocks", [{"symbol": data["ticker"], "name": data["ticker"]}])
+    stock_links = "".join(
+        '<a href="' + html.escape(safe_ticker_component(stock["symbol"]), quote=True)
+        + '.html"' + (' aria-current="page"' if stock["symbol"] == data["ticker"] else '')
+        + '><strong>' + html.escape(stock["symbol"]) + '</strong><span>'
+        + html.escape(stock["name"]) + '</span></a>'
+        for stock in stocks
+    )
     return (
         template.replace("__TITLE__", html.escape(f"{data['ticker']} · Price & events"))
+        .replace("__STOCK_LINKS__", stock_links)
         .replace("__FALLBACK_ROWS__", rows)
         .replace("__DATA__", payload)
     )
@@ -482,5 +491,8 @@ def render_chart(
         store.close()
     out_dir.mkdir(parents=True, exist_ok=True)
     target = out_dir / f"{symbol}.html"
+    data["stocks"] = [
+        {"symbol": entry.symbol, "name": entry.name} for entry in portfolio.entries
+    ]
     target.write_text(render_html(data))
     return target
