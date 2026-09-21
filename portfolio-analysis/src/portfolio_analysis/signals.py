@@ -1,4 +1,4 @@
-"""Alpha slope and acceleration signals (issue #19). Pure statistics - no I/O.
+"""Alpha slope signals (issues #19, #39). Pure statistics - no I/O.
 
 The absolute level of rolling alpha can be a lagging signal: a stock may sit
 at alpha = -30%, improve to -20%, then -10%, and only cross zero after much of
@@ -13,19 +13,25 @@ Conventions (stated once, so the units are never ambiguous):
 - ``slope`` = (alpha(t) - alpha(t-SPAN)) / SPAN: the change in *annualized*
   alpha per trading session. A slope of +0.005 means the annualized alpha is
   improving by half a point per session. Displayed as %/session.
-- ``acceleration`` = slope(t) - slope(t-SPAN): the change in the slope over
-  SPAN sessions. Algebraically (a(t) - 2*a(t-SPAN) + a(t-2*SPAN)) / SPAN.
-  Displayed as % (of slope change per SPAN sessions).
 
 Every function is causal: the value at index ``i`` uses only entries at
 indices <= ``i``. Entries that cannot be computed (warmup, degenerate OLS
 windows) are ``None``, never fabricated. The template skips nulls when
 drawing; the backtest skips nulls when scoring.
 
-Signal kinds (see issue #19): "turnaround" (alpha < 0, slope > 0),
-"turnaround-strong" (additionally acceleration > 0), "early-watch"
-(alpha < 0, slope < 0, acceleration > 0). These are regime-change signals for
-later validation against forward returns - never buy signals.
+Signal kinds (see issues #19, #39): "turnaround" (alpha < 0, slope > 0).
+Issue #39 removed the acceleration series (it duplicated the slope panel),
+so the acceleration-confirmed kinds "turnaround-strong" and "early-watch" no
+longer exist. These are regime-change signals for later validation against
+forward returns - never buy signals.
+
+``smooth_display`` is presentation-only smoothing for the slope sparkline;
+it is deliberately not used by ``alpha_signal``.
+
+Impact on issue #32 (alpha-reversal alert): the slope sign-change detection
+it needs is unaffected - the slope series is kept. What changed is that the
+alert can no longer require acceleration confirmation, and the "early-watch"
+(deterioration slowing while still falling) state is gone.
 """
 
 from __future__ import annotations
@@ -36,6 +42,12 @@ from portfolio_analysis.moves import annualize_alpha, ols_regression
 
 #: Smoothing span for the slope, in trading sessions (issue #19: 20).
 SLOPE_SPAN = 20
+
+#: Display-smoothing span for the alpha-slope sparkline. The raw per-session
+#: slope is jagged; the chart draws a short trailing moving average so the
+#: trend is readable. Display only: turnaround signals and the TLDR keep
+#: using the raw slope from rolling_slope, so signal behavior is unchanged.
+SLOPE_DISPLAY_SPAN = 5
 
 #: Rolling OLS windows offered by the chart's window switch.
 REGIME_WINDOWS = (60, 125, 250)
@@ -57,21 +69,27 @@ def rolling_slope(
     return out
 
 
-def alpha_acceleration(
-    slopes: Sequence[float | None], span: int = SLOPE_SPAN
+def smooth_display(
+    values: Sequence[float | None], span: int = SLOPE_DISPLAY_SPAN
 ) -> list[float | None]:
-    """Change in the slope over ``span`` sessions: ``slope[i] - slope[i-span]``.
+    """Trailing moving average for display.
 
-    Positive means the alpha trend itself is improving, even if alpha is still
-    falling. This is a pure difference, not a per-session rate: algebraically
-    ``(a[i] - 2*a[i-span] + a[i-2*span]) / span``. ``None`` propagates: no
-    slope, no acceleration.
+    ``None`` until ``span`` consecutive defined points have been seen; a
+    ``None`` gap breaks the run instead of being interpolated. Causal: the
+    value at index ``i`` uses only entries at indices <= ``i``. Pure
+    presentation smoothing - never fed into signal classification.
     """
-    out: list[float | None] = [None] * len(slopes)
-    for i in range(span, len(slopes)):
-        start, end = slopes[i - span], slopes[i]
-        if start is not None and end is not None:
-            out[i] = end - start
+    out: list[float | None] = [None] * len(values)
+    run: list[float] = []
+    for i, value in enumerate(values):
+        if value is None:
+            run = []
+            continue
+        run.append(value)
+        if len(run) > span:
+            run.pop(0)
+        if len(run) == span:
+            out[i] = sum(run) / span
     return out
 
 
@@ -102,29 +120,21 @@ def rolling_alpha_daily(
     return out
 
 
-#: Signal kinds emitted by :func:`alpha_signal`.
+#: The only signal kind emitted by :func:`alpha_signal` (issue #39).
 TURNAROUND = "turnaround"
-TURNAROUND_STRONG = "turnaround-strong"
-EARLY_WATCH = "early-watch"
 
 
-def alpha_signal(
-    alpha: float | None, slope: float | None, accel: float | None
-) -> str | None:
-    """Classify one point of the alpha/slope/acceleration triple.
+def alpha_signal(alpha: float | None, slope: float | None) -> str | None:
+    """Classify one point of the alpha/slope pair.
 
-    Returns ``"turnaround-strong"`` when alpha < 0, slope > 0 and
-    acceleration > 0; ``"turnaround"`` when alpha < 0 and slope > 0;
-    ``"early-watch"`` when alpha < 0, slope < 0 but acceleration > 0
-    (deterioration slowing); else ``None``. Any ``None`` input yields
-    ``None`` - a signal needs all three legs.
+    Returns ``"turnaround"`` when alpha < 0 and slope > 0 - alpha is negative
+    but improving; else ``None``. Any ``None`` input yields ``None``: a
+    signal needs both legs. (Issue #39 removed acceleration, so the former
+    "turnaround-strong" and "early-watch" kinds are gone; "turnaround" now
+    covers every alpha < 0, slope > 0 point.)
     """
     if alpha is None or slope is None:
         return None
     if alpha < 0 and slope > 0:
-        if accel is not None and accel > 0:
-            return TURNAROUND_STRONG
         return TURNAROUND
-    if alpha < 0 and slope < 0 and accel is not None and accel > 0:
-        return EARLY_WATCH
     return None

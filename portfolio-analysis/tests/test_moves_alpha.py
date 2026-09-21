@@ -240,14 +240,13 @@ def test_chart_data_carries_factor_regime_and_decomposition(tmp_path):
     assert reg["r_squared"][-1] == pytest.approx(factor["r_squared"])
     assert all(0.0 <= r <= 1.0 for r in reg["r_squared"])
     assert len(reg["r_squared"]) == len(reg["dates"])
-    # Slope/acceleration ride the same sampled dates; the trailing point has
-    # enough history for both (needs alpha 40 sessions back).
+    # Slope rides the same sampled dates; the trailing point has enough
+    # history (needs alpha 20 sessions back). Issue #39 removed acceleration.
     assert len(reg["alpha_slope"]) == len(reg["dates"])
-    assert len(reg["alpha_accel"]) == len(reg["dates"])
     assert len(reg["signals"]) == len(reg["dates"])
+    assert "alpha_accel" not in reg
     assert reg["alpha_slope"][-1] is not None
-    assert reg["alpha_accel"][-1] is not None
-    assert set(reg["signals"]) <= {"turnaround", "turnaround-strong", "early-watch", None}
+    assert set(reg["signals"]) <= {"turnaround", None}
     # The shorter windows sample the same series earlier and further back.
     assert len(regime["windows"]["60"]["dates"]) > len(reg["dates"])
     assert regime["windows"]["60"]["dates"][-1] == dates[-1]
@@ -276,7 +275,7 @@ def test_chart_data_with_short_series_omits_factor_and_regime(tmp_path):
         "r_squared": [],
         "alpha_annualized": [],
         "alpha_slope": [],
-        "alpha_accel": [],
+        "alpha_slope_display": [],
         "signals": [],
     }
     assert data["regime"]["default_window"] == "250"
@@ -307,3 +306,89 @@ def test_chart_data_rejects_an_inconsistent_decomposition(tmp_path):
             tmp_path,
             name="Meta",
         )
+
+
+@pytest.mark.unit
+def test_regime_fine_tail_is_bounded_and_daily(tmp_path):
+    """Issue #41: each OLS window also ships a bounded daily-resolution tail
+    for zoomed-in views, ending on the latest session."""
+    from portfolio_analysis.render import _FINE_TAIL_SESSIONS
+
+    asset, bench, dates = _drift_series()
+    moves, _ = compute_moves("META", "QQQ", asset, bench, PARAMS)
+    data = chart_data(
+        _artifact(moves, (dates[250], dates[-1])),
+        asset,
+        bench,
+        tmp_path,
+        name="Meta Platforms",
+    )
+    regime = data["regime"]
+    assert regime["fine_tail_sessions"] == _FINE_TAIL_SESSIONS
+    assert set(regime["fine"]) == {"60", "125", "250"}
+    for window, fine in regime["fine"].items():
+        assert fine["dates"][-1] == dates[-1]
+        assert list(fine["dates"]) == sorted(fine["dates"])
+        assert len(fine["dates"]) <= _FINE_TAIL_SESSIONS + 1
+        # Daily resolution: strictly more points than the monthly sampling.
+        assert len(fine["dates"]) > len(regime["windows"][window]["dates"])
+        assert "alpha_accel" not in fine
+        assert set(fine["signals"]) <= {"turnaround", None}
+
+
+@pytest.mark.unit
+def test_tldr_is_under_100_words_and_states_missing_events(tmp_path):
+    """Issue #42: generated summary, hard word cap, honest about gaps."""
+    asset, bench, dates = _drift_series()
+    moves, _ = compute_moves("META", "QQQ", asset, bench, PARAMS)
+    data = chart_data(
+        _artifact(moves, (dates[250], dates[-1])),
+        asset,
+        bench,
+        tmp_path,
+        name="Meta Platforms",
+    )
+    tldr = data["tldr"]
+    assert isinstance(tldr, str) and tldr
+    assert len(tldr.split()) < 100
+    # No evidence bundles were collected for these moves: the TLDR must say
+    # so instead of inventing drivers.
+    assert "No dated events were collected" in tldr
+    # The forward read is explicitly labeled as interpretation.
+    assert "Interpretation:" in tldr
+
+
+@pytest.mark.unit
+def test_tldr_word_cap_is_hard():
+    """The 100-word cap is enforced by truncation, not trusted to phrasing."""
+    from portfolio_analysis.render import _tldr_text
+
+    moves = [
+        {"evidence_status": "available", "facts": [{"label": "Quarterly earnings reported"}]}
+        for _ in range(50)
+    ]
+    regime = {"windows": {"250": {"alpha_annualized": [-0.1], "alpha_slope": [0.001]}}}
+    text = _tldr_text(
+        factor={"beta": 1.5}, regime=regime, moves=moves, benchmark="QQQ"
+    )
+    assert len(text.split()) < 100
+
+
+@pytest.mark.unit
+def test_tldr_names_collected_drivers_and_labels_interpretation():
+    """Drivers come only from collected event windows; the forward read is
+    labeled as interpretation."""
+    from portfolio_analysis.render import _tldr_text
+
+    moves = [
+        {"evidence_status": "available", "facts": [{"label": "Quarterly earnings reported"}]},
+        {"evidence_status": "available", "facts": [{"label": "8-K filed"}]},
+        {"evidence_status": "missing", "facts": []},
+    ]
+    regime = {"windows": {"250": {"alpha_annualized": [0.05], "alpha_slope": [-0.001]}}}
+    text = _tldr_text(
+        factor={"beta": 0.9}, regime=regime, moves=moves, benchmark="QQQ"
+    )
+    assert "Earnings reports lined up with 1 of 3 unusual moves" in text
+    assert "Interpretation:" in text
+    assert len(text.split()) < 100

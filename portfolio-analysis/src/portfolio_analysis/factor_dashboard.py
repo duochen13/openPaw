@@ -169,7 +169,7 @@ const $ = id => document.getElementById(id);
 const fmtDate = d => { const [y,m,dd] = d.split('-').map(Number); return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][m-1] + ' ' + y; };
 const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
 $('subline').textContent = 'Trailing ' + DATA.window + '-session OLS vs ' + DATA.benchmark + ' (as of ' + fmtDate(DATA.asof) + '). Drag the handles to change the time frame; tap a stock to show/hide it. Hover a chart for values.';
-$('noteline').textContent = '\\u03b2 = slope of stock returns on ' + DATA.benchmark + ' \\u00b7 \\u03b1 = intercept, annualized \\u00d7252 \\u00b7 R\\u00b2 and \\u03b1 slope/acceleration live on each stock\\u2019s own chart.';
+$('noteline').textContent = '\\u03b2 = slope of stock returns on ' + DATA.benchmark + ' \\u00b7 \\u03b1 = intercept, annualized \\u00d7252 \\u00b7 R\\u00b2 and \\u03b1 slope live on each stock\\u2019s own chart.';
 
 /* ---------- chips ---------- */
 const chipsEl = $('chips');
