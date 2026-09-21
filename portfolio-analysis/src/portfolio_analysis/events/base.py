@@ -131,6 +131,25 @@ class EventSource(Protocol):
     ) -> tuple[list[Document], list[VerifiedFact]]: ...
 
 
+def dated_fact_label(key: str, value: Any) -> tuple[str, str] | None:
+    """(label, calendar date) for a verified fact that pins an event to a day.
+
+    Returns None for fact kinds with no event date (not an error: most facts
+    are contextual, not dated). Shared by the evidence-bundle renderer and
+    the event-date catalog so both label the same fact the same way.
+    """
+    try:
+        if key == "filing":
+            return f"{value['form']} filing", str(value["filed"])
+        if key == "earnings_reported":
+            return "Quarterly earnings reported", str(value["reportedDate"])
+        if key == "macro_release":
+            return f"{value['release']} release", str(value["date"])
+    except (KeyError, TypeError):
+        return None
+    return None
+
+
 def utc_bounds(start: str, end: str) -> tuple[datetime, datetime]:
     """Inclusive Eastern dates as [start, next-midnight) UTC instants."""
     lo = datetime.combine(datetime.fromisoformat(start).date(), time(), EASTERN)
