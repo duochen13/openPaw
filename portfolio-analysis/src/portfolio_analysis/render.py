@@ -6,6 +6,7 @@ import html
 import json
 import math
 import re
+from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -21,7 +22,6 @@ from portfolio_analysis.naming import safe_ticker_component
 from portfolio_analysis.signals import (
     REGIME_WINDOWS,
     SLOPE_SPAN,
-    alpha_acceleration,
     alpha_signal,
     rolling_alpha_daily,
     rolling_slope,
@@ -32,6 +32,15 @@ from portfolio_analysis.store import Store
 #: points keeps the embedded JSON small while still showing regime changes
 #: like a beta collapsing from 1.0 to 0.27.
 _REGIME_STEP = 21
+
+#: Recent sessions kept at daily resolution for zoomed-in views (issue #41).
+#: 400 sessions (~19 months) bounds the embedded payload: the fine series is
+#: only embedded for this tail, and the chart falls back to the monthly
+#: sampling for earlier history.
+_FINE_TAIL_SESSIONS = 400
+
+#: Hard cap on TLDR words (issue #42).
+_TLDR_MAX_WORDS = 100
 
 
 def safe_url(value: object) -> str:
@@ -188,23 +197,26 @@ def _regime_points(
     benchmark: dict[str, float],
     window: int,
     step: int = _REGIME_STEP,
+    tail: int | None = None,
 ) -> dict[str, list[object]]:
-    """Rolling beta, annualized alpha, R², alpha slope/acceleration and
-    turnaround signals, sampled every `step` sessions.
+    """Rolling beta, annualized alpha, R², alpha slope and turnaround signals,
+    sampled every `step` sessions.
 
     R² is computed over the identical return observations as beta and alpha.
     The slope is the change in *annualized* alpha per trading session over
-    ``SLOPE_SPAN`` sessions (see ``signals`` for the unit convention); the
-    acceleration is the change in the slope over the same span. Both are
+    ``SLOPE_SPAN`` sessions (see ``signals`` for the unit convention),
     derived from the full daily alpha series and then sampled, so the "20
     trading days" definition is exact, not an artifact of the sampling grid.
-    ``signals[i]`` classifies the sampled point (turnaround / strong /
-    early-watch) or is ``None``; slope, acceleration and signals are ``None``
-    during their warmup. Empty when the series is shorter than one full
-    window, for the same reason as _trailing_factor. The most recent session
-    is always the last point. A degenerate window (zero variance, so
-    beta/alpha/R² are all undefined) is skipped, never filled with a made-up
-    number.
+    ``signals[i]`` classifies the sampled point ("turnaround" or ``None``);
+    slope and signals are ``None`` during their warmup. Empty when the series
+    is shorter than one full window, for the same reason as _trailing_factor.
+    The most recent session is always the last point. A degenerate window
+    (zero variance, so beta/alpha/R² are all undefined) is skipped, never
+    filled with a made-up number.
+
+    ``tail`` keeps only the most recent ``tail`` sessions before sampling
+    (used for the daily fine series in issue #41), so the embedded payload
+    stays bounded: zoomed-out views use the monthly sampling instead.
     """
     dates, asset_returns, benchmark_returns = aligned_returns(asset, benchmark)
     empty: dict[str, list[object]] = {
@@ -213,17 +225,18 @@ def _regime_points(
         "r_squared": [],
         "alpha_annualized": [],
         "alpha_slope": [],
-        "alpha_accel": [],
         "signals": [],
     }
     if len(asset_returns) < window:
         return empty
     alpha_daily = rolling_alpha_daily(asset_returns, benchmark_returns, window)
     slope_daily = rolling_slope(alpha_daily, SLOPE_SPAN)
-    accel_daily = alpha_acceleration(slope_daily, SLOPE_SPAN)
-    ends = list(range(window, len(asset_returns) + 1, step))
-    if ends[-1] != len(asset_returns):
-        ends.append(len(asset_returns))
+    n = len(asset_returns)
+    ends = list(range(window, n + 1, step))
+    if tail is not None:
+        ends = [e for e in ends if e > n - tail]
+    if not ends or ends[-1] != n:
+        ends.append(n)
     out: dict[str, list[object]] = {key: [] for key in empty}
     for end in ends:
         i = end - 1  # return index whose date is dates[end - 1]
@@ -240,8 +253,7 @@ def _regime_points(
         out["r_squared"].append(r_squared)
         out["alpha_annualized"].append(alpha_ann)
         out["alpha_slope"].append(slope_daily[i])
-        out["alpha_accel"].append(accel_daily[i])
-        out["signals"].append(alpha_signal(alpha_ann, slope_daily[i], accel_daily[i]))
+        out["signals"].append(alpha_signal(alpha_ann, slope_daily[i]))
     return out
 
 
@@ -294,6 +306,143 @@ def _kpi_data(store: Store, symbol: str) -> dict[str, Any] | None:
     if not series:
         return None
     return kpis_module.kpi_panels(series, metric_keys)
+
+
+def _tldr_text(
+    *,
+    factor: dict[str, Any] | None,
+    regime: dict[str, Any],
+    moves: list[dict[str, Any]],
+    benchmark: str,
+) -> str:
+    """Sub-100-word TLDR for the top of a stock page (issue #42).
+
+    Generated from already-computed data at render time, so it refreshes
+    with the data. Covers: alpha/beta trend + direction, 1-2 historical
+    drivers from collected event windows, incoming catalysts, and a
+    forward-looking read explicitly labeled as interpretation. When event
+    windows are uncollected the text says so plainly instead of inventing
+    drivers; when no upcoming catalyst dates exist it says that too. The
+    hard word cap is enforced here, not trusted to phrasing.
+    """
+    parts: list[str] = []
+
+    # 1. alpha/beta trend + direction, from the default (250-session) window.
+    windows = regime.get("windows") or {}
+    reg = windows.get("250") or {}
+    alphas = [a for a in reg.get("alpha_annualized", []) if a is not None]
+    slopes = [s for s in reg.get("alpha_slope", []) if s is not None]
+    if alphas:
+        alpha = alphas[-1]
+        direction = ""
+        if slopes:
+            direction = (
+                " and improving"
+                if slopes[-1] > 0
+                else " and still falling"
+                if slopes[-1] < 0
+                else " and flat"
+            )
+        parts.append(
+            f"\u03b1 is {alpha:+.2%} annualized (trailing 250 sessions){direction}."
+        )
+    else:
+        parts.append("\u03b1 is unavailable \u2014 history is shorter than one window.")
+    beta = (factor or {}).get("beta")
+    if isinstance(beta, (int, float)):
+        if beta < 0.5:
+            relation = "the stock barely tracks the benchmark"
+        elif beta < 0.8:
+            relation = "the stock moves less than the market"
+        elif beta <= 1.2:
+            relation = "the stock moves roughly with the market"
+        else:
+            relation = "the stock amplifies market moves"
+        # Beta trend from the 250-session regime series (issue #42 asks for
+        # the trend, not just the level).
+        betas = [b for b in reg.get("beta", []) if b is not None]
+        trend = ""
+        if len(betas) >= 2:
+            delta = betas[-1] - betas[0]
+            if abs(delta) < 0.05:
+                trend = ", roughly steady over the window"
+            elif delta < 0:
+                trend = f", down from {betas[0]:.2f} at the start of the window"
+            else:
+                trend = f", up from {betas[0]:.2f} at the start of the window"
+        parts.append(f"\u03b2 {beta:.2f} vs {benchmark}{trend} \u2014 {relation}.")
+
+    # 2. historical drivers from collected event windows.
+    evidenced = [m for m in moves if m.get("evidence_status") == "available"]
+    if not moves:
+        parts.append("No unusual moves were flagged in this history.")
+    elif not evidenced:
+        parts.append(
+            f"No event windows have been collected for the {len(moves)} unusual "
+            "move days, so historical drivers are unidentified."
+        )
+    else:
+
+        def has(label_test: Callable[[str], bool], move: dict[str, Any]) -> bool:
+            return any(label_test(f.get("label", "")) for f in move.get("facts", []))
+
+        buckets = [
+            ("Earnings reports", lambda label: label == "Quarterly earnings reported"),
+            (
+                "SEC filings",
+                lambda label: label.startswith("8-K")
+                or "filing" in label.lower(),
+            ),
+            ("Macro releases", lambda label: "release" in label.lower()),
+        ]
+        counts = [
+            (name, sum(1 for m in evidenced if has(test, m)))
+            for name, test in buckets
+        ]
+        counts = [(name, c) for name, c in counts if c]
+        counts.sort(key=lambda nc: -nc[1])
+        if counts:
+            top = "; ".join(
+                f"{name.lower()} lined up with {c} of {len(moves)} unusual moves"
+                for name, c in counts[:2]
+            )
+            parts.append(top[0].upper() + top[1:] + ".")
+        else:
+            parts.append(
+                "Collected event windows show no dated earnings, filings, or "
+                "macro releases lining up with the unusual moves."
+            )
+
+    # 3. incoming catalysts. There is no upcoming-catalyst feed in the
+    # collected data, so this states the gap plainly instead of inventing
+    # a date.
+    parts.append("No upcoming catalyst dates are available in the collected data.")
+
+    # 4. forward-looking read, labeled as interpretation, grounded in (1).
+    if alphas:
+        alpha, slope = alphas[-1], slopes[-1] if slopes else None
+        if alpha < 0 and slope is not None and slope > 0:
+            read = (
+                "Interpretation: \u03b1 is still negative but improving \u2014 "
+                "early repair, not a recovery."
+            )
+        elif alpha < 0:
+            read = (
+                "Interpretation: \u03b1 is negative and deteriorating \u2014 "
+                "no sign of repair yet."
+            )
+        else:
+            read = (
+                "Interpretation: \u03b1 is positive \u2014 the stock has recently "
+                f"earned its drift vs {benchmark}."
+            )
+        parts.append(read)
+
+    text = " ".join(parts)
+    words = text.split()
+    if len(words) > _TLDR_MAX_WORDS:
+        text = " ".join(words[: _TLDR_MAX_WORDS - 1]) + "\u2026"
+    return text
 
 
 def chart_data(
@@ -393,7 +542,7 @@ def chart_data(
             except (ValueError, KeyError, TypeError):
                 row["evidence_status"] = "invalid"
         moves.append(row)
-    return {
+    data: dict[str, Any] = {
         "ticker": symbol,
         "name": name,
         "benchmark": artifact.benchmark,
@@ -421,8 +570,25 @@ def chart_data(
                 str(window): _regime_points(asset, benchmark, window)
                 for window in REGIME_WINDOWS
             },
+            # Daily-resolution tail for zoomed-in views (issue #41). The
+            # template picks daily/weekly/monthly by visible range and falls
+            # back to "windows" where the fine tail does not reach.
+            "fine_tail_sessions": _FINE_TAIL_SESSIONS,
+            "fine": {
+                str(window): _regime_points(
+                    asset, benchmark, window, step=1, tail=_FINE_TAIL_SESSIONS
+                )
+                for window in REGIME_WINDOWS
+            },
         },
     }
+    data["tldr"] = _tldr_text(
+        factor=data["factor"],
+        regime=data["regime"],
+        moves=data["moves"],
+        benchmark=artifact.benchmark,
+    )
+    return data
 
 
 def render_html(data: dict[str, Any]) -> str:
