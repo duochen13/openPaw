@@ -31,6 +31,10 @@ from portfolio_analysis.http import (
     QuotaExhausted,
     RateLimitLedger,
 )
+from portfolio_analysis.insight_dashboard import (
+    insight_dashboard_data,
+    render_insight_dashboard,
+)
 from portfolio_analysis.render import render_chart
 from portfolio_analysis.store import Store
 
@@ -341,6 +345,26 @@ def _factor_dashboard(args: argparse.Namespace) -> int:
     return 0
 
 
+def _insight_dashboard(args: argparse.Namespace) -> int:
+    try:
+        data = insight_dashboard_data(
+            Path(args.data_dir) if args.data_dir else None
+        )
+    except ValueError as exc:
+        print(f"insight-dashboard: {exc}", file=sys.stderr)
+        return 1
+    portfolio = load_portfolio()
+    try:
+        target = render_insight_dashboard(
+            data, Path(args.out_dir) if args.out_dir else portfolio.path("out")
+        )
+    except OSError as exc:
+        print(f"insight-dashboard: {exc}", file=sys.stderr)
+        return 1
+    print(f"insight dashboard written -> {target}")
+    return 0
+
+
 def _event_dashboard(args: argparse.Namespace) -> int:
     portfolio = load_portfolio()
     reddit_dir = (
@@ -514,6 +538,13 @@ def main(argv: list[str] | None = None) -> int:
     factor_dashboard.add_argument("--db", default=None)
     factor_dashboard.add_argument("--out-dir", default=None)
     factor_dashboard.set_defaults(func=_factor_dashboard)
+    insight_dashboard = sub.add_parser(
+        "insight-dashboard",
+        help="build the Insight dashboard: reported vs true AI capex + credit stress",
+    )
+    insight_dashboard.add_argument("--data-dir", default=None)
+    insight_dashboard.add_argument("--out-dir", default=None)
+    insight_dashboard.set_defaults(func=_insight_dashboard)
     event_dashboard = sub.add_parser(
         "event-dashboard", help="compare returns around macro release dates"
     )
