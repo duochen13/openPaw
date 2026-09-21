@@ -1,4 +1,8 @@
-"""Alpha slope/acceleration metrics and turnaround signals (issue #19)."""
+"""Alpha slope metrics and turnaround signals (issues #19, #39).
+
+Issue #39 removed alpha acceleration entirely: signals are slope-only.
+The only signal kind is TURNAROUND (alpha < 0 and slope > 0).
+"""
 
 import importlib.util
 from pathlib import Path
@@ -6,12 +10,9 @@ from pathlib import Path
 import pytest
 
 from portfolio_analysis.signals import (
-    EARLY_WATCH,
     REGIME_WINDOWS,
     SLOPE_SPAN,
     TURNAROUND,
-    TURNAROUND_STRONG,
-    alpha_acceleration,
     alpha_signal,
     rolling_alpha_daily,
     rolling_slope,
@@ -46,18 +47,6 @@ def test_rolling_slope_none_propagation():
 
 
 @pytest.mark.unit
-def test_alpha_acceleration_quadratic():
-    """a[i] = c*i^2 -> slope[i] = c*(2i-20), accel[i] = 40c exactly."""
-    c = 0.0002
-    values = [c * i * i for i in range(80)]
-    accel = alpha_acceleration(rolling_slope(values, 20), 20)
-    assert accel[:40] == [None] * 40
-    defined = [a for a in accel[40:] if a is not None]
-    assert len(defined) == 40
-    assert all(a == pytest.approx(40 * c) for a in defined)
-
-
-@pytest.mark.unit
 def test_rolling_alpha_daily_known_drift():
     """asset = 0.001 + bench: daily alpha is exactly 0.001 -> 0.252 annualized."""
     bench = [0.0005 * ((i * 37) % 11 - 5) for i in range(400)]
@@ -86,37 +75,29 @@ def test_rolling_alpha_daily_length_mismatch():
 
 @pytest.mark.unit
 @pytest.mark.parametrize(
-    "alpha,slope,accel,expected",
+    "alpha,slope,expected",
     [
-        (-0.20, 0.005, 0.001, TURNAROUND_STRONG),
-        (-0.20, 0.005, -0.001, TURNAROUND),
-        (-0.20, 0.005, 0.0, TURNAROUND),  # accel == 0 is not > 0
-        (-0.20, 0.005, None, TURNAROUND),
-        (-0.20, -0.005, 0.001, EARLY_WATCH),
-        (-0.20, -0.005, None, None),
-        (-0.20, -0.005, -0.001, None),  # plain deterioration: no signal
-        (0.10, 0.005, 0.001, None),  # positive alpha is not a reversal setup
-        (-0.20, 0.0, 0.001, None),  # slope == 0 is not > 0
-        (0.0, 0.005, 0.001, None),  # alpha == 0 is not < 0
-        (None, 0.005, 0.001, None),
-        (-0.20, None, 0.001, None),
+        (-0.20, 0.005, TURNAROUND),  # negative alpha, improving
+        (-0.20, -0.005, None),  # still deteriorating: no signal
+        (-0.20, 0.0, None),  # slope == 0 is not > 0
+        (0.10, 0.005, None),  # positive alpha is not a reversal setup
+        (0.0, 0.005, None),  # alpha == 0 is not < 0
+        (None, 0.005, None),
+        (-0.20, None, None),
     ],
 )
-def test_alpha_signal_kinds(alpha, slope, accel, expected):
-    assert alpha_signal(alpha, slope, accel) == expected
+def test_alpha_signal_kinds(alpha, slope, expected):
+    assert alpha_signal(alpha, slope) == expected
 
 
 @pytest.mark.unit
 def test_signals_are_causal_no_look_ahead():
-    """Appending future data must not change slope/accel at earlier indices."""
+    """Appending future data must not change the slope at earlier indices."""
     values = [0.001 * i + 0.0001 * (i % 5) for i in range(100)]
     slope_a = rolling_slope(values, 20)
-    accel_a = alpha_acceleration(slope_a, 20)
     extended = values + [10.0] * 50
     slope_b = rolling_slope(extended, 20)
-    accel_b = alpha_acceleration(slope_b, 20)
     assert slope_b[:100] == slope_a
-    assert accel_b[:100] == accel_a
     # ... but the future does change the future
     assert slope_b[100] != slope_a[99]
 
@@ -154,3 +135,20 @@ def test_backtest_forward_excess_starts_after_t():
     assert bt.forward_excess(stock, bench, 179, 20) == pytest.approx(
         1.01**20 - 1.005**20
     )
+
+
+@pytest.mark.unit
+def test_backtest_is_slope_only():
+    """Issue #39: no acceleration or combo signal definitions remain."""
+    bt = _load_backtest()
+    assert bt.SIGNALS == ("alpha_cross", "slope_cross")
+
+
+@pytest.mark.unit
+def test_acceleration_is_gone():
+    """Issue #39: acceleration computation/config was removed, not hidden."""
+    import portfolio_analysis.signals as signals
+
+    assert not hasattr(signals, "alpha_acceleration")
+    assert not hasattr(signals, "TURNAROUND_STRONG")
+    assert not hasattr(signals, "EARLY_WATCH")
