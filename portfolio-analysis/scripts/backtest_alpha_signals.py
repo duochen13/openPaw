@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
-"""Backtest alpha slope/acceleration reversal signals (issue #19).
+"""Backtest alpha slope reversal signals (issues #19, #39).
 
 For each stock, compute the daily trailing-250-session OLS alpha vs QQQ
 (trailing-only: alpha(t) uses returns up to and including t, never the
-future), derive the 20-session slope and acceleration, and score four signal
-definitions by their forward EXCESS return vs QQQ over 20/60/120 trading days:
+future), derive the 20-session slope, and score two signal definitions by
+their forward EXCESS return vs QQQ over 20/60/120 trading days:
 
   alpha_cross  alpha crosses from <= 0 to > 0
   slope_cross  slope crosses from <= 0 to > 0
-  accel_cross  acceleration crosses from <= 0 to > 0
-  combo        slope crosses > 0 while acceleration > 0
+
+Issue #39 removed alpha acceleration from the product, so the acceleration
+and combo signal definitions are gone; only slope-only signals remain.
 
 Forward returns start at t+1, strictly after the signal date: no look-ahead.
 Results are pooled across stocks. Caveats, printed with the table: signal
@@ -33,7 +34,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 from portfolio_analysis.moves import aligned_returns
 from portfolio_analysis.signals import (
     SLOPE_SPAN,
-    alpha_acceleration,
     rolling_alpha_daily,
     rolling_slope,
 )
@@ -42,7 +42,7 @@ STOCKS = ("NOW", "CRM", "META", "GOOGL", "NVDA", "ORCL", "TSLA")
 BENCHMARK = "QQQ"
 ALPHA_WINDOW = 250
 HORIZONS = (20, 60, 120)
-SIGNALS = ("alpha_cross", "slope_cross", "accel_cross", "combo")
+SIGNALS = ("alpha_cross", "slope_cross")
 
 
 def load_prices(db: Path) -> dict[str, dict[str, float]]:
@@ -89,14 +89,10 @@ def main() -> int:
         dates, sret, bret = aligned_returns(prices[stock], prices[BENCHMARK])
         alpha = rolling_alpha_daily(sret, bret, ALPHA_WINDOW)
         slope = rolling_slope(alpha, SLOPE_SPAN)
-        accel = alpha_acceleration(slope, SLOPE_SPAN)
         for i in range(1, len(dates)):
-            accel_i = accel[i]
             fired = {
                 "alpha_cross": cross_up(alpha, i),
                 "slope_cross": cross_up(slope, i),
-                "accel_cross": cross_up(accel, i),
-                "combo": cross_up(slope, i) and accel_i is not None and accel_i > 0,
             }
             for name, hit in fired.items():
                 if not hit:
