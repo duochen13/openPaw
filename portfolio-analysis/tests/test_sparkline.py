@@ -71,6 +71,18 @@ const document = {
 __TEMPLATE_CODE__
 
 // ---- fixture: regime windows with different point counts ----
+// Trailing-average helper mirroring signals.smooth_display (span 5).
+function trailAvg(vals, span) {
+  const out = new Array(vals.length).fill(null), run = [];
+  for (let i = 0; i < vals.length; i++) {
+    const v = vals[i];
+    if (v === null || v === undefined) { run.length = 0; continue; }
+    run.push(v);
+    if (run.length > span) run.shift();
+    if (run.length === span) out[i] = run.reduce((a, b) => a + b, 0) / span;
+  }
+  return out;
+}
 function mkWindow(n, alpha0, endDate) {
   const dates = [], beta = [], r2 = [], alpha = [], slope = [], signals = [];
   const end = new Date(endDate + "T12:00:00Z").getTime();
@@ -84,7 +96,7 @@ function mkWindow(n, alpha0, endDate) {
     signals.push(i < 4 ? null : (i % 5 === 0 ? "turnaround" : null));
   }
   return {dates, beta, r_squared: r2, alpha_annualized: alpha,
-          alpha_slope: slope, signals};
+          alpha_slope: slope, alpha_slope_display: trailAvg(slope, 5), signals};
 }
 // Daily-resolution tail for zoomed-in views (issue #41), ending on the same
 // session as the monthly series.
@@ -98,11 +110,11 @@ function mkFine(endDate, n) {
     beta.push(1.15 + (k % 9) * 0.01);
     r2.push(Math.min(0.99, 0.4 + (k % 20) * 0.01));
     alpha.push(-0.06 + (k % 30) * 0.001);
-    slope.push(k % 4 === 0 ? null : 0.0008 * ((k % 2) ? 1 : -1));
+    slope.push(k < 2 ? null : 0.0008 * ((k % 2) ? 1 : -1));
     signals.push(k % 25 === 0 ? "turnaround" : null);
   }
   return {dates, beta, r_squared: r2, alpha_annualized: alpha,
-          alpha_slope: slope, signals};
+          alpha_slope: slope, alpha_slope_display: trailAvg(slope, 5), signals};
 }
 const win250 = mkWindow(87, -0.05, "2026-09-17"),
       win125 = mkWindow(61, -0.04, "2026-09-17"),
@@ -118,10 +130,11 @@ const data = {
 };
 const regimeDates = win250.dates, regimeBeta = win250.beta,
       regimeR2 = win250.r_squared, regimeAlpha = win250.alpha_annualized,
-      regimeSlope = win250.alpha_slope, regimeSignals = win250.signals;
+      regimeSlope = win250.alpha_slope, regimeSlopeD = win250.alpha_slope_display,
+      regimeSignals = win250.signals;
 const maxDate = data.dates.at(-1);
-const state = {range: "all", view: "compare", direction: "all", regimeWindow: "250",
-               start: data.dates[0], end: maxDate};
+const state = {range: "all", view: "compare", direction: "all", kind: "all",
+               regimeWindow: "250", start: data.dates[0], end: maxDate};
 
 const failures = [];
 function check(name, cond, extra) {
@@ -165,8 +178,8 @@ check("granularity caption monthly on full range",
 check("beta polyline point count", polyPoints("spark-beta") === regimeDates.length);
 check("alpha polyline point count", polyPoints("spark-alpha") === regimeDates.length);
 check("rsquared polyline point count", polyPoints("spark-rsquared") === regimeDates.length);
-check("slope polyline skips warmup nulls",
-      polyPoints("spark-slope") === defined(regimeSlope),
+check("slope polyline draws the smoothed display series",
+      polyPoints("spark-slope") === defined(regimeSlopeD),
       String(polyPoints("spark-slope")));
 check("annotation hidden initially", annoGroup("spark-beta").attrs.visibility === "hidden");
 // R² sparkline uses a fixed 0-1 axis: labels must read 0% / 100% regardless of data range
@@ -175,6 +188,24 @@ check("annotation hidden initially", annoGroup("spark-beta").attrs.visibility ==
   check("rsquared axis fixed 0-1",
         r2texts.includes("+100.00%") && !r2texts.includes("+0.00%"),
         JSON.stringify(r2texts));
+}
+// Reference threshold lines: beta = 1.0 (market-neutral); R² = 0.70/0.85
+{
+  const isHline = c => c.tag === "line" && c.attrs["stroke-dasharray"] === "5 3";
+  const betaH = document.getElementById("spark-beta").children.filter(isHline);
+  check("beta market-neutral line drawn", betaH.length === 1, String(betaH.length));
+  check("beta line labeled",
+        svgTexts("spark-beta").includes("β = 1.0"),
+        JSON.stringify(svgTexts("spark-beta")));
+  const r2H = document.getElementById("spark-rsquared").children.filter(isHline);
+  check("rsquared two threshold lines", r2H.length === 2, String(r2H.length));
+  const r2t = svgTexts("spark-rsquared");
+  check("rsquared lines labeled",
+        r2t.includes("0.70") && r2t.includes("0.85"), JSON.stringify(r2t));
+  // the slope sparkline draws the display series, not the raw slope
+  const slopeSvg = document.getElementById("spark-slope");
+  check("slope sparkline has no threshold lines",
+        slopeSvg.children.filter(isHline).length === 0);
 }
 // Issue #39: the standalone min-value label is gone, so the bottom-right
 // date/value caption can never collide with it; the max label stays.
@@ -299,7 +330,7 @@ renderRegime();
   check("12m alpha point count (weekly)", polyPoints("spark-alpha") === expWeekly.length);
   check("12m rsquared point count (weekly)", polyPoints("spark-rsquared") === expWeekly.length);
   check("12m slope point count (weekly)",
-        polyPoints("spark-slope") === defined(expWeekly.map(i => fineWin.alpha_slope[i])));
+        polyPoints("spark-slope") === defined(expWeekly.map(i => fineWin.alpha_slope_display[i])));
   check("12m marker count (weekly)",
         signalMarkers("spark-alpha").length ===
           expWeekly.filter(i => fineWin.signals[i] !== null).length);
@@ -344,7 +375,7 @@ renderRegime();
 check("60w beta point count", polyPoints("spark-beta") === win60.dates.length,
       String(polyPoints("spark-beta")) + " vs " + win60.dates.length);
 check("60w slope point count",
-      polyPoints("spark-slope") === defined(win60.alpha_slope));
+      polyPoints("spark-slope") === defined(win60.alpha_slope_display));
 check("60w marker count",
       signalMarkers("spark-alpha").length ===
         win60.signals.filter(s => s !== null).length);
@@ -410,6 +441,21 @@ check("granularity monthly", granularityForDays(366) === "monthly");
   const mLines = moveTipLines(missing);
   check("move tip missing evidence plain", mLines[1] === "Evidence not collected", mLines[1]);
   check("move tip up direction", moveTipLines(missing)[0].includes("Price rose"));
+  // Dated-event marker (no unusual move): return and abnormal move still
+  // shown, z omitted instead of crashing.
+  const eventOnly = {
+    date: "2025-04-30", return: 0.012, idiosyncratic_component: 0.004,
+    z: null, beta: 1.1, kind: "event",
+    facts: [{label: "Quarterly earnings reported", date: "2025-04-30"}],
+    evidence_status: "event_only",
+  };
+  const vLines = moveTipLines(eventOnly);
+  check("event tip date+direction+return", vLines[0].includes("Apr 30, 2025") &&
+        vLines[0].includes("Price rose") && vLines[0].includes("+1.20%"), vLines[0]);
+  check("event tip event from facts", vLines[1] === "Quarterly earnings reported", vLines[1]);
+  check("event tip shows abnormal, no z",
+        vLines[2].includes("abnormal +0.40%") && !vLines[2].includes("z ") &&
+        vLines[2].includes("dated event"), vLines[2]);
   // Tooltip placement clamps inside the chart near every edge.
   const W = 900, H = 370, L = 45, R = 24, T = 32, B = 32, tw = 330, th = 76;
   const inside = ([tx, ty]) =>
