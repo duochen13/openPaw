@@ -25,6 +25,9 @@ so the acceleration-confirmed kinds "turnaround-strong" and "early-watch" no
 longer exist. These are regime-change signals for later validation against
 forward returns - never buy signals.
 
+``smooth_display`` is presentation-only smoothing for the slope sparkline;
+it is deliberately not used by ``alpha_signal``.
+
 Impact on issue #32 (alpha-reversal alert): the slope sign-change detection
 it needs is unaffected - the slope series is kept. What changed is that the
 alert can no longer require acceleration confirmation, and the "early-watch"
@@ -39,6 +42,12 @@ from portfolio_analysis.moves import annualize_alpha, ols_regression
 
 #: Smoothing span for the slope, in trading sessions (issue #19: 20).
 SLOPE_SPAN = 20
+
+#: Display-smoothing span for the alpha-slope sparkline. The raw per-session
+#: slope is jagged; the chart draws a short trailing moving average so the
+#: trend is readable. Display only: turnaround signals and the TLDR keep
+#: using the raw slope from rolling_slope, so signal behavior is unchanged.
+SLOPE_DISPLAY_SPAN = 5
 
 #: Rolling OLS windows offered by the chart's window switch.
 REGIME_WINDOWS = (60, 125, 250)
@@ -57,6 +66,30 @@ def rolling_slope(
         start, end = values[i - span], values[i]
         if start is not None and end is not None:
             out[i] = (end - start) / span
+    return out
+
+
+def smooth_display(
+    values: Sequence[float | None], span: int = SLOPE_DISPLAY_SPAN
+) -> list[float | None]:
+    """Trailing moving average for display.
+
+    ``None`` until ``span`` consecutive defined points have been seen; a
+    ``None`` gap breaks the run instead of being interpolated. Causal: the
+    value at index ``i`` uses only entries at indices <= ``i``. Pure
+    presentation smoothing - never fed into signal classification.
+    """
+    out: list[float | None] = [None] * len(values)
+    run: list[float] = []
+    for i, value in enumerate(values):
+        if value is None:
+            run = []
+            continue
+        run.append(value)
+        if len(run) > span:
+            run.pop(0)
+        if len(run) == span:
+            out[i] = sum(run) / span
     return out
 
 
