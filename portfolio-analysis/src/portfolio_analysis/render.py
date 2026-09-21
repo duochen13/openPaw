@@ -16,8 +16,15 @@ from portfolio_analysis import kpis as kpis_module
 from portfolio_analysis.artifacts import MovesArtifact, read_moves
 from portfolio_analysis.bundle import SCHEMA_VERSION, bundle_hash, move_payload
 from portfolio_analysis.config import Portfolio
+from portfolio_analysis.events.base import dated_fact_label
 from portfolio_analysis.fundamentals import pe_series
-from portfolio_analysis.moves import aligned_returns, annualize_alpha, correlation, ols_regression
+from portfolio_analysis.moves import (
+    aligned_returns,
+    annualize_alpha,
+    correlation,
+    ols_beta,
+    ols_regression,
+)
 from portfolio_analysis.naming import safe_ticker_component
 from portfolio_analysis.signals import (
     REGIME_WINDOWS,
@@ -25,6 +32,7 @@ from portfolio_analysis.signals import (
     alpha_signal,
     rolling_alpha_daily,
     rolling_slope,
+    smooth_display,
 )
 from portfolio_analysis.store import Store
 
@@ -62,15 +70,10 @@ def _facts(bundle: dict[str, Any]) -> list[dict[str, str]]:
         value = fact.get("value")
         if not isinstance(value, dict):
             continue
-        kind = fact["key"]
-        if kind == "filing":
-            label, day = f"{value['form']} filing", value["filed"]
-        elif kind == "earnings_reported":
-            label, day = "Quarterly earnings reported", value["reportedDate"]
-        elif kind == "macro_release":
-            label, day = f"{value['release']} release", value["date"]
-        else:
+        labeled = dated_fact_label(fact["key"], value)
+        if labeled is None:
             continue
+        label, day = labeled
         rows.append(
             {
                 "label": label,
@@ -219,12 +222,15 @@ def _regime_points(
     stays bounded: zoomed-out views use the monthly sampling instead.
     """
     dates, asset_returns, benchmark_returns = aligned_returns(asset, benchmark)
-    empty: dict[str, list[object]] = {
+    empty: dict[str, list[Any]] = {
         "dates": [],
         "beta": [],
         "r_squared": [],
         "alpha_annualized": [],
         "alpha_slope": [],
+        # Display-only smoothing of the slope (trailing average over the
+        # sampled points). Signals and the TLDR keep the raw alpha_slope.
+        "alpha_slope_display": [],
         "signals": [],
     }
     if len(asset_returns) < window:
@@ -237,7 +243,7 @@ def _regime_points(
         ends = [e for e in ends if e > n - tail]
     if not ends or ends[-1] != n:
         ends.append(n)
-    out: dict[str, list[object]] = {key: [] for key in empty}
+    out: dict[str, list[Any]] = {key: [] for key in empty}
     for end in ends:
         i = end - 1  # return index whose date is dates[end - 1]
         alpha_ann = alpha_daily[i]
@@ -254,6 +260,9 @@ def _regime_points(
         out["alpha_annualized"].append(alpha_ann)
         out["alpha_slope"].append(slope_daily[i])
         out["signals"].append(alpha_signal(alpha_ann, slope_daily[i]))
+    out["alpha_slope_display"] = smooth_display(
+        [s if isinstance(s, float) else None for s in out["alpha_slope"]]
+    )
     return out
 
 
@@ -372,13 +381,18 @@ def _tldr_text(
                 trend = f", up from {betas[0]:.2f} at the start of the window"
         parts.append(f"\u03b2 {beta:.2f} vs {benchmark}{trend} \u2014 {relation}.")
 
-    # 2. historical drivers from collected event windows.
-    evidenced = [m for m in moves if m.get("evidence_status") == "available"]
-    if not moves:
+    # 2. historical drivers from collected dated events. Markers are unusual
+    # moves ("move") plus dated events whose day moved modestly ("event");
+    # driver buckets count only unusual-move days, and dated-event markers
+    # get their own sentence so the counts stay honest.
+    move_days = [m for m in moves if m.get("kind", "move") == "move"]
+    event_days = [m for m in moves if m.get("kind") == "event"]
+    flagged = [m for m in move_days if m.get("facts")]
+    if not move_days:
         parts.append("No unusual moves were flagged in this history.")
-    elif not evidenced:
+    elif not flagged:
         parts.append(
-            f"No event windows have been collected for the {len(moves)} unusual "
+            f"No dated events were collected for the {len(move_days)} unusual "
             "move days, so historical drivers are unidentified."
         )
     else:
@@ -395,23 +409,25 @@ def _tldr_text(
             ),
             ("Macro releases", lambda label: "release" in label.lower()),
         ]
-        counts = [
-            (name, sum(1 for m in evidenced if has(test, m)))
-            for name, test in buckets
-        ]
+        counts = [(name, sum(1 for m in flagged if has(test, m))) for name, test in buckets]
         counts = [(name, c) for name, c in counts if c]
         counts.sort(key=lambda nc: -nc[1])
         if counts:
             top = "; ".join(
-                f"{name.lower()} lined up with {c} of {len(moves)} unusual moves"
+                f"{name.lower()} lined up with {c} of {len(move_days)} unusual moves"
                 for name, c in counts[:2]
             )
             parts.append(top[0].upper() + top[1:] + ".")
         else:
             parts.append(
-                "Collected event windows show no dated earnings, filings, or "
+                "Collected dated events show no earnings, filings, or "
                 "macro releases lining up with the unusual moves."
             )
+    if event_days:
+        parts.append(
+            f"{len(event_days)} dated event{'s' if len(event_days) != 1 else ''} "
+            "also annotate the chart without large moves."
+        )
 
     # 3. incoming catalysts. There is no upcoming-catalyst feed in the
     # collected data, so this states the gap plainly instead of inventing
@@ -443,6 +459,118 @@ def _tldr_text(
     if len(words) > _TLDR_MAX_WORDS:
         text = " ".join(words[: _TLDR_MAX_WORDS - 1]) + "\u2026"
     return text
+
+
+def _event_catalog(events_dir: Path, symbol: str) -> dict[str, list[dict[str, str]]]:
+    """Dated events collected independently of the move filter.
+
+    Reads ``events_dir/<symbol>/event_dates.json`` (written by the event
+    collection step from verified facts: earnings, SEC filings, macro
+    releases - never forum chatter). Missing, corrupt, or wrong-schema files
+    degrade to no event markers, never a crash.
+    """
+    try:
+        payload = json.loads((events_dir / symbol / "event_dates.json").read_text())
+    except (OSError, ValueError):
+        return {}
+    if payload.get("schema_version") != 1 or payload.get("ticker") != symbol:
+        return {}
+    raw = payload.get("dates")
+    if not isinstance(raw, dict):
+        return {}
+    out: dict[str, list[dict[str, str]]] = {}
+    for day, entries in raw.items():
+        if not isinstance(entries, list):
+            continue
+        rows = [
+            {
+                "label": str(entry["label"]),
+                "date": str(entry.get("date") or day),
+                "detail": str(entry.get("detail", "")),
+                "url": safe_url(entry.get("url")),
+            }
+            for entry in entries
+            if isinstance(entry, dict) and entry.get("label")
+        ]
+        if rows:
+            out[str(day)] = sorted(rows, key=lambda row: row["label"])
+    return out
+
+
+def _merge_event_markers(
+    moves: list[dict[str, Any]],
+    *,
+    event_catalog: dict[str, list[dict[str, str]]],
+    dates: list[str],
+    asset: dict[str, float],
+    benchmark: dict[str, float],
+    benchmark_name: str,
+    beta_window: int,
+) -> None:
+    """Union of unusual-move days and dated-event days, in place.
+
+    A date with a collected dated event earns a chart annotation even when
+    its abnormal move was modest (the event, not the move size, earns the
+    annotation). A date that is both a move and an event day keeps a single
+    "move" marker with the catalog facts merged in. Event markers carry the
+    day's return and abnormal move via the trailing beta_window-session OLS
+    beta; z/sigma/alpha are None because they were never estimated for
+    these days. Days without a full trailing window are skipped rather than
+    shown with a made-up abnormal move.
+    """
+    if not event_catalog:
+        return
+    by_date = {m["date"]: m for m in moves}
+    index = {day: i for i, day in enumerate(dates)}
+    for day in sorted(event_catalog):
+        facts = event_catalog[day]
+        row = by_date.get(day)
+        if row is not None:
+            seen = {(fact["label"], fact["date"]) for fact in row["facts"]}
+            for fact in facts:
+                if (fact["label"], fact["date"]) not in seen:
+                    row["facts"].append(fact)
+                    seen.add((fact["label"], fact["date"]))
+            row["facts"].sort(key=lambda fact: (fact["date"], fact["label"]))
+            continue
+        i = index.get(day)
+        if i is None or i <= beta_window:
+            continue
+        ret = asset[day] / asset[dates[i - 1]] - 1
+        bench_ret = benchmark[day] / benchmark[dates[i - 1]] - 1
+        asset_rets = [
+            asset[dates[j]] / asset[dates[j - 1]] - 1
+            for j in range(i - beta_window, i)
+        ]
+        bench_rets = [
+            benchmark[dates[j]] / benchmark[dates[j - 1]] - 1
+            for j in range(i - beta_window, i)
+        ]
+        try:
+            beta = ols_beta(asset_rets, bench_rets)
+        except ValueError:
+            continue
+        abnormal = ret - beta * bench_ret
+        by_date[day] = {
+            "date": day,
+            "kind": "event",
+            "benchmark": benchmark_name,
+            "return": ret,
+            "benchmark_return": bench_ret,
+            "beta": beta,
+            "alpha": None,
+            "abnormal_return": abnormal,
+            "sigma_60": None,
+            "z": None,
+            "market_component": beta * bench_ret,
+            "idiosyncratic_component": abnormal,
+            "alpha_annualized": None,
+            "facts": facts,
+            "documents": [],
+            "coverage": None,
+            "evidence_status": "event_only",
+        }
+        moves.append(by_date[day])
 
 
 def chart_data(
@@ -509,6 +637,7 @@ def chart_data(
             )
         row: dict[str, Any] = {
             "date": move.date,
+            "kind": "move",
             **move_payload(move),
             "market_component": market_component,
             "idiosyncratic_component": move.abnormal_return,
@@ -542,6 +671,16 @@ def chart_data(
             except (ValueError, KeyError, TypeError):
                 row["evidence_status"] = "invalid"
         moves.append(row)
+    _merge_event_markers(
+        moves,
+        event_catalog=_event_catalog(events_dir, symbol),
+        dates=dates,
+        asset=asset,
+        benchmark=benchmark,
+        benchmark_name=artifact.benchmark,
+        beta_window=artifact.params.beta_window,
+    )
+    moves.sort(key=lambda m: m["date"])
     data: dict[str, Any] = {
         "ticker": symbol,
         "name": name,
@@ -599,11 +738,15 @@ def render_html(data: dict[str, Any]) -> str:
     payload = (
         payload.replace(">", "\\u003e").replace("\u2028", "\\u2028").replace("\u2029", "\\u2029")
     )
-    rows = "".join(
-        f"<tr><td>{html.escape(m['date'])}</td><td>{m['return']:+.2%}</td>"
-        f"<td>{m['abnormal_return']:+.2%}</td><td>{m['z']:+.2f}</td></tr>"
-        for m in data["moves"]
-    )
+    def fallback_row(m: dict[str, Any]) -> str:
+        # Event-driven markers have no z (it was never estimated for them).
+        z = "—" if m["z"] is None else f"{m['z']:+.2f}"
+        return (
+            f"<tr><td>{html.escape(m['date'])}</td><td>{m['return']:+.2%}</td>"
+            f"<td>{m['abnormal_return']:+.2%}</td><td>{z}</td></tr>"
+        )
+
+    rows = "".join(fallback_row(m) for m in data["moves"])
     stocks = data.get("stocks", [{"symbol": data["ticker"], "name": data["ticker"]}])
     stock_links = "".join(
         '<a href="' + html.escape(safe_ticker_component(stock["symbol"]), quote=True)
