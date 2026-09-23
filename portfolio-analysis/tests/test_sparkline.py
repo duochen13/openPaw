@@ -50,6 +50,7 @@ function stubNode(tag) {
   return {
     tag, children: [], attrs: {}, textContent: "", hidden: false, value: "",
     handlers: {}, onpointermove: null, onpointerleave: null,
+    classList: {toggle() {}, add() {}, remove() {}},
     setAttribute(k, v) { this.attrs[k] = String(v); },
     getAttribute(k) { return this.attrs[k]; },
     addEventListener(ev, fn) { (this.handlers[ev] = this.handlers[ev] || []).push(fn); },
@@ -120,13 +121,22 @@ const win250 = mkWindow(87, -0.05, "2026-09-17"),
       win125 = mkWindow(61, -0.04, "2026-09-17"),
       win60 = mkWindow(30, -0.02, "2026-09-17");
 const fineWin = mkFine(win250.dates.at(-1), 400);
+// Issue #47 fixtures: time-weighted (WLS) regime series keyed by half-life.
+const wls20 = mkWindow(40, -0.03, "2026-09-17"),
+      wls60 = mkWindow(55, -0.025, "2026-09-17"),
+      wls120 = mkWindow(70, -0.035, "2026-09-17");
+const wlsFine = mkFine(win250.dates.at(-1), 300);
 const data = {
   ticker: "NOW", name: "ServiceNow, Inc.", benchmark: "QQQ",
   dates: ["2020-09-18", "2026-09-17"],
+  tldr: "TLDR fixture sentence.",
   regime: {default_window: "250",
            windows: {"60": win60, "125": win125, "250": win250},
            fine_tail_sessions: 400,
-           fine: {"60": fineWin, "125": fineWin, "250": fineWin}},
+           fine: {"60": fineWin, "125": fineWin, "250": fineWin},
+           wls_half_lives: ["20", "60", "120"], wls_default: "60",
+           wls: {"20": wls20, "60": wls60, "120": wls120},
+           wls_fine: {"20": wlsFine, "60": wlsFine, "120": wlsFine}},
 };
 const regimeDates = win250.dates, regimeBeta = win250.beta,
       regimeR2 = win250.r_squared, regimeAlpha = win250.alpha_annualized,
@@ -134,7 +144,8 @@ const regimeDates = win250.dates, regimeBeta = win250.beta,
       regimeSignals = win250.signals;
 const maxDate = data.dates.at(-1);
 const state = {range: "all", view: "compare", direction: "all", kind: "all",
-               regimeWindow: "250", start: data.dates[0], end: maxDate};
+               regimeWindow: "250", regimeMode: "fixed", wlsHalfLife: "60",
+               start: data.dates[0], end: maxDate};
 
 const failures = [];
 function check(name, cond, extra) {
@@ -168,8 +179,15 @@ check("box unhidden", document.getElementById("regime-box").hidden === false);
 check("grid shown", document.getElementById("regime-grid").hidden === false);
 check("empty hidden", document.getElementById("regime-empty").hidden === true);
 check("bench label", document.getElementById("regime-bench").textContent === "QQQ");
-check("window label defaults to 250",
-      document.getElementById("regime-window-label").textContent === "250");
+check("mode label defaults to fixed 250-session OLS",
+      document.getElementById("regime-mode-label").textContent === "Trailing 250-session OLS",
+      document.getElementById("regime-mode-label").textContent);
+check("factor strip states active fixed mode",
+      document.getElementById("factor-mode").textContent === "Regime panel: fixed time weight",
+      document.getElementById("factor-mode").textContent);
+check("tldr unmodified in fixed mode",
+      document.getElementById("tldr-text").textContent === "TLDR fixture sentence.",
+      document.getElementById("tldr-text").textContent);
 check("window select synced",
       document.getElementById("regime-window").value === "250");
 check("granularity caption monthly on full range",
@@ -379,12 +397,57 @@ check("60w slope point count",
 check("60w marker count",
       signalMarkers("spark-alpha").length ===
         win60.signals.filter(s => s !== null).length);
-check("60w window label", document.getElementById("regime-window-label").textContent === "60");
+check("60w mode label",
+      document.getElementById("regime-mode-label").textContent === "Trailing 60-session OLS",
+      document.getElementById("regime-mode-label").textContent);
 check("60w select synced", document.getElementById("regime-window").value === "60");
 state.regimeWindow = "125";
 renderRegime();
 check("125w beta point count", polyPoints("spark-beta") === win125.dates.length);
-check("125w window label", document.getElementById("regime-window-label").textContent === "125");
+check("125w mode label",
+      document.getElementById("regime-mode-label").textContent === "Trailing 125-session OLS",
+      document.getElementById("regime-mode-label").textContent);
+
+// 5b. issue #47: WLS tab renders the half-life series and says so
+state.regimeMode = "wls"; state.wlsHalfLife = "20"; state.range = "all";
+renderRegime();
+check("wls 20h beta point count", polyPoints("spark-beta") === wls20.dates.length,
+      String(polyPoints("spark-beta")) + " vs " + wls20.dates.length);
+check("wls mode label",
+      document.getElementById("regime-mode-label").textContent ===
+        "Trailing WLS, half-life 20 sessions (recent sessions weigh more)",
+      document.getElementById("regime-mode-label").textContent);
+check("wls half-life select synced", document.getElementById("regime-half-life").value === "20");
+check("wls tab marked selected",
+      document.getElementById("regime-tab-wls").attrs["aria-selected"] === "true");
+check("fixed tab deselected in wls mode",
+      document.getElementById("regime-tab-fixed").attrs["aria-selected"] === "false");
+check("wls signal note names WLS computation",
+      document.getElementById("regime-signal-note").textContent ===
+        "time-weighted (WLS) computation",
+      document.getElementById("regime-signal-note").textContent);
+check("factor strip states active wls mode",
+      document.getElementById("factor-mode").textContent ===
+        "Regime panel: enable time weight (half-life 20 sessions)",
+      document.getElementById("factor-mode").textContent);
+check("tldr names the active wls mode",
+      document.getElementById("tldr-text").textContent ===
+        "TLDR fixture sentence. Regime panel below is showing enable time weight " +
+        "(half-life 20 sessions).",
+      document.getElementById("tldr-text").textContent);
+{
+  const wmarks = signalMarkers("spark-alpha");
+  check("wls marker count",
+        wmarks.length === wls20.signals.filter(s => s !== null).length);
+  const wlast = wmarks[wmarks.length - 1];
+  wlast.handlers.pointerenter[0]();
+  const wtip = sigTipGroup("spark-alpha");
+  check("wls signal tooltip cites WLS",
+        wtip.children[3].textContent.includes("trailing WLS, half-life 20 sessions"),
+        wtip.children[3].textContent);
+  wlast.handlers.pointerleave[0]();
+}
+state.regimeMode = "fixed"; state.wlsHalfLife = "60";
 
 // 6. window with < 2 points -> empty state, no made-up numbers
 state.regimeWindow = "250"; state.range = "custom";
@@ -515,7 +578,6 @@ def test_template_carries_window_switch_and_signal_legend():
     assert 'id="regime-window"' in html
     assert 'id="spark-slope"' in html
     assert 'id="spark-accel"' not in html
-    assert 'id="regime-window-label"' in html
     assert 'id="regime-gran"' in html
     assert 'id="tldr-box"' in html and 'id="tldr-text"' in html
     assert "not buy signals" in html
@@ -524,3 +586,21 @@ def test_template_carries_window_switch_and_signal_legend():
     assert "early-watch" not in html
     # One filled signal kind remains: alpha < 0 and slope > 0.
     assert "\u03b1 &lt; 0 and slope &gt; 0" in html
+
+
+@pytest.mark.unit
+def test_template_carries_weighting_mode_tabs():
+    """Issue #47: the regime panel has fixed-time-weight / enable-time-weight
+    tabs, a half-life selector for the WLS tab, and a dynamic mode label."""
+    html = TEMPLATE.read_text()
+    assert 'id="regime-tab-fixed"' in html
+    assert 'id="regime-tab-wls"' in html
+    assert ">fixed time weight<" in html
+    assert ">enable time weight<" in html
+    assert 'id="regime-half-life"' in html
+    assert 'id="regime-mode-label"' in html
+    assert 'id="regime-signal-note"' in html
+    assert 'id="factor-mode"' in html
+    assert "fixed time weight" in html
+    # The old static window label is gone; the label is mode-aware now.
+    assert 'id="regime-window-label"' not in html
