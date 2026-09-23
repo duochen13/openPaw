@@ -22,13 +22,17 @@ from portfolio_analysis.moves import (
     aligned_returns,
     annualize_alpha,
     correlation,
+    decay_weights,
     ols_beta,
     ols_regression,
+    wls_regression,
 )
 from portfolio_analysis.naming import safe_ticker_component
 from portfolio_analysis.signals import (
+    DEFAULT_WLS_HALF_LIFE,
     REGIME_WINDOWS,
     SLOPE_SPAN,
+    WLS_HALF_LIVES,
     alpha_signal,
     rolling_alpha_daily,
     rolling_slope,
@@ -198,12 +202,18 @@ def _industry_factor(
 def _regime_points(
     asset: dict[str, float],
     benchmark: dict[str, float],
-    window: int,
+    window: int | None = None,
     step: int = _REGIME_STEP,
     tail: int | None = None,
+    *,
+    half_life: float | None = None,
 ) -> dict[str, list[object]]:
     """Rolling beta, annualized alpha, R², alpha slope and turnaround signals,
     sampled every `step` sessions.
+
+    Exactly one of ``window`` (hard-window OLS, "fixed time weight") or
+    ``half_life`` (exponentially-decayed WLS over the growing history,
+    "enable time weight", issue #47) must be set.
 
     R² is computed over the identical return observations as beta and alpha.
     The slope is the change in *annualized* alpha per trading session over
@@ -212,10 +222,10 @@ def _regime_points(
     trading days" definition is exact, not an artifact of the sampling grid.
     ``signals[i]`` classifies the sampled point ("turnaround" or ``None``);
     slope and signals are ``None`` during their warmup. Empty when the series
-    is shorter than one full window, for the same reason as _trailing_factor.
-    The most recent session is always the last point. A degenerate window
-    (zero variance, so beta/alpha/R² are all undefined) is skipped, never
-    filled with a made-up number.
+    is shorter than one full window (OLS) or one half-life (WLS), for the
+    same reason as _trailing_factor. The most recent session is always the
+    last point. A degenerate window (zero variance, so beta/alpha/R² are all
+    undefined) is skipped, never filled with a made-up number.
 
     ``tail`` keeps only the most recent ``tail`` sessions before sampling
     (used for the daily fine series in issue #41), so the embedded payload
@@ -233,12 +243,30 @@ def _regime_points(
         "alpha_slope_display": [],
         "signals": [],
     }
-    if len(asset_returns) < window:
+    if (window is None) == (half_life is None):
+        raise ValueError("exactly one of window and half_life must be set")
+    use_wls = half_life is not None
+    if use_wls:
+        assert half_life is not None
+        min_history = max(2, int(half_life))
+    else:
+        assert window is not None
+        min_history = window
+    if len(asset_returns) < min_history:
         return empty
-    alpha_daily = rolling_alpha_daily(asset_returns, benchmark_returns, window)
-    slope_daily = rolling_slope(alpha_daily, SLOPE_SPAN)
+    if half_life is None:
+        assert window is not None
+        alpha_daily = rolling_alpha_daily(asset_returns, benchmark_returns, window)
+        slope_daily = rolling_slope(alpha_daily, SLOPE_SPAN)
+        warmup_end = window
+    else:
+        alpha_daily = rolling_alpha_daily(
+            asset_returns, benchmark_returns, None, half_life=half_life
+        )
+        slope_daily = rolling_slope(alpha_daily, SLOPE_SPAN, half_life=half_life)
+        warmup_end = max(2, int(half_life))
     n = len(asset_returns)
-    ends = list(range(window, n + 1, step))
+    ends = list(range(warmup_end, n + 1, step))
     if tail is not None:
         ends = [e for e in ends if e > n - tail]
     if not ends or ends[-1] != n:
@@ -249,11 +277,21 @@ def _regime_points(
         alpha_ann = alpha_daily[i]
         if alpha_ann is None:
             continue  # degenerate window: beta/alpha/R² undefined, skip
-        beta, _, r_squared = ols_regression(
-            asset_returns[end - window : end],
-            benchmark_returns[end - window : end],
-            r_squared=True,
-        )
+        if half_life is None:
+            assert window is not None
+            beta, _, r_squared = ols_regression(
+                asset_returns[end - window : end],
+                benchmark_returns[end - window : end],
+                r_squared=True,
+            )
+        else:
+            weights = decay_weights(end, half_life)
+            beta, _, r_squared = wls_regression(
+                asset_returns[:end],
+                benchmark_returns[:end],
+                weights,
+                r_squared=True,
+            )
         out["dates"].append(dates[i])
         out["beta"].append(beta)
         out["r_squared"].append(r_squared)
@@ -353,7 +391,9 @@ def _tldr_text(
                 else " and flat"
             )
         parts.append(
-            f"\u03b1 is {alpha:+.2%} annualized (trailing 250 sessions){direction}."
+            "\u03b1 is "
+            f"{alpha:+.2%} annualized (trailing 250 sessions, fixed time weight)"
+            f"{direction}."
         )
     else:
         parts.append("\u03b1 is unavailable \u2014 history is shorter than one window.")
@@ -718,6 +758,28 @@ def chart_data(
                     asset, benchmark, window, step=1, tail=_FINE_TAIL_SESSIONS
                 )
                 for window in REGIME_WINDOWS
+            },
+            # Time-weighted (WLS) twins of the above (issue #47): growing
+            # history with exponential decay instead of a hard OLS window.
+            # The "enable time weight" tab reads these; the half-life -
+            # not a window - controls how much history matters.
+            "wls_half_lives": [str(h) for h in WLS_HALF_LIVES],
+            "wls_default": str(DEFAULT_WLS_HALF_LIFE),
+            "wls": {
+                str(half_life): _regime_points(
+                    asset, benchmark, half_life=float(half_life)
+                )
+                for half_life in WLS_HALF_LIVES
+            },
+            "wls_fine": {
+                str(half_life): _regime_points(
+                    asset,
+                    benchmark,
+                    step=1,
+                    tail=_FINE_TAIL_SESSIONS,
+                    half_life=float(half_life),
+                )
+                for half_life in WLS_HALF_LIVES
             },
         },
     }
