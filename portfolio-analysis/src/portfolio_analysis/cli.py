@@ -14,6 +14,7 @@ from pathlib import Path
 from portfolio_analysis import fundamentals, prices
 from portfolio_analysis import kpis as kpis_module
 from portfolio_analysis import moves as moves_module
+from portfolio_analysis import positions as positions_module
 from portfolio_analysis.artifacts import MovesArtifact, write_moves
 from portfolio_analysis.collection import collect_events
 from portfolio_analysis.config import PROJECT_ROOT, Portfolio, load_portfolio
@@ -320,11 +321,58 @@ def _dashboard(args: argparse.Namespace) -> int:
     return 0
 
 
+def _import_robinhood_csv(args: argparse.Namespace) -> int:
+    """Import a Robinhood positions CSV export into the holdings snapshot (#55).
+
+    v1 is CSV-only and read-only: zero credentials, zero ToS risk. The
+    snapshot is timestamped so a stale import is visible in the dashboards.
+    """
+    src = Path(args.file)
+    if not src.is_file():
+        print(f"import-robinhood-csv: no such file: {src}", file=sys.stderr)
+        return 2
+    try:
+        result = positions_module.parse_robinhood_csv(src)
+    except ValueError as exc:
+        print(f"import-robinhood-csv: {exc}", file=sys.stderr)
+        return 1
+    if not result.positions:
+        print(
+            f"import-robinhood-csv: no equity positions found in {src} "
+            f"({len(result.skipped)} rows skipped)",
+            file=sys.stderr,
+        )
+        return 1
+    print(f"positions from {src}:")
+    for pos in result.positions:
+        print(f"  {pos.symbol:6s} {pos.shares:>10g} shares @ ${pos.avg_cost:,.2f}")
+    for skip in result.skipped:
+        print(f"  skipped row {skip.row} ({skip.symbol or '?'}): {skip.reason}")
+    if args.dry_run:
+        print("dry run: snapshot not written")
+        return 0
+    target = positions_module.write_snapshot(result, args.out)
+    snapshot = positions_module.load_snapshot(target)
+    assert snapshot is not None
+    print(
+        f"wrote {len(snapshot.positions)} positions -> {target} "
+        f"(snapshot {snapshot.imported_at.isoformat()})"
+    )
+    return 0
+
+
 def _factor_dashboard(args: argparse.Namespace) -> int:
     portfolio = load_portfolio()
     store = Store.open(args.db or portfolio.path("db"))
+    # Holdings are optional: a missing snapshot renders the page exactly as
+    # before; a corrupt one fails loud instead of silently hiding positions.
     try:
-        data = factor_dashboard_data(portfolio, store)
+        snapshot = positions_module.load_snapshot()
+    except ValueError as exc:
+        print(f"factor-dashboard: {exc}", file=sys.stderr)
+        return 1
+    try:
+        data = factor_dashboard_data(portfolio, store, snapshot=snapshot)
     except ValueError as exc:
         print(f"factor-dashboard: {exc}", file=sys.stderr)
         return 1
@@ -471,6 +519,21 @@ def main(argv: list[str] | None = None) -> int:
         "--force", action="store_true", help="refetch even if stored data is fresh"
     )
     fetch_fund.set_defaults(func=_fetch_fundamentals)
+
+    import_csv = sub.add_parser(
+        "import-robinhood-csv",
+        help="import a Robinhood positions CSV export into the holdings snapshot",
+    )
+    import_csv.add_argument("file", help="Robinhood positions CSV export")
+    import_csv.add_argument(
+        "--out",
+        default=None,
+        help="snapshot path (default config/positions.yaml)",
+    )
+    import_csv.add_argument(
+        "--dry-run", action="store_true", help="parse and print, write nothing"
+    )
+    import_csv.set_defaults(func=_import_robinhood_csv)
 
     detect = sub.add_parser("detect-moves", help="flag days whose abnormal return is large")
     detect.add_argument(

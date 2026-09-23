@@ -12,11 +12,13 @@ constraint as the single-stock charts.
 
 from __future__ import annotations
 
+import html
 import json
 from pathlib import Path
 
 from portfolio_analysis.config import Portfolio
 from portfolio_analysis.moves import aligned_returns, annualize_alpha, ols_regression
+from portfolio_analysis.positions import Snapshot
 from portfolio_analysis.store import Store
 
 #: Trailing OLS window, in sessions, matching the single-stock regime panel.
@@ -30,7 +32,10 @@ _PALETTE = (
 
 
 def factor_dashboard_data(
-    portfolio: Portfolio, store: Store, window: int = FACTOR_WINDOW
+    portfolio: Portfolio,
+    store: Store,
+    window: int = FACTOR_WINDOW,
+    snapshot: Snapshot | None = None,
 ) -> dict[str, object]:
     """Daily trailing OLS beta / annualized alpha per ticker vs the benchmark.
 
@@ -42,6 +47,10 @@ def factor_dashboard_data(
     segments instead of fabricating continuity. A ticker the benchmark never
     overlaps still appears with an all-``None`` series; a ticker or benchmark
     with no prices at all is a configuration error and raises.
+
+    When ``snapshot`` is given, ``"holdings"`` carries the imported positions
+    valued at the latest stored close, with the snapshot timestamp and age so
+    a stale import is visible, not silent.
     """
     benchmark = portfolio.benchmark
     bench = store.adjusted_series(benchmark)
@@ -88,6 +97,61 @@ def factor_dashboard_data(
         "window": window,
         "benchmark": benchmark,
         "asof": master[-1] if master else "",
+        "holdings": _holdings_payload(portfolio, store, stocks, snapshot),
+    }
+
+
+def _holdings_payload(
+    portfolio: Portfolio,
+    store: Store,
+    stocks: dict[str, dict[str, object]],
+    snapshot: Snapshot | None,
+) -> dict[str, object] | None:
+    """Value the snapshot positions at the latest stored close.
+
+    Returns ``None`` when no snapshot exists so the page renders exactly as
+    before the import feature.
+    """
+    if snapshot is None:
+        return None
+    names = {entry.symbol: entry.name for entry in portfolio.entries}
+    rows: list[dict[str, object]] = []
+    for pos in snapshot.positions:
+        series = store.adjusted_series(pos.symbol)
+        # adjusted_series is ordered by date, so the last value is the latest.
+        latest_price: float | None = next(reversed(series.values())) if series else None
+        cost = pos.shares * pos.avg_cost
+        value = pos.shares * latest_price if latest_price is not None else None
+        stock = stocks.get(pos.symbol)
+        latest_alpha: float | None = None
+        if stock is not None:
+            alpha_series = stock["alpha"]
+            assert isinstance(alpha_series, list)
+            for point in reversed(alpha_series):
+                if point is not None:
+                    latest_alpha = float(point)
+                    break
+        rows.append(
+            {
+                "symbol": pos.symbol,
+                "name": names.get(pos.symbol, pos.symbol),
+                "shares": pos.shares,
+                "avg_cost": round(pos.avg_cost, 4),
+                "price": round(latest_price, 2) if latest_price is not None else None,
+                "value": round(value, 2) if value is not None else None,
+                "gain": round(value - cost, 2) if value is not None else None,
+                "gain_pct": round(100 * (value - cost) / cost, 2)
+                if value is not None and cost > 0
+                else None,
+                "alpha": latest_alpha,
+            }
+        )
+    return {
+        "as_of": snapshot.imported_at.isoformat(timespec="minutes"),
+        "age_days": snapshot.age_days(),
+        "stale": snapshot.stale,
+        "source": snapshot.source,
+        "rows": rows,
     }
 
 
@@ -103,8 +167,77 @@ def render_factor_dashboard(data: dict[str, object], out_dir: Path) -> Path:
         .replace("<", "\\u003c")
         .replace(">", "\\u003e")
     )
-    target.write_text(_PAGE.replace("__DATA__", "const DATA = " + payload + ";"))
+    page = _PAGE.replace("__DATA__", "const DATA = " + payload + ";")
+    holdings = data.get("holdings")
+    page = page.replace(
+        "__HOLDINGS__",
+        _holdings_html(holdings) if isinstance(holdings, dict) else "",
+    )
+    target.write_text(page)
     return target
+
+
+def _holdings_html(holdings: dict[str, object]) -> str:
+    """Server-rendered holdings table with the snapshot timestamp and age."""
+
+    def fmt(v: object, money: bool = False) -> str:
+        if v is None:
+            return "n/a"
+        if isinstance(v, bool):
+            return str(v)
+        if isinstance(v, (int, float)):
+            return f"${v:,.2f}" if money else f"{v:,.2f}"
+        return str(v)
+
+    raw_rows = holdings.get("rows")
+    typed_rows: list[dict[str, object]] = (
+        [r for r in raw_rows if isinstance(r, dict)] if isinstance(raw_rows, list) else []
+    )
+    rows_html: list[str] = []
+    for row in typed_rows:
+        symbol = html.escape(str(row["symbol"]), quote=True)
+        name = html.escape(str(row.get("name", row["symbol"])))
+        gain = row.get("gain")
+        gain_pct = row.get("gain_pct")
+        alpha = row.get("alpha")
+        gain_cls = ""
+        if isinstance(gain, (int, float)) and not isinstance(gain, bool):
+            gain_cls = "pos" if gain >= 0 else "neg"
+        gain_pct_txt = ""
+        if isinstance(gain_pct, (int, float)) and not isinstance(gain_pct, bool):
+            gain_pct_txt = f" ({gain_pct:+.1f}%)"
+        alpha_txt = "n/a"
+        if isinstance(alpha, (int, float)) and not isinstance(alpha, bool):
+            alpha_txt = f"{alpha * 100:+.1f}%"
+        rows_html.append(
+            "<tr>"
+            f"<td><strong>{symbol}</strong><br>"
+            f'<span style="color:var(--muted);font-size:11px">{name}</span></td>'
+            f"<td>{fmt(row.get('shares'))}</td>"
+            f"<td>{fmt(row.get('avg_cost'), True)}</td>"
+            f"<td>{fmt(row.get('price'), True)}</td>"
+            f"<td>{fmt(row.get('value'), True)}</td>"
+            f'<td class="{gain_cls}">{fmt(gain, True)}{gain_pct_txt}</td>'
+            f"<td>{alpha_txt}</td>"
+            "</tr>"
+        )
+    as_of = html.escape(str(holdings.get("as_of", "")))
+    age_days = holdings.get("age_days", 0)
+    stale = bool(holdings.get("stale"))
+    source = html.escape(str(holdings.get("source", "")))
+    badge = (
+        '<span class="badge stale">STALE</span>'
+        if stale
+        else '<span class="badge">FRESH</span>'
+    )
+    source_txt = f" · source: {source}" if source else ""
+    return (
+        '<div class="chart-block holdings"><h2>Holdings' + badge + "</h2>"
+        f'<p class="cap">Positions snapshot as of {as_of} · {age_days} day(s) old{source_txt}</p>'
+        '<table><thead><tr><th>Symbol</th><th>Shares</th><th>Avg cost</th>'
+        "<th>Latest</th><th>Value</th><th>Gain</th><th>Alpha</th></tr></thead>"
+        "<tbody>" + "".join(rows_html) + "</tbody></table></div>"
+    )
 
 
 _PAGE = """<!doctype html><html lang="en"><head><meta charset="utf-8">
@@ -142,10 +275,18 @@ p.sub{color:var(--muted);margin:0 0 14px}
 .handle{position:absolute;top:7px;width:20px;height:20px;border-radius:50%;background:#fff;border:2px solid var(--accent);cursor:ew-resize;transform:translateX(-50%);box-shadow:0 1px 4px rgba(0,0,0,.2);z-index:2}
 #rangeLabels{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-top:2px}
 .note{font-size:12px;color:var(--muted);margin-top:22px}
+.holdings table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+.holdings th,.holdings td{text-align:right;padding:7px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+.holdings th:first-child,.holdings td:first-child{text-align:left}
+.holdings th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:650}
+.holdings .pos{color:#166534}.holdings .neg{color:#b91c1c}
+.badge{display:inline-block;font-size:11px;font-weight:700;border-radius:10px;padding:2px 9px;margin-left:8px;vertical-align:2px;background:#e7f2e4;color:#166534}
+.badge.stale{background:#fbeed3;color:#92600a}
 </style></head><body><main>
 <div class="top"><span class="brand">OPENPAW / MARKET NOTES</span></div>
 <h1>Beta &amp; Alpha across stocks.</h1>
 <p class="sub" id="subline">Trailing factor trajectories. Drag the handles to change the time frame; tap a stock to show/hide it. Hover a chart for values.</p>
+__HOLDINGS__
 <div class="controls" id="chips"></div>
 <div class="chart-block"><h2>Beta over time</h2><p class="cap">Benchmark sensitivity. Zero line dashed.</p><div class="chart" id="betaBox"><svg id="betaSvg" viewBox="0 0 1000 340" preserveAspectRatio="none"></svg><div class="tip" id="betaTip"></div></div></div>
 <div class="chart-block"><h2>Alpha over time</h2><p class="cap">Annualized trailing residual, not a forecast. Zero line dashed.</p><div class="chart" id="alphaBox"><svg id="alphaSvg" viewBox="0 0 1000 340" preserveAspectRatio="none"></svg><div class="tip" id="alphaTip"></div></div></div>
