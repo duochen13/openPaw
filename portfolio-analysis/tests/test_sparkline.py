@@ -682,3 +682,40 @@ def test_template_carries_alpha_slope_tab():
     assert 'id="regime-slope-span"' in html
     assert 'id="regime-slope-note"' in html
     assert "WLS-regression" in html
+
+
+@pytest.mark.unit
+def test_preset_date_helpers(tmp_path):
+    """Issue #52: monthsBefore/daysBefore do calendar-correct arithmetic.
+
+    Regression guard: sixMonthStart previously used yearsBefore(x, 0.5),
+    whose fractional year truncated to a whole year (12 months, not 6).
+    """
+    if shutil.which("node") is None:
+        pytest.skip("node is required for the date-helper check")
+    lines = TEMPLATE.read_text().splitlines()
+    funcs = [
+        ln
+        for ln in lines
+        if ln.startswith("function monthsBefore(") or ln.startswith("function daysBefore(")
+    ]
+    assert len(funcs) == 2, "preset date helpers not found in template"
+    script = tmp_path / "preset_dates.js"
+    script.write_text(
+        "\n".join(funcs)
+        + """
+const assert = require("assert");
+assert.strictEqual(monthsBefore("2026-09-17", 6), "2026-03-17");
+assert.strictEqual(monthsBefore("2026-09-17", 3), "2026-06-17");
+assert.strictEqual(monthsBefore("2026-09-17", 1), "2026-08-17");
+assert.strictEqual(monthsBefore("2026-03-31", 1), "2026-02-28");  // month-end clamp
+assert.strictEqual(daysBefore("2026-09-17", 7), "2026-09-10");
+assert.strictEqual(daysBefore("2026-01-05", 10), "2025-12-26");  // year boundary
+console.log("preset date helper checks passed");
+"""
+    )
+    proc = subprocess.run(["node", "--check", str(script)], capture_output=True, text=True)
+    assert proc.returncode == 0, f"node --check failed:\n{proc.stderr}"
+    proc = subprocess.run(["node", str(script)], capture_output=True, text=True)
+    assert proc.returncode == 0, f"date helper check failed:\n{proc.stderr}"
+    assert "preset date helper checks passed" in proc.stdout
