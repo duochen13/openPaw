@@ -174,6 +174,117 @@ def ols_beta(asset: Sequence[float], benchmark: Sequence[float]) -> float:
     return beta
 
 
+def decay_weights(length: int, half_life: float) -> list[float]:
+    """Exponential decay weights, normalized to sum to 1 (issue #47).
+
+    ``weights[t] = 0.5 ** ((length - 1 - t) / half_life)``: the most recent
+    observation (``t = length - 1``) has weight 1 before normalization, and an
+    observation ``half_life`` sessions older has exactly half that weight.
+    Recent data dominates; old data fades but is never hard-cut, so there is
+    no window edge to fall off.
+
+    Raises on non-positive ``half_life`` or ``length < 1``.
+    """
+    if length < 1:
+        raise ValueError(f"need at least one observation, got {length}")
+    if half_life <= 0:
+        raise ValueError(f"half_life must be positive, got {half_life}")
+    raw = [0.5 ** ((length - 1 - t) / half_life) for t in range(length)]
+    total = math.fsum(raw)
+    return [w / total for w in raw]
+
+
+@overload
+def wls_regression(
+    asset: Sequence[float],
+    benchmark: Sequence[float],
+    weights: Sequence[float],
+) -> tuple[float, float]: ...
+
+
+@overload
+def wls_regression(
+    asset: Sequence[float],
+    benchmark: Sequence[float],
+    weights: Sequence[float],
+    *,
+    r_squared: Literal[True],
+) -> tuple[float, float, float]: ...
+
+
+def wls_regression(
+    asset: Sequence[float],
+    benchmark: Sequence[float],
+    weights: Sequence[float],
+    *,
+    r_squared: bool = False,
+) -> tuple[float, float] | tuple[float, float, float]:
+    """Slope (beta) and intercept (alpha) of the *weighted* least-squares
+    regression of asset returns on benchmark returns (issue #47).
+
+    Minimizes ``sum(w * residual**2)``. With uniform weights this is exactly
+    :func:`ols_regression` (unit-tested); with :func:`decay_weights` the
+    recent past dominates the fit.
+
+    Returns ``(beta, alpha)``, or ``(beta, alpha, r_squared)`` with
+    ``r_squared=True``, where R² = 1 - SSE_w/SST_w over the weighted sums,
+    clamped to [0, 1]. The same degenerate-input rules as
+    :func:`ols_regression` apply: mismatched lengths, fewer than two
+    observations, zero (weighted) benchmark variance, or zero (weighted)
+    asset variance for R² all raise ``ValueError`` - a flat line is never
+    laundered into a relationship.
+    """
+    if not (len(asset) == len(benchmark) == len(weights)):
+        raise ValueError(
+            "series and weights must be the same length, got "
+            f"{len(asset)}, {len(benchmark)} and {len(weights)}"
+        )
+    if len(asset) < 2:
+        raise ValueError(f"need at least two observations, got {len(asset)}")
+    if any(w < 0 for w in weights):
+        raise ValueError("weights must be non-negative")
+    w_sum = math.fsum(weights)
+    if w_sum <= 0:
+        raise ValueError("weights must sum to a positive value")
+
+    def wmean(xs: Sequence[float]) -> float:
+        return math.fsum(w * x for w, x in zip(weights, xs, strict=True)) / w_sum
+
+    mean_asset = wmean(asset)
+    mean_benchmark = wmean(benchmark)
+    covariance = (
+        math.fsum(
+            w * (a - mean_asset) * (b - mean_benchmark)
+            for w, a, b in zip(weights, asset, benchmark, strict=True)
+        )
+        / w_sum
+    )
+    variance = (
+        math.fsum(w * (b - mean_benchmark) ** 2 for w, b in zip(weights, benchmark, strict=True))
+        / w_sum
+    )
+    if variance == 0:
+        raise ValueError("benchmark has zero (weighted) variance; beta is undefined")
+    beta = covariance / variance
+    alpha = mean_asset - beta * mean_benchmark
+    if not r_squared:
+        return beta, alpha
+
+    sse = (
+        math.fsum(
+            w * (a - (alpha + beta * b)) ** 2
+            for w, a, b in zip(weights, asset, benchmark, strict=True)
+        )
+        / w_sum
+    )
+    sst = (
+        math.fsum(w * (a - mean_asset) ** 2 for w, a in zip(weights, asset, strict=True)) / w_sum
+    )
+    if sst == 0:
+        raise ValueError("asset has zero (weighted) variance; R² is undefined")
+    return beta, alpha, min(1.0, max(0.0, 1.0 - sse / sst))
+
+
 def correlation(asset: Sequence[float], benchmark: Sequence[float]) -> float:
     """Pearson correlation of two same-length return series.
 
