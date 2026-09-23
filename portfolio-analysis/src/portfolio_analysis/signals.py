@@ -10,9 +10,27 @@ Conventions (stated once, so the units are never ambiguous):
 - ``alpha`` is the trailing OLS intercept, *annualized* (x252), exactly as the
   regime series stores it: a change of 0.01 is one percentage point of
   annualized alpha.
-- ``slope`` = (alpha(t) - alpha(t-SPAN)) / SPAN: the change in *annualized*
-  alpha per trading session. A slope of +0.005 means the annualized alpha is
-  improving by half a point per session. Displayed as %/session.
+- ``slope`` is the change in *annualized* alpha per trading session, in %/session.
+  Two estimators exist (issue #50):
+  - ``two-point`` (legacy): ``(alpha(t) - alpha(t-SPAN)) / SPAN`` - only the
+    two endpoints, maximally sensitive to endpoint noise.
+  - ``WLS regression``: the weighted least-squares slope of the trailing
+    ``SPAN`` alpha points against time, weights
+    ``w = 0.5 ** ((t - i) / half_life)``. ``half_life -> infinity`` recovers
+    the equal-weight OLS slope; a small half-life lets recent sessions
+    dominate. Qualitatively the small-half-life end of the spectrum is the
+    recent-days extreme the two-point formula also aims at, but the two are
+    different estimators and do not agree numerically on noisy data (they
+    agree exactly only on a clean linear trend).
+  A slope of +0.005 means the annualized alpha is improving by half a point
+  per session. Displayed as %/session.
+
+Caveat on inference (issue #50, relevant to #49): consecutive alpha points
+are highly autocorrelated - trailing windows overlap heavily, so neighboring
+alphas share almost all their return data. The WLS regression treats them as
+independent observations, which is fine for *point estimation* of the slope
+but understates the true standard error. Never read a slope t-statistic at
+face value; it will look more confident than the data warrants.
 
 Every function is causal: the value at index ``i`` uses only entries at
 indices <= ``i``. Entries that cannot be computed (warmup, degenerate OLS
@@ -43,6 +61,13 @@ from portfolio_analysis.moves import annualize_alpha, decay_weights, ols_regress
 #: Smoothing span for the slope, in trading sessions (issue #19: 20).
 SLOPE_SPAN = 20
 
+#: Slope spans offered by the chart's "enable time weight (alpha slope)" tab
+#: (issue #50): the WLS-regression slope is fit over the trailing ``span``
+#: alpha points, so the span is a responsiveness knob - 10 reacts fast, 30 is
+#: steadier. The legacy two-point slope also takes ``span`` as its endpoint
+#: distance.
+SLOPE_SPANS = (10, 20, 30)
+
 #: Display-smoothing span for the alpha-slope sparkline. The raw per-session
 #: slope is jagged; the chart draws a short trailing moving average so the
 #: trend is readable. Display only: turnaround signals and the TLDR keep
@@ -64,19 +89,28 @@ DEFAULT_WLS_HALF_LIFE = 60
 def rolling_slope(
     values: Sequence[float | None], span: int = SLOPE_SPAN, *, half_life: float | None = None
 ) -> list[float | None]:
-    """Per-session slope of ``values``.
+    """Per-session slope of ``values`` (issue #50: two estimators).
 
     ``half_life=None`` (default): ``(v[i] - v[i-span]) / span``, the original
-    "fixed time weight" behavior. ``None`` until index ``span`` and whenever
-    either endpoint is ``None``: the first ``span`` entries are a warmup fact,
-    not a zero slope.
+    "fixed time weight" two-point behavior. ``None`` until index ``span`` and
+    whenever either endpoint is ``None``: the first ``span`` entries are a
+    warmup fact, not a zero slope.
 
-    ``half_life`` set ("enable time weight", issue #47): the WLS slope of the
-    trailing ``span`` values against time, with :func:`decay_weights`
-    weighting recent values more. ``None`` until ``span`` consecutive defined
-    values have been seen; a ``None`` anywhere in the trailing span poisons
-    the slope instead of being interpolated - the same "never fabricated"
-    rule as the fixed mode.
+    ``half_life`` set ("enable time weight", issues #47/#50): the WLS slope of
+    the trailing ``span`` values against time, with :func:`decay_weights`
+    weighting recent values more. ``half_life -> infinity`` recovers the
+    equal-weight OLS slope over the span; a small half-life lets the most
+    recent sessions dominate (the recent-days extreme - qualitatively what
+    the two-point formula aims at, though not numerically identical).
+    ``None`` until ``span`` consecutive defined values have
+    been seen; a ``None`` anywhere in the trailing span poisons the slope
+    instead of being interpolated - the same "never fabricated" rule as the
+    fixed mode.
+
+    Caveat: alpha points are highly autocorrelated (trailing windows
+    overlap), so the regression understates the slope's standard error -
+    fine for point estimation, optimistic for inference (see module
+    docstring; relevant to issue #49).
     """
     out: list[float | None] = [None] * len(values)
     if half_life is None:
