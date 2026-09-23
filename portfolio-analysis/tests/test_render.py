@@ -1,6 +1,7 @@
 import json
 from dataclasses import replace
 from html.parser import HTMLParser
+from pathlib import Path
 
 import pytest
 
@@ -70,6 +71,9 @@ def test_timeframe_slider_markup_present_and_period_select_kept(tmp_path):
         'data-tf="3"',
         'data-tf="1"',
         'data-tf="0.5"',
+        'data-tf="3m"',
+        'data-tf="1m"',
+        'data-tf="1w"',
         'id="tf-slider"',
         'id="tf-h0"',
         'id="tf-h1"',
@@ -199,3 +203,16 @@ def test_render_html_embeds_kpi_section_and_payload(tmp_path):
     assert 'id="kpi-box"' in html
     assert "renderKPIs();" in html
     assert '"kpis": {"metrics": [{"key": "revenue"' in html
+
+
+def test_issue52_dashboard_defaults():
+    """Issue #52: the alpha-slope tab loads by default with slope half-life 120."""
+    html = (
+        Path(__file__).resolve().parent.parent
+        / "src" / "portfolio_analysis" / "templates" / "chart.html"
+    ).read_text()
+    assert "regimeMode:'wls-slope'" in html  # fresh-load state default
+    assert "?rm:'wls-slope'" in html  # URL-hash fallback default
+    assert "wlsSlopeHalfLife:'120'" in html
+    assert 'id="regime-tab-wls-slope" role="tab" aria-selected="true"' in html
+    assert '<option value="120" selected>120 sessions</option>' in html
