@@ -923,13 +923,25 @@ def render_html(data: dict[str, Any]) -> str:
 
     rows = "".join(fallback_row(m) for m in data["moves"])
     stocks = data.get("stocks", [{"symbol": data["ticker"], "name": data["ticker"]}])
-    stock_links = "".join(
-        '<a href="' + html.escape(safe_ticker_component(stock["symbol"]), quote=True)
-        + '.html"' + (' aria-current="page"' if stock["symbol"] == data["ticker"] else '')
-        + '><strong>' + html.escape(stock["symbol"]) + '</strong><span>'
-        + html.escape(stock["name"]) + '</span></a>'
-        for stock in stocks
-    )
+    links: list[str] = []
+    seen_group: str | None = None
+    for stock in stocks:
+        group = stock.get("group")
+        if group and group != seen_group:
+            links.append(f'<h3 class="nav-group">{html.escape(group)}</h3>')
+            seen_group = group
+        links.append(
+            '<a href="'
+            + html.escape(safe_ticker_component(stock["symbol"]), quote=True)
+            + '.html"'
+            + (' aria-current="page"' if stock["symbol"] == data["ticker"] else "")
+            + '><strong>'
+            + html.escape(stock["symbol"])
+            + "</strong><span>"
+            + html.escape(stock["name"])
+            + "</span></a>"
+        )
+    stock_links = "".join(links)
     return (
         template.replace("__TITLE__", html.escape(f"{data['ticker']} · Price & events"))
         .replace("__STOCK_LINKS__", stock_links)
@@ -949,7 +961,8 @@ def render_chart(
 ) -> Path:
     symbol = safe_ticker_component(symbol)
     artifact = read_moves(moves_dir / f"{symbol}.json")
-    if artifact.ticker != symbol or artifact.benchmark != portfolio.benchmark:
+    benchmark = portfolio.benchmark_for(symbol)
+    if artifact.ticker != symbol or artifact.benchmark != benchmark:
         raise ValueError("move artifact does not match configured ticker/benchmark")
     store = Store.open(db)
     try:
@@ -959,13 +972,19 @@ def render_chart(
         industry_series = (
             store.adjusted_series(industry_ticker) if industry_ticker else {}
         )
+        if portfolio.is_index(symbol):
+            display_name = portfolio.index_entry(symbol).name
+            aliases: tuple[str, ...] = ()
+        else:
+            display_name = portfolio.entry(symbol).name
+            aliases = portfolio.entry(symbol).aliases
         data = chart_data(
             artifact,
             store.adjusted_series(symbol),
             store.adjusted_series(artifact.benchmark),
             events_dir,
-            name=portfolio.entry(symbol).name,
-            aliases=portfolio.entry(symbol).aliases,
+            name=display_name,
+            aliases=aliases,
             industry=industry_series or None,
             industry_name=industry_ticker if industry_series else None,
             eps_quarters=store.eps_quarters(symbol),
@@ -985,7 +1004,11 @@ def render_chart(
     out_dir.mkdir(parents=True, exist_ok=True)
     target = out_dir / f"{symbol}.html"
     data["stocks"] = [
-        {"symbol": entry.symbol, "name": entry.name} for entry in portfolio.entries
+        {"symbol": entry.symbol, "name": entry.name, "group": "Stocks"}
+        for entry in portfolio.entries
+    ] + [
+        {"symbol": index.symbol, "name": index.name, "group": "Indices"}
+        for index in portfolio.indices
     ]
     target.write_text(render_html(data))
     return target
