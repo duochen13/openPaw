@@ -232,3 +232,15 @@ def test_issue52_hash_regime_mode_override():
         "state.regimeMode=(['fixed','wls','wls-slope'].includes(rm))?rm:'wls-slope';"
         in html
     )
+
+
+def test_issue58_sticky_timeframe_bar():
+    """Issue #58: the timeframe bar sticks to the viewport top while scrolling."""
+    html = (
+        Path(__file__).resolve().parent.parent
+        / "src" / "portfolio_analysis" / "templates" / "chart.html"
+    ).read_text()
+    assert "#timeframe-bar{margin:2px 0 14px;position:sticky;top:0;" in html
+    assert "background:var(--paper)" in html  # no bleed-through when stuck
+    assert "#timeframe-bar.stuck{" in html  # stuck-state styling hook
+    assert "IntersectionObserver" in html  # toggles .stuck while pinned
