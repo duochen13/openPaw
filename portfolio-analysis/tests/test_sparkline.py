@@ -126,6 +126,19 @@ const wls20 = mkWindow(40, -0.03, "2026-09-17"),
       wls60 = mkWindow(55, -0.025, "2026-09-17"),
       wls120 = mkWindow(70, -0.035, "2026-09-17");
 const wlsFine = mkFine(win250.dates.at(-1), 300);
+// Issue #50 fixtures: WLS-regression slope series per (half-life, span).
+const wlsSlope = {}, wlsSlopeFine = {};
+for (const h of ["20", "60", "120"]) {
+  wlsSlope[h] = {}; wlsSlopeFine[h] = {};
+  for (const s of ["10", "20", "30"]) {
+    const w = mkWindow(40, -0.03, "2026-09-17");
+    const k = Number(s) / 20;  // keep spans distinguishable
+    w.alpha_slope = w.alpha_slope.map(v => v === null ? null : v * k);
+    w.alpha_slope_display = trailAvg(w.alpha_slope, 5);
+    wlsSlope[h][s] = w;
+    wlsSlopeFine[h][s] = mkFine(win250.dates.at(-1), 300);
+  }
+}
 const data = {
   ticker: "NOW", name: "ServiceNow, Inc.", benchmark: "QQQ",
   dates: ["2020-09-18", "2026-09-17"],
@@ -136,7 +149,9 @@ const data = {
            fine: {"60": fineWin, "125": fineWin, "250": fineWin},
            wls_half_lives: ["20", "60", "120"], wls_default: "60",
            wls: {"20": wls20, "60": wls60, "120": wls120},
-           wls_fine: {"20": wlsFine, "60": wlsFine, "120": wlsFine}},
+           wls_fine: {"20": wlsFine, "60": wlsFine, "120": wlsFine},
+           slope_spans: ["10", "20", "30"], slope_default: "20",
+           wls_slope: wlsSlope, wls_slope_fine: wlsSlopeFine},
 };
 const regimeDates = win250.dates, regimeBeta = win250.beta,
       regimeR2 = win250.r_squared, regimeAlpha = win250.alpha_annualized,
@@ -145,6 +160,7 @@ const regimeDates = win250.dates, regimeBeta = win250.beta,
 const maxDate = data.dates.at(-1);
 const state = {range: "all", view: "compare", direction: "all", kind: "all",
                regimeWindow: "250", regimeMode: "fixed", wlsHalfLife: "60",
+               wlsSlopeHalfLife: "60", wlsSlopeSpan: "20",
                start: data.dates[0], end: maxDate};
 
 const failures = [];
@@ -447,6 +463,53 @@ check("tldr names the active wls mode",
         wtip.children[3].textContent);
   wlast.handlers.pointerleave[0]();
 }
+// 5c. issue #50: "enable time weight (alpha slope)" tab
+state.regimeMode = "wls-slope"; state.wlsSlopeHalfLife = "60";
+state.wlsSlopeSpan = "30"; state.range = "all";
+renderRegime();
+check("slope tab marked selected",
+      document.getElementById("regime-tab-wls-slope").attrs["aria-selected"] === "true");
+check("other tabs deselected in slope mode",
+      document.getElementById("regime-tab-fixed").attrs["aria-selected"] === "false" &&
+      document.getElementById("regime-tab-wls").attrs["aria-selected"] === "false");
+check("slope controls visible, sibling controls hidden",
+      document.getElementById("regime-wls-slope-controls").hidden === false &&
+      document.getElementById("regime-wls-controls").hidden === true &&
+      document.getElementById("regime-fixed-controls").hidden === true);
+check("slope half-life + span selects synced",
+      document.getElementById("regime-slope-half-life").value === "60" &&
+      document.getElementById("regime-slope-span").value === "30");
+check("slope mode label names WLS-regression estimator and span",
+      document.getElementById("regime-mode-label").textContent.includes("WLS-regression") &&
+      document.getElementById("regime-mode-label").textContent.includes("span 30"),
+      document.getElementById("regime-mode-label").textContent);
+check("slope note names WLS regression",
+      document.getElementById("regime-slope-note").textContent.includes("WLS regression"),
+      document.getElementById("regime-slope-note").textContent);
+check("slope tab beta still from the wls half-life series",
+      polyPoints("spark-beta") === wls60.dates.length,
+      String(polyPoints("spark-beta")) + " vs " + wls60.dates.length);
+{
+  const sd30 = wlsSlope["60"]["30"].alpha_slope_display;
+  check("slope sparkline draws the span-30 display series",
+        polyPoints("spark-slope") === defined(sd30),
+        String(polyPoints("spark-slope")) + " vs " + defined(sd30));
+  const smarks = signalMarkers("spark-alpha");
+  const slast = smarks[smarks.length - 1];
+  slast.handlers.pointerenter[0]();
+  const stip = sigTipGroup("spark-alpha");
+  check("slope tab tooltip cites WLS-regression slope and span",
+        stip.children[3].textContent.includes("WLS-regression slope (span 30)"),
+        stip.children[3].textContent);
+  slast.handlers.pointerleave[0]();
+}
+check("factor strip states slope mode",
+      document.getElementById("factor-mode").textContent.includes(
+        "enable time weight (alpha slope)"),
+      document.getElementById("factor-mode").textContent);
+check("tldr names the slope mode",
+      document.getElementById("tldr-text").textContent.includes("enable time weight (alpha slope)"),
+      document.getElementById("tldr-text").textContent);
 state.regimeMode = "fixed"; state.wlsHalfLife = "60";
 
 // 6. window with < 2 points -> empty state, no made-up numbers
@@ -604,3 +667,55 @@ def test_template_carries_weighting_mode_tabs():
     assert "fixed time weight" in html
     # The old static window label is gone; the label is mode-aware now.
     assert 'id="regime-window-label"' not in html
+
+
+@pytest.mark.unit
+def test_template_carries_alpha_slope_tab():
+    """Issue #50: the regime panel's third tab - "enable time weight (alpha
+    slope)" - with its own half-life and slope-span selectors, and a dynamic
+    slope note naming the active estimator."""
+    html = TEMPLATE.read_text()
+    assert 'id="regime-tab-wls-slope"' in html
+    assert ">enable time weight (alpha slope)<" in html
+    assert 'id="regime-wls-slope-controls"' in html
+    assert 'id="regime-slope-half-life"' in html
+    assert 'id="regime-slope-span"' in html
+    assert 'id="regime-slope-note"' in html
+    assert "WLS-regression" in html
+
+
+@pytest.mark.unit
+def test_preset_date_helpers(tmp_path):
+    """Issue #52: monthsBefore/daysBefore do calendar-correct arithmetic.
+
+    Regression guard: sixMonthStart previously used yearsBefore(x, 0.5),
+    whose fractional year truncated to a whole year (12 months, not 6).
+    """
+    if shutil.which("node") is None:
+        pytest.skip("node is required for the date-helper check")
+    lines = TEMPLATE.read_text().splitlines()
+    funcs = [
+        ln
+        for ln in lines
+        if ln.startswith("function monthsBefore(") or ln.startswith("function daysBefore(")
+    ]
+    assert len(funcs) == 2, "preset date helpers not found in template"
+    script = tmp_path / "preset_dates.js"
+    script.write_text(
+        "\n".join(funcs)
+        + """
+const assert = require("assert");
+assert.strictEqual(monthsBefore("2026-09-17", 6), "2026-03-17");
+assert.strictEqual(monthsBefore("2026-09-17", 3), "2026-06-17");
+assert.strictEqual(monthsBefore("2026-09-17", 1), "2026-08-17");
+assert.strictEqual(monthsBefore("2026-03-31", 1), "2026-02-28");  // month-end clamp
+assert.strictEqual(daysBefore("2026-09-17", 7), "2026-09-10");
+assert.strictEqual(daysBefore("2026-01-05", 10), "2025-12-26");  // year boundary
+console.log("preset date helper checks passed");
+"""
+    )
+    proc = subprocess.run(["node", "--check", str(script)], capture_output=True, text=True)
+    assert proc.returncode == 0, f"node --check failed:\n{proc.stderr}"
+    proc = subprocess.run(["node", str(script)], capture_output=True, text=True)
+    assert proc.returncode == 0, f"date helper check failed:\n{proc.stderr}"
+    assert "preset date helper checks passed" in proc.stdout
