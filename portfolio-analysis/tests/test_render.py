@@ -216,3 +216,19 @@ def test_issue52_dashboard_defaults():
     assert "wlsSlopeHalfLife:'120'" in html
     assert 'id="regime-tab-wls-slope" role="tab" aria-selected="true"' in html
     assert '<option value="120" selected>120 sessions</option>' in html
+
+
+def test_issue52_hash_regime_mode_override():
+    """Issue #52: an explicit #regimeMode in the URL hash must override the default.
+
+    All three valid values ('fixed', 'wls', 'wls-slope') are preserved; only a
+    missing/invalid value falls back to the 'wls-slope' default.
+    """
+    html = (
+        Path(__file__).resolve().parent.parent
+        / "src" / "portfolio_analysis" / "templates" / "chart.html"
+    ).read_text()
+    assert (
+        "state.regimeMode=(['fixed','wls','wls-slope'].includes(rm))?rm:'wls-slope';"
+        in html
+    )
