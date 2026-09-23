@@ -8,10 +8,10 @@ from __future__ import annotations
 
 import argparse
 import sys
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
-from portfolio_analysis import fundamentals, prices
+from portfolio_analysis import freshness, fundamentals, prices
 from portfolio_analysis import kpis as kpis_module
 from portfolio_analysis import moves as moves_module
 from portfolio_analysis import positions as positions_module
@@ -44,9 +44,20 @@ def _selected_symbols(portfolio: Portfolio, requested: str | None) -> list[str] 
     return None if symbol is None else [symbol]
 
 
+def _price_targets(portfolio: Portfolio, symbols: list[str]) -> list[str]:
+    """Every ticker a price ingest fetches: the symbols, the benchmark, and
+    the industry benchmarks that ride along with the compare view."""
+    targets = [*symbols, portfolio.benchmark]
+    for symbol in symbols:
+        industry = portfolio.industry_benchmark(symbol)
+        if industry and industry not in targets:
+            targets.append(industry)
+    return targets
+
+
 def _ingest_prices(args: argparse.Namespace) -> int:
     portfolio = load_portfolio()
-    symbols = _selected_symbols(portfolio, args.ticker)
+    symbols = _selected_symbols(portfolio, getattr(args, "ticker", None))
     if symbols is None:
         print(
             f"{args.ticker!r} is not in the portfolio; add it to config/portfolio.yaml",
@@ -58,11 +69,7 @@ def _ingest_prices(args: argparse.Namespace) -> int:
     # cannot be computed without it, so an ingest that skips it leaves a store
     # that looks complete and is not. Industry benchmarks ride along the same
     # way: the compare view cannot draw the third line without them.
-    targets = [*symbols, portfolio.benchmark]
-    for symbol in symbols:
-        industry = portfolio.industry_benchmark(symbol)
-        if industry and industry not in targets:
-            targets.append(industry)
+    targets = _price_targets(portfolio, symbols)
 
     store = Store.open(args.db or portfolio.path("db"))
     try:
@@ -106,6 +113,104 @@ def _kpi_fresh(store: Store, symbol: str, metric_keys: list[str]) -> bool:
     return age < _FUNDAMENTALS_TTL
 
 
+#: Sessions behind the last completed one before a build warns on stderr.
+_STALE_WARN_SESSIONS = 2
+
+
+def _latest_bar_day(store: Store, symbol: str) -> date | None:
+    """The latest stored price date for a symbol, or None when empty."""
+    series = store.adjusted_series(symbol)
+    if not series:
+        return None
+    return date.fromisoformat(max(series))
+
+
+def _prices_need_refresh(
+    portfolio: Portfolio, store: Store, symbols: list[str], now: datetime
+) -> tuple[bool, int]:
+    """Check every ingest target; refresh if any bar predates the last
+    completed session. Returns (needed, worst_sessions_behind)."""
+    needed = False
+    worst = 0
+    for symbol in _price_targets(portfolio, symbols):
+        stale, behind = freshness.price_staleness(_latest_bar_day(store, symbol), now)
+        needed = needed or stale
+        worst = max(worst, behind)
+    return needed, worst
+
+
+def _fundamentals_need_refresh(portfolio: Portfolio, store: Store, symbols: list[str]) -> bool:
+    """True when any symbol's EPS or KPI fetch is older than the TTL."""
+    try:
+        kpi_config = kpis_module.load_kpi_config()
+    except kpis_module.ConfigError:
+        kpi_config = {}
+    for symbol in symbols:
+        # Symbols without a CIK (e.g. indices) have no fundamentals to fetch.
+        if getattr(portfolio.entry(symbol), "cik", None) is None:
+            continue
+        if not _fundamentals_fresh(store, symbol):
+            return True
+        if not _kpi_fresh(store, symbol, kpi_config.get(symbol, [])):
+            return True
+    return False
+
+
+def _refresh_if_stale(args: argparse.Namespace, portfolio: Portfolio, symbols: list[str]) -> int:
+    """Freshness pre-flight for the user-facing triggers (#56).
+
+    - `--offline`: fetches nothing, exactly like the old default.
+    - `--refresh`: forces both price ingest and fundamentals refetch.
+    - otherwise: ingest prices only when the latest bar is older than the
+      last completed trading session; refetch fundamentals only when the
+      stored fetch is older than the TTL (fresh symbols are skipped).
+    """
+    if getattr(args, "offline", False):
+        return 0
+    force = getattr(args, "force", False) or getattr(args, "refresh", False)
+    if getattr(args, "refresh", False):
+        args.refresh_prices = True
+    # _fetch_fundamentals reads args.force directly; the dashboard parser
+    # does not define --force, so make sure the attribute exists.
+    args.force = force
+    db = args.db or portfolio.path("db")
+    store = Store.open(db)
+    try:
+        now = datetime.now(UTC)
+        price_stale, _ = _prices_need_refresh(portfolio, store, symbols, now)
+        missing = any(
+            not store.price_bar_count(target) for target in _price_targets(portfolio, symbols)
+        )
+        fund_stale = _fundamentals_need_refresh(portfolio, store, symbols)
+    finally:
+        store.close()
+    if (getattr(args, "refresh_prices", False) or price_stale or missing) and _ingest_prices(
+        args
+    ):
+        return 1
+    if (getattr(args, "force", False) or fund_stale) and _fetch_fundamentals(args):
+        return 1
+    return 0
+
+
+def _warn_if_price_stale(
+    args: argparse.Namespace, portfolio: Portfolio, symbols: list[str]
+) -> None:
+    """Stderr warning when the build runs on data >= 2 sessions old, so a
+    skipped or failed fetch is loud instead of silent."""
+    store = Store.open(args.db or portfolio.path("db"))
+    try:
+        _, behind = _prices_need_refresh(portfolio, store, symbols, datetime.now(UTC))
+    finally:
+        store.close()
+    if behind >= _STALE_WARN_SESSIONS:
+        print(
+            f"warning: building on prices {behind} trading sessions behind "
+            "the last completed session; run with --refresh to update",
+            file=sys.stderr,
+        )
+
+
 def _fetch_fundamentals(args: argparse.Namespace) -> int:
     """Fetch quarterly fundamentals from SEC EDGAR for the universe.
 
@@ -115,7 +220,7 @@ def _fetch_fundamentals(args: argparse.Namespace) -> int:
     rather than crash, same as before.
     """
     portfolio = load_portfolio()
-    symbols = _selected_symbols(portfolio, args.ticker)
+    symbols = _selected_symbols(portfolio, getattr(args, "ticker", None))
     if symbols is None:
         print(
             f"{args.ticker!r} is not in the portfolio; add it to config/portfolio.yaml",
@@ -309,7 +414,13 @@ def _render(args: argparse.Namespace) -> int:
 
 
 def _dashboard(args: argparse.Namespace) -> int:
+    """Multi-stock builds go stale the same way single charts do, so
+    `dashboard` gets the identical freshness treatment as `chart` (#56)."""
     portfolio = load_portfolio()
+    symbols = list(portfolio.symbols)
+    if _refresh_if_stale(args, portfolio, symbols):
+        return 1
+    _warn_if_price_stale(args, portfolio, symbols)
     try:
         target = render_dashboard(
             portfolio, Path(args.out_dir) if args.out_dir else portfolio.path("out")
@@ -446,7 +557,12 @@ def _collect_reddit(args: argparse.Namespace) -> int:
 
 
 def _chart(args: argparse.Namespace) -> int:
-    """The user-facing trigger: prices -> moves -> events -> HTML, no model calls."""
+    """The user-facing trigger: prices -> moves -> events -> HTML, no model calls.
+
+    Freshness (#56): prices auto-refresh when the latest bar is older than
+    the last completed trading session, fundamentals refetch only when the
+    stored fetch is stale. --refresh forces both; --offline fetches nothing.
+    """
     portfolio = load_portfolio()
     symbols = _selected_symbols(portfolio, args.ticker)
     if symbols is None:
@@ -455,23 +571,9 @@ def _chart(args: argparse.Namespace) -> int:
             file=sys.stderr,
         )
         return 2
-    store = Store.open(args.db or portfolio.path("db"))
-    try:
-        industry_tickers = [
-            ticker
-            for symbol in symbols
-            if (ticker := portfolio.industry_benchmark(symbol))
-        ]
-        missing = any(
-            not store.price_bar_count(symbol)
-            for symbol in [*symbols, portfolio.benchmark, *industry_tickers]
-        )
-    finally:
-        store.close()
-    if args.refresh_prices or missing:
-        result = _ingest_prices(args)
-        if result:
-            return result
+    if _refresh_if_stale(args, portfolio, symbols):
+        return 1
+    _warn_if_price_stale(args, portfolio, symbols)
     result = _detect_moves(args)
     if result:
         return result
@@ -569,6 +671,15 @@ def main(argv: list[str] | None = None) -> int:
         "dashboard", help="build an offline dashboard linking all configured stock charts"
     )
     dashboard.add_argument("--out-dir", default=None)
+    dashboard.add_argument("--db", default=None)
+    dashboard.add_argument(
+        "--refresh",
+        action="store_true",
+        help="force price ingest and fundamentals refetch before building",
+    )
+    dashboard.add_argument(
+        "--offline", action="store_true", help="fetch nothing; build from stored data"
+    )
     dashboard.set_defaults(func=_dashboard)
     factor_dashboard = sub.add_parser(
         "factor-dashboard",
@@ -626,6 +737,14 @@ def main(argv: list[str] | None = None) -> int:
         "--skip-events", action="store_true", help="render existing evidence offline"
     )
     chart.add_argument("--refresh-prices", action="store_true", help="fetch prices even if stored")
+    chart.add_argument(
+        "--refresh",
+        action="store_true",
+        help="force price ingest and fundamentals refetch before building",
+    )
+    chart.add_argument(
+        "--offline", action="store_true", help="fetch nothing; build from stored data"
+    )
     chart.add_argument("--rebuild", action="store_true", help="rebuild event bundles from cache")
     chart.set_defaults(func=_chart, date=None)
 
