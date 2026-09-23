@@ -265,6 +265,12 @@ def test_cli_factor_dashboard_end_to_end(tmp_path):
         for i, sym in enumerate(real.symbols):
             asset = _gen_asset(5000 + i, dates, bench_rets, 1.0)
             store.upsert_price_bars(_bars(sym, asset))
+        # Index rows (#57) need bars as well; QQQ is already seeded above.
+        for j, index in enumerate(real.indices):
+            if index.symbol == real.benchmark:
+                continue
+            asset = _gen_asset(6000 + j, dates, bench_rets, 1.0)
+            store.upsert_price_bars(_bars(index.symbol, asset))
     finally:
         store.close()
     out = tmp_path / "out"
