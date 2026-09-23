@@ -32,6 +32,7 @@ from portfolio_analysis.signals import (
     DEFAULT_WLS_HALF_LIFE,
     REGIME_WINDOWS,
     SLOPE_SPAN,
+    SLOPE_SPANS,
     WLS_HALF_LIVES,
     alpha_signal,
     rolling_alpha_daily,
@@ -199,6 +200,22 @@ def _industry_factor(
     }
 
 
+def _regime_ends(n: int, warmup_end: int, step: int, tail: int | None) -> list[int]:
+    """Sampling grid for the regime series (issue #50: shared helper).
+
+    Sessions ``warmup_end .. n`` sampled every ``step``; ``tail`` keeps only
+    the most recent ``tail`` sessions (daily fine series); the most recent
+    session is always included. ``_regime_points`` and the WLS-slope series
+    share this grid so their ``dates`` arrays line up exactly.
+    """
+    ends = list(range(warmup_end, n + 1, step))
+    if tail is not None:
+        ends = [e for e in ends if e > n - tail]
+    if not ends or ends[-1] != n:
+        ends.append(n)
+    return ends
+
+
 def _regime_points(
     asset: dict[str, float],
     benchmark: dict[str, float],
@@ -207,6 +224,7 @@ def _regime_points(
     tail: int | None = None,
     *,
     half_life: float | None = None,
+    slope_span: int = SLOPE_SPAN,
 ) -> dict[str, list[object]]:
     """Rolling beta, annualized alpha, R², alpha slope and turnaround signals,
     sampled every `step` sessions.
@@ -217,8 +235,8 @@ def _regime_points(
 
     R² is computed over the identical return observations as beta and alpha.
     The slope is the change in *annualized* alpha per trading session over
-    ``SLOPE_SPAN`` sessions (see ``signals`` for the unit convention),
-    derived from the full daily alpha series and then sampled, so the "20
+    ``slope_span`` sessions (see ``signals`` for the unit convention),
+    derived from the full daily alpha series and then sampled, so the "N
     trading days" definition is exact, not an artifact of the sampling grid.
     ``signals[i]`` classifies the sampled point ("turnaround" or ``None``);
     slope and signals are ``None`` during their warmup. Empty when the series
@@ -257,20 +275,19 @@ def _regime_points(
     if half_life is None:
         assert window is not None
         alpha_daily = rolling_alpha_daily(asset_returns, benchmark_returns, window)
-        slope_daily = rolling_slope(alpha_daily, SLOPE_SPAN)
+        slope_daily = rolling_slope(alpha_daily, slope_span)
         warmup_end = window
     else:
         alpha_daily = rolling_alpha_daily(
             asset_returns, benchmark_returns, None, half_life=half_life
         )
-        slope_daily = rolling_slope(alpha_daily, SLOPE_SPAN, half_life=half_life)
+        # Issue #50: the "enable time weight" tab keeps the legacy two-point
+        # slope; the WLS-regression slope lives only in the third tab's
+        # separate payload (_wls_slope_payload).
+        slope_daily = rolling_slope(alpha_daily, slope_span)
         warmup_end = max(2, int(half_life))
     n = len(asset_returns)
-    ends = list(range(warmup_end, n + 1, step))
-    if tail is not None:
-        ends = [e for e in ends if e > n - tail]
-    if not ends or ends[-1] != n:
-        ends.append(n)
+    ends = _regime_ends(n, warmup_end, step, tail)
     out: dict[str, list[Any]] = {key: [] for key in empty}
     for end in ends:
         i = end - 1  # return index whose date is dates[end - 1]
@@ -302,6 +319,82 @@ def _regime_points(
         [s if isinstance(s, float) else None for s in out["alpha_slope"]]
     )
     return out
+
+
+def _wls_slope_series(
+    dates: list[str],
+    alpha_daily: list[float | None],
+    half_life: float,
+    slope_span: int,
+    step: int = _REGIME_STEP,
+    tail: int | None = None,
+) -> dict[str, list[object]]:
+    """Sampled WLS-regression slope + turnaround signals for one
+    ``(half_life, slope_span)`` combo (issue #50).
+
+    Powers the "enable time weight (alpha slope)" tab: the beta/R²/alpha
+    panels keep reading the ``wls`` payload for this half-life, while the
+    slope sparkline and signal markers read this series. ``alpha_daily`` is
+    the full daily WLS alpha series for ``half_life`` (computed once by the
+    caller and shared across spans); the slope is the WLS regression of the
+    trailing ``slope_span`` alphas with the same half-life decay, so recent
+    sessions dominate the fit. The sampling grid matches
+    ``_regime_points(half_life=half_life, step=step, tail=tail)`` exactly,
+    so the ``dates`` arrays line up.
+
+    Signals classify each sampled point with this combo's slope
+    (``alpha < 0 and slope > 0``); warmup and ``None``-poisoning follow
+    ``rolling_slope``, never fabricated.
+    """
+    n = len(alpha_daily)
+    warmup_end = max(2, int(half_life))
+    if n < warmup_end:
+        return {"dates": [], "alpha_slope": [], "alpha_slope_display": [], "signals": []}
+    slope_daily = rolling_slope(alpha_daily, slope_span, half_life=half_life)
+    out: dict[str, list[Any]] = {
+        "dates": [],
+        "alpha_slope": [],
+        "alpha_slope_display": [],
+        "signals": [],
+    }
+    for end in _regime_ends(n, warmup_end, step, tail):
+        i = end - 1
+        alpha_ann = alpha_daily[i]
+        if alpha_ann is None:
+            continue  # degenerate alpha: same skip rule as _regime_points
+        out["dates"].append(dates[i])
+        out["alpha_slope"].append(slope_daily[i])
+        out["signals"].append(alpha_signal(alpha_ann, slope_daily[i]))
+    out["alpha_slope_display"] = smooth_display(
+        [s if isinstance(s, float) else None for s in out["alpha_slope"]]
+    )
+    return out
+
+
+def _wls_slope_payload(
+    asset: dict[str, float], benchmark: dict[str, float], *, fine: bool
+) -> dict[str, dict[str, dict[str, list[object]]]]:
+    """Nested ``{half_life: {slope_span: series}}`` payload for the
+    "enable time weight (alpha slope)" tab (issue #50).
+
+    The daily WLS alpha series is computed once per half-life and shared
+    across spans; ``fine`` selects the daily-tail sampling for zoomed views
+    (mirroring ``wls_fine``) versus the monthly sampling (mirroring ``wls``).
+    """
+    step = 1 if fine else _REGIME_STEP
+    tail = _FINE_TAIL_SESSIONS if fine else None
+    dates, asset_returns, benchmark_returns = aligned_returns(asset, benchmark)
+    payload: dict[str, dict[str, dict[str, list[object]]]] = {}
+    for half_life in WLS_HALF_LIVES:
+        h = float(half_life)
+        if len(asset_returns) < max(2, int(h)):
+            continue
+        alpha_daily = rolling_alpha_daily(asset_returns, benchmark_returns, None, half_life=h)
+        payload[str(half_life)] = {
+            str(span): _wls_slope_series(dates, alpha_daily, h, span, step=step, tail=tail)
+            for span in SLOPE_SPANS
+        }
+    return payload
 
 
 def _pe_panel(
@@ -781,6 +874,15 @@ def chart_data(
                 )
                 for half_life in WLS_HALF_LIVES
             },
+            # WLS-regression slope series per (half-life, slope-span) combo
+            # (issue #50): the "enable time weight (alpha slope)" tab reads
+            # beta/R²/alpha from "wls"/"wls_fine" and the slope + signals
+            # from here. The span selector (10/20/30) is the responsiveness
+            # knob for the slope fit.
+            "slope_spans": [str(s) for s in SLOPE_SPANS],
+            "slope_default": str(SLOPE_SPAN),
+            "wls_slope": _wls_slope_payload(asset, benchmark, fine=False),
+            "wls_slope_fine": _wls_slope_payload(asset, benchmark, fine=True),
         },
     }
     data["tldr"] = _tldr_text(
