@@ -18,7 +18,7 @@ def test_ingest_fetches_the_universe_and_the_benchmark(tmp_path):
     db = tmp_path / "t.sqlite"
     calls = []
 
-    def fake_fetch(ticker, *, years, now=None):
+    def fake_fetch(ticker, *, years, now=None, yahoo_ticker=None):
         calls.append((ticker, years))
         return _bars(ticker, ["2024-04-24", "2024-04-25"])
 
@@ -33,8 +33,12 @@ def test_ingest_fetches_the_universe_and_the_benchmark(tmp_path):
         ("NVDA", 6),
         ("CRM", 6),
         ("ORCL", 6),
+        # Index charts (#57) are part of the ingest universe now, and QQQ's
+        # dual role (stock benchmark + index) dedupes naturally.
         ("QQQ", 6),
-        # Industry benchmarks ride along after the market benchmark, in
+        ("NDX", 6),
+        ("SPY", 6),
+        # Industry benchmarks ride along after the universe, in
         # symbol order, deduplicated: META->MAGS, NOW->CLOU, NVDA->SOXX.
         ("MAGS", 6),
         ("CLOU", 6),
@@ -53,7 +57,7 @@ def test_ingest_accepts_a_single_ticker_by_alias(tmp_path):
     db = tmp_path / "t.sqlite"
     calls = []
 
-    def fake_fetch(ticker, *, years, now=None):
+    def fake_fetch(ticker, *, years, now=None, yahoo_ticker=None):
         calls.append(ticker)
         return _bars(ticker, ["2024-04-25"])
 
