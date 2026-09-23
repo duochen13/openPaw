@@ -78,6 +78,22 @@ class PortfolioEntry:
 
 
 @dataclass(frozen=True)
+class IndexEntry:
+    """A market index charted alongside the holdings (#57).
+
+    Indices have no CIK and therefore no EDGAR fundamentals; their charts
+    render the fundamentals sections as n/a. ``yahoo`` is the Yahoo Finance
+    ticker used at ingest (e.g. ``^NDX``); ``benchmark`` is the symbol the
+    index's alpha/beta is measured against.
+    """
+
+    symbol: str
+    name: str
+    yahoo: str
+    benchmark: str
+
+
+@dataclass(frozen=True)
 class Portfolio:
     entries: tuple[PortfolioEntry, ...]
     benchmark: str
@@ -88,10 +104,19 @@ class Portfolio:
     # Defaulted so older constructions (and configs without the key) keep
     # working: unmapped means the two-line chart, not an error.
     industry_benchmarks: dict[str, str] = field(default_factory=dict)
+    # Index charts (#57). Default benchmark for indices so an index is never
+    # measured against itself when it also serves as the stock benchmark.
+    indices: tuple[IndexEntry, ...] = ()
+    index_benchmark: str = "SPY"
 
     @property
     def symbols(self) -> tuple[str, ...]:
         return tuple(e.symbol for e in self.entries)
+
+    @property
+    def chart_symbols(self) -> tuple[str, ...]:
+        """Every symbol with a chart: holdings first, then indices."""
+        return (*self.symbols, *(i.symbol for i in self.indices))
 
     def industry_benchmark(self, symbol: str) -> str | None:
         """The industry benchmark ticker for a symbol, or None when unmapped.
@@ -106,15 +131,55 @@ class Portfolio:
                 return e
         raise KeyError(f"{symbol!r} is not in the portfolio")
 
+    def is_index(self, symbol: str) -> bool:
+        """True for configured index symbols, which have no CIK."""
+        return any(i.symbol == symbol.upper() for i in self.indices)
+
+    def index_entry(self, symbol: str) -> IndexEntry:
+        for i in self.indices:
+            if i.symbol == symbol.upper():
+                return i
+        raise KeyError(f"{symbol!r} is not a configured index")
+
+    def benchmark_for(self, symbol: str) -> str:
+        """The benchmark a symbol's alpha/beta is measured against.
+
+        Stocks use the portfolio benchmark; indices use their configured
+        benchmark (defaulting to ``index_benchmark``). A symbol benchmarked
+        against itself is degenerate (alpha = 0, beta = 1 by construction),
+        so that misconfiguration raises instead of rendering a chart that
+        says nothing.
+        """
+        symbol = symbol.upper()
+        benchmark = (
+            self.index_entry(symbol).benchmark if self.is_index(symbol) else self.benchmark
+        )
+        if benchmark.upper() == symbol:
+            raise ValueError(
+                f"{symbol} is benchmarked against itself; "
+                "alpha/beta would be degenerate (0 and 1 by construction)"
+            )
+        return benchmark
+
+    def yahoo_ticker(self, symbol: str) -> str:
+        """The Yahoo Finance ticker to ingest for a symbol."""
+        if self.is_index(symbol):
+            return self.index_entry(symbol).yahoo
+        return symbol.upper()
+
     def resolve(self, text: str) -> str | None:
         """Resolve a ticker, company name, or alias to a symbol.
 
         Returns None when unknown. Matching is exact after case folding.
+        Index symbols and names resolve the same way stock ones do.
         """
         needle = text.strip().casefold()
         for e in self.entries:
             if any(needle == c.casefold() for c in (e.symbol, e.name, *e.aliases)):
                 return e.symbol
+        for i in self.indices:
+            if needle in (i.symbol.casefold(), i.name.casefold()):
+                return i.symbol
         return None
 
     def path(self, key: str) -> Path:
@@ -172,4 +237,18 @@ def load_portfolio(path: Path | None = None) -> Portfolio:
             str(raw["news_coverage_start"])
         ).isoformat(),
         paths=dict(raw["paths"]),
+        # Index charts (#57): symbols with a Yahoo ticker mapping and their
+        # own benchmark, no CIK. Absent in old configs: no index charts.
+        index_benchmark=safe_ticker_component(str(raw.get("index_benchmark", "SPY"))),
+        indices=tuple(
+            IndexEntry(
+                symbol=safe_ticker_component(idx["symbol"]),
+                name=idx["name"],
+                yahoo=str(idx.get("yahoo") or idx["symbol"]),
+                benchmark=safe_ticker_component(
+                    str(idx.get("benchmark") or raw.get("index_benchmark", "SPY"))
+                ),
+            )
+            for idx in (raw.get("indices") or [])
+        ),
     )
