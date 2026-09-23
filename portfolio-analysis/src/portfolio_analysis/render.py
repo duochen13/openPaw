@@ -13,6 +13,7 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from portfolio_analysis import kpis as kpis_module
+from portfolio_analysis import manual_kpis as manual_kpis_module
 from portfolio_analysis.artifacts import MovesArtifact, read_moves
 from portfolio_analysis.bundle import SCHEMA_VERSION, bundle_hash, move_payload
 from portfolio_analysis.config import Portfolio
@@ -429,23 +430,33 @@ def _pe_panel(
 
 
 def _kpi_data(store: Store, symbol: str) -> dict[str, Any] | None:
-    """Business-KPI panels for the per-stock chart (issue #29).
+    """Business-KPI panels for the per-stock chart (issues #29 + #59).
 
-    None when the ticker has no KPI config or no stored KPI data - the
-    template hides the section, the same rule as the P/E and factor
-    panels. A broken KPI config degrades to no section, never a crash.
+    EDGAR panels (#29) come first, then hand-entered manual panels (#59),
+    each carrying ``"source": "manual"`` so the template can label them.
+    None when the ticker has neither EDGAR nor manual data - the template
+    hides the section, the same rule as the P/E and factor panels. A
+    broken KPI config degrades to a smaller section, never a crash.
     """
     try:
         metric_keys = kpis_module.load_kpi_config().get(symbol, [])
     except kpis_module.ConfigError:
-        return None
-    if not metric_keys:
-        return None
+        metric_keys = []
     series = {key: store.kpi_quarters(symbol, key) for key in metric_keys}
     series = {key: rows for key, rows in series.items() if rows}
-    if not series:
+    panels = kpis_module.kpi_panels(series, metric_keys)
+    metrics: list[dict[str, Any]] = list(panels["metrics"]) if panels else []
+    try:
+        manual_cfg = manual_kpis_module.load_manual_kpis()
+    except manual_kpis_module.ManualKpiError:
+        manual_cfg = None
+    if manual_cfg is not None:
+        metrics.extend(
+            manual_kpis_module.manual_kpi_panels(manual_cfg.metrics.get(symbol, {}))
+        )
+    if not metrics:
         return None
-    return kpis_module.kpi_panels(series, metric_keys)
+    return {"metrics": metrics}
 
 
 def _tldr_text(

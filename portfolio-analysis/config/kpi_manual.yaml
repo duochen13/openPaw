@@ -1,0 +1,113 @@
+# Manual per-quarter business metrics (issues #36, #59).
+#
+# Schema: ticker -> metric key -> list of quarterly datapoints.
+#   - quarter:        quarter-end date, YYYY-MM-DD
+#   - value:          the number, copied from the cited source.
+#                     UNITS MATTER: currency metrics take raw USD
+#                     (3005000000, not 3005); percent metrics take a
+#                     fraction (0.9, not 90.0); counts take the plain
+#                     number (3560000000, not 3.56). The dashboard formats
+#                     accordingly.
+#   - source:         REQUIRED - where the number came from
+#                     (e.g. "ServiceNow Q2 2026 earnings release, 2026-07-22")
+#   - date_recorded:  REQUIRED - YYYY-MM-DD, when you entered it
+#
+# This file is the escape hatch for numbers SEC EDGAR never tags:
+# - NOW subscription revenue: us-gaap:SubscriptionRevenue was abandoned
+#   after 2014, so it is copied from ServiceNow earnings releases (#59).
+# - META daily active people: not XBRL-tagged at all; Meta reports
+#   "Family daily active people (DAP)", which is what is tracked here -
+#   do NOT mislabel it as legacy Facebook DAU (#59).
+# - GOOGL search market share: no stable provider/definition yet; the
+#   metric is registered so the dashboard renders "n/a" instead of
+#   silently omitting it. Do NOT fabricate market-share figures (#59).
+# - NOW seat-count proxies (issue #36) share this schema; see PR #37.
+#
+# Panels built from this file render in the dashboard's Business metrics
+# section visibly labeled as manual entries, with each value's source
+# shown. An empty datapoint list renders as "n/a", never a crash.
+#
+# RULES
+# - Real numbers only, copied from the cited source. Never invent a value.
+# - Metric keys are free-form; the dashboard knows display labels for the
+#   keys in KNOWN_MANUAL_METRICS (see src/portfolio_analysis/manual_kpis.py)
+#   and renders unknown keys with a generic label - they still show.
+# - A malformed file never crashes the dashboard: the render degrades to
+#   EDGAR-only panels. The parser raises ManualKpiError (unit-tested) so
+#   mistakes surface in tests / CLI runs instead of silently rendering.
+
+manual_kpis:
+  NOW:
+    subscription_revenue: # RAW USD millions->units: 3005000000 renders as $3.0B
+      - quarter: "2024-09-30"
+        value: 2715000000
+        source: "ServiceNow Q3 2024 earnings release, 2024-10-23 (newsroom.servicenow.com)"
+        date_recorded: "2026-09-23"
+      - quarter: "2024-12-31"
+        value: 2866000000
+        source: "ServiceNow Q4 2024 earnings release, 2025-01-29 (newsroom.servicenow.com)"
+        date_recorded: "2026-09-23"
+      - quarter: "2025-03-31"
+        value: 3005000000
+        source: "ServiceNow Q1 2025 earnings release, 2025-04-23 (newsroom.servicenow.com)"
+        date_recorded: "2026-09-23"
+      - quarter: "2025-06-30"
+        value: 3113000000
+        source: "ServiceNow Q2 2025 earnings release, 2025-07-23 (newsroom.servicenow.com)"
+        date_recorded: "2026-09-23"
+      - quarter: "2025-09-30"
+        value: 3299000000
+        source: "ServiceNow Q3 2025 earnings release, 2025-10-29 (newsroom.servicenow.com)"
+        date_recorded: "2026-09-23"
+      - quarter: "2025-12-31"
+        value: 3466000000
+        source: "ServiceNow Q4 2025 earnings release, 2026-01-28 (newsroom.servicenow.com)"
+        date_recorded: "2026-09-23"
+      - quarter: "2026-03-31"
+        value: 3671000000
+        source: "ServiceNow Q1 2026 earnings release, 2026-04-22 (newsroom.servicenow.com)"
+        date_recorded: "2026-09-23"
+      - quarter: "2026-06-30"
+        value: 3877000000
+        source: "ServiceNow Q2 2026 earnings release, 2026-07-22 (investor.servicenow.com)"
+        date_recorded: "2026-09-23"
+
+  META:
+    daily_active_people: # plain counts: 3560000000 renders as 3.56B
+      - quarter: "2024-09-30"
+        value: 3290000000
+        source: "Meta Q3 2025 earnings release, 2025-10-29 (+250M YoY vs Q3 2024)"
+        date_recorded: "2026-09-23"
+      - quarter: "2024-12-31"
+        value: 3350000000
+        source: "Meta Q4 2025 earnings release (Exhibit 99.1), 2026-01-28 (+230M YoY vs Q4 2024)"
+        date_recorded: "2026-09-23"
+      - quarter: "2025-03-31"
+        value: 3430000000
+        source: "Meta Q1 2026 earnings release, 2026-04-29 (+130M YoY vs Q1 2025)"
+        date_recorded: "2026-09-23"
+      - quarter: "2025-06-30"
+        value: 3480000000
+        source: "Meta Q2 2026 earnings release, 2026-07-29 (+3% YoY vs Q2 2025)"
+        date_recorded: "2026-09-23"
+      - quarter: "2025-09-30"
+        value: 3540000000
+        source: "Meta Q3 2025 earnings release, 2025-10-29 (DAP 3.54B, +8% YoY)"
+        date_recorded: "2026-09-23"
+      - quarter: "2025-12-31"
+        value: 3580000000
+        source: "Meta Q4 2025 earnings release (Exhibit 99.1), 2026-01-28 (DAP 3.58B, +7% YoY)"
+        date_recorded: "2026-09-23"
+      - quarter: "2026-03-31"
+        value: 3560000000
+        source: "Meta Q1 2026 earnings release, 2026-04-29 (DAP 3.56B, +4% YoY)"
+        date_recorded: "2026-09-23"
+      - quarter: "2026-06-30"
+        value: 3600000000
+        source: "Meta Q2 2026 earnings release, 2026-07-29 (DAP 3.60B, +3% YoY)"
+        date_recorded: "2026-09-23"
+
+  GOOGL:
+    # No stable search-share provider/definition yet - leave empty so the
+    # dashboard renders "n/a". Never fabricate market-share figures.
+    search_share: []
