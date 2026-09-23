@@ -38,7 +38,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from portfolio_analysis.moves import annualize_alpha, ols_regression
+from portfolio_analysis.moves import annualize_alpha, decay_weights, ols_regression, wls_regression
 
 #: Smoothing span for the slope, in trading sessions (issue #19: 20).
 SLOPE_SPAN = 20
@@ -52,20 +52,48 @@ SLOPE_DISPLAY_SPAN = 5
 #: Rolling OLS windows offered by the chart's window switch.
 REGIME_WINDOWS = (60, 125, 250)
 
+#: Half-lives (sessions) offered by the chart's "enable time weight" tab
+#: (issue #47). The WLS fit uses a growing window with exponential decay,
+#: so the half-life - not a hard window - controls how much history matters.
+WLS_HALF_LIVES = (20, 60, 120)
+
+#: Default half-life for the time-weighted tab and the backtest.
+DEFAULT_WLS_HALF_LIFE = 60
+
 
 def rolling_slope(
-    values: Sequence[float | None], span: int = SLOPE_SPAN
+    values: Sequence[float | None], span: int = SLOPE_SPAN, *, half_life: float | None = None
 ) -> list[float | None]:
-    """Per-session slope ``(v[i] - v[i-span]) / span``.
+    """Per-session slope of ``values``.
 
-    ``None`` until index ``span`` and whenever either endpoint is ``None``:
-    the first ``span`` entries are a warmup fact, not a zero slope.
+    ``half_life=None`` (default): ``(v[i] - v[i-span]) / span``, the original
+    "fixed time weight" behavior. ``None`` until index ``span`` and whenever
+    either endpoint is ``None``: the first ``span`` entries are a warmup fact,
+    not a zero slope.
+
+    ``half_life`` set ("enable time weight", issue #47): the WLS slope of the
+    trailing ``span`` values against time, with :func:`decay_weights`
+    weighting recent values more. ``None`` until ``span`` consecutive defined
+    values have been seen; a ``None`` anywhere in the trailing span poisons
+    the slope instead of being interpolated - the same "never fabricated"
+    rule as the fixed mode.
     """
     out: list[float | None] = [None] * len(values)
-    for i in range(span, len(values)):
-        start, end = values[i - span], values[i]
-        if start is not None and end is not None:
-            out[i] = (end - start) / span
+    if half_life is None:
+        for i in range(span, len(values)):
+            start, end = values[i - span], values[i]
+            if start is not None and end is not None:
+                out[i] = (end - start) / span
+        return out
+    weights = decay_weights(span, half_life)
+    times = list(range(span))
+    for i in range(span - 1, len(values)):
+        window = values[i - span + 1 : i + 1]
+        if any(v is None for v in window):
+            continue
+        ys = [v for v in window if v is not None]
+        slope, _ = wls_regression(ys, times, weights)
+        out[i] = slope
     return out
 
 
@@ -96,24 +124,55 @@ def smooth_display(
 def rolling_alpha_daily(
     asset_returns: Sequence[float],
     benchmark_returns: Sequence[float],
-    window: int,
+    window: int | None,
+    *,
+    half_life: float | None = None,
 ) -> list[float | None]:
-    """Trailing OLS alpha (annualized) for every return index.
+    """Trailing alpha (annualized) for every return index.
 
-    ``alpha[i]`` is the intercept of the regression over returns
-    ``[i-window+1, i]`` - the "as of" date is the date return ``i`` was
-    realized on, matching ``_regime_points``. Entries before ``window - 1``
-    and degenerate windows (zero variance) are ``None``.
+    Exactly one of ``window`` / ``half_life`` must be set:
+
+    - ``window=N, half_life=None`` ("fixed time weight"): ``alpha[i]`` is the
+      OLS intercept over returns ``[i-window+1, i]`` - the "as of" date is
+      the date return ``i`` was realized on, matching ``_regime_points``.
+      Entries before ``window - 1`` and degenerate windows (zero variance)
+      are ``None``.
+    - ``window=None, half_life=H`` ("enable time weight", issue #47):
+      ``alpha[i]`` is the WLS intercept over the *growing* history
+      ``[0, i]`` with :func:`decay_weights` decay ``H`` - recent sessions
+      dominate, old ones fade without a hard window edge. Entries before
+      ``H - 1`` (fewer than one half-life of data) and degenerate fits are
+      ``None``.
+
+    Both modes are causal: the value at index ``i`` uses only entries at
+    indices <= ``i``. Passing both or neither raises ``ValueError``.
     """
+    if (window is None) == (half_life is None):
+        raise ValueError("exactly one of window and half_life must be set")
     if len(asset_returns) != len(benchmark_returns):
         raise ValueError(
             f"series must be the same length, got {len(asset_returns)} and {len(benchmark_returns)}"
         )
     out: list[float | None] = [None] * len(asset_returns)
-    for i in range(window - 1, len(asset_returns)):
-        segment = slice(i - window + 1, i + 1)
+    if half_life is None:
+        assert window is not None
+        for i in range(window - 1, len(asset_returns)):
+            segment = slice(i - window + 1, i + 1)
+            try:
+                _, alpha = ols_regression(asset_returns[segment], benchmark_returns[segment])
+            except ValueError:
+                continue
+            out[i] = annualize_alpha(alpha)
+        return out
+    warmup = max(2, int(half_life))
+    for i in range(warmup - 1, len(asset_returns)):
+        segment = slice(0, i + 1)
         try:
-            _, alpha = ols_regression(asset_returns[segment], benchmark_returns[segment])
+            _, alpha = wls_regression(
+                asset_returns[segment],
+                benchmark_returns[segment],
+                decay_weights(i + 1, half_life),
+            )
         except ValueError:
             continue
         out[i] = annualize_alpha(alpha)
