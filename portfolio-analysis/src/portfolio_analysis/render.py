@@ -971,6 +971,15 @@ def render_chart(
             eps_quarters=store.eps_quarters(symbol),
             kpis=_kpi_data(store, symbol),
         )
+        # Prominent as-of dates (#56): price coverage and fundamentals
+        # currency, display-only from already-stored data — render stays
+        # offline.
+        data["price_as_of"] = data["dates"][-1] if data["dates"] else None
+        fund_at = max(
+            (ts for ts in (store.eps_fetched_at(symbol), store.kpi_fetched_at(symbol)) if ts),
+            default=None,
+        )
+        data["fundamentals_as_of"] = fund_at[:10] if fund_at else None
     finally:
         store.close()
     out_dir.mkdir(parents=True, exist_ok=True)
