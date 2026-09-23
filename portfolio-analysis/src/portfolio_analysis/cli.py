@@ -39,20 +39,39 @@ from portfolio_analysis.store import Store
 def _selected_symbols(portfolio: Portfolio, requested: str | None) -> list[str] | None:
     """The universe, or the single resolved symbol. None means unresolvable."""
     if requested is None:
-        return list(portfolio.symbols)
+        return list(portfolio.chart_symbols)
     symbol = portfolio.resolve(requested)
     return None if symbol is None else [symbol]
 
 
 def _price_targets(portfolio: Portfolio, symbols: list[str]) -> list[str]:
-    """Every ticker a price ingest fetches: the symbols, the benchmark, and
-    the industry benchmarks that ride along with the compare view."""
-    targets = [*symbols, portfolio.benchmark]
+    """Every ticker a price ingest fetches: the symbols, each symbol's
+    benchmark, and the industry benchmarks that ride along with the compare
+    view."""
+    targets = list(symbols)
     for symbol in symbols:
+        bench = portfolio.benchmark_for(symbol)
+        if bench not in targets:
+            targets.append(bench)
         industry = portfolio.industry_benchmark(symbol)
         if industry and industry not in targets:
             targets.append(industry)
     return targets
+
+
+def _check_benchmarks(portfolio: Portfolio, symbols: list[str]) -> str | None:
+    """Refuse a self-benchmark before any work starts (#57).
+
+    A symbol measured against itself yields alpha = 0, beta = 1 by
+    construction - a chart that says nothing. Returns the error message,
+    or None when every symbol has a proper benchmark.
+    """
+    for symbol in symbols:
+        try:
+            portfolio.benchmark_for(symbol)
+        except ValueError as exc:
+            return str(exc)
+    return None
 
 
 def _ingest_prices(args: argparse.Namespace) -> int:
@@ -74,7 +93,11 @@ def _ingest_prices(args: argparse.Namespace) -> int:
     store = Store.open(args.db or portfolio.path("db"))
     try:
         for symbol in targets:
-            bars = prices.fetch_yahoo(symbol, years=portfolio.price_years)
+            bars = prices.fetch_yahoo(
+                symbol,
+                years=portfolio.price_years,
+                yahoo_ticker=portfolio.yahoo_ticker(symbol),
+            )
             written = store.upsert_price_bars(bars)
             first = bars[0]["date"] if bars else "-"
             last = bars[-1]["date"] if bars else "-"
@@ -146,8 +169,8 @@ def _fundamentals_need_refresh(portfolio: Portfolio, store: Store, symbols: list
     except kpis_module.ConfigError:
         kpi_config = {}
     for symbol in symbols:
-        # Symbols without a CIK (e.g. indices) have no fundamentals to fetch.
-        if getattr(portfolio.entry(symbol), "cik", None) is None:
+        # Symbols without fundamentals (indices) have nothing to fetch.
+        if portfolio.is_index(symbol):
             continue
         if not _fundamentals_fresh(store, symbol):
             return True
@@ -240,6 +263,11 @@ def _fetch_fundamentals(args: argparse.Namespace) -> int:
     store = Store.open(args.db or portfolio.path("db"))
     try:
         for symbol in symbols:
+            if portfolio.is_index(symbol):
+                # Indices have no CIK and no EDGAR fundamentals; their
+                # charts render those sections as n/a (#57).
+                print(f"{symbol}: index has no fundamentals; skipping")
+                continue
             metric_keys = kpi_config.get(symbol, [])
             if (
                 not args.force
@@ -307,20 +335,29 @@ def _detect_moves(args: argparse.Namespace) -> int:
             file=sys.stderr,
         )
         return 2
+    if error := _check_benchmarks(portfolio, symbols):
+        print(f"detect-moves: {error}", file=sys.stderr)
+        return 2
 
     moves_dir = Path(args.moves_dir) if args.moves_dir else portfolio.path("moves")
     store = Store.open(args.db or portfolio.path("db"))
     try:
-        benchmark_series = store.adjusted_series(portfolio.benchmark)
-        if not benchmark_series:
-            print(
-                f"no prices for benchmark {portfolio.benchmark}; "
-                "run `ingest-prices` first - beta cannot be computed without it",
-                file=sys.stderr,
-            )
-            return 1
+        benchmark_series: dict[str, dict[str, float]] = {}
+        for symbol in symbols:
+            benchmark = portfolio.benchmark_for(symbol)
+            if benchmark not in benchmark_series:
+                series = store.adjusted_series(benchmark)
+                if not series:
+                    print(
+                        f"no prices for benchmark {benchmark}; "
+                        "run `ingest-prices` first - beta cannot be computed without it",
+                        file=sys.stderr,
+                    )
+                    return 1
+                benchmark_series[benchmark] = series
 
         for symbol in symbols:
+            benchmark = portfolio.benchmark_for(symbol)
             asset_series = store.adjusted_series(symbol)
             if not asset_series:
                 print(f"no prices for {symbol}; run `ingest-prices` first", file=sys.stderr)
@@ -328,9 +365,9 @@ def _detect_moves(args: argparse.Namespace) -> int:
 
             found, coverage = moves_module.compute_moves(
                 symbol,
-                portfolio.benchmark,
+                benchmark,
                 asset_series,
-                benchmark_series,
+                benchmark_series[benchmark],
                 portfolio.move_params,
             )
             store.replace_moves(symbol, [m.as_row() for m in found])
@@ -338,7 +375,7 @@ def _detect_moves(args: argparse.Namespace) -> int:
                 moves_dir,
                 MovesArtifact(
                     ticker=symbol,
-                    benchmark=portfolio.benchmark,
+                    benchmark=benchmark,
                     params=portfolio.move_params,
                     coverage=coverage,
                     moves=found,
@@ -396,6 +433,9 @@ def _render(args: argparse.Namespace) -> int:
     if symbols is None:
         print(f"{args.ticker!r} is not in config/portfolio.yaml", file=sys.stderr)
         return 2
+    if error := _check_benchmarks(portfolio, symbols):
+        print(f"render: {error}", file=sys.stderr)
+        return 2
     try:
         for symbol in symbols:
             target = render_chart(
@@ -417,7 +457,7 @@ def _dashboard(args: argparse.Namespace) -> int:
     """Multi-stock builds go stale the same way single charts do, so
     `dashboard` gets the identical freshness treatment as `chart` (#56)."""
     portfolio = load_portfolio()
-    symbols = list(portfolio.symbols)
+    symbols = list(portfolio.chart_symbols)
     if _refresh_if_stale(args, portfolio, symbols):
         return 1
     _warn_if_price_stale(args, portfolio, symbols)
@@ -570,6 +610,9 @@ def _chart(args: argparse.Namespace) -> int:
             f"{args.ticker!r} is not in config/portfolio.yaml; add its symbol and CIK first",
             file=sys.stderr,
         )
+        return 2
+    if error := _check_benchmarks(portfolio, symbols):
+        print(f"chart: {error}", file=sys.stderr)
         return 2
     if _refresh_if_stale(args, portfolio, symbols):
         return 1

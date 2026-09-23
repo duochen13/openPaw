@@ -33,6 +33,23 @@ tickers:
 # Beta is measured against this. QQQ matches the sibling repo's watchlist.
 benchmark: QQQ
 
+# Index charts (#57). Indices have no CIK and no EDGAR fundamentals; they
+# are first-class charts with their own benchmark so an index is never
+# measured against itself. `yahoo` is the Yahoo Finance ticker used at
+# ingest (NDX -> ^NDX); `benchmark` overrides the default below.
+index_benchmark: SPY
+indices:
+  - symbol: QQQ
+    name: Invesco QQQ Trust
+    yahoo: QQQ
+  - symbol: NDX
+    name: Nasdaq-100 Index
+    yahoo: ^NDX
+  - symbol: SPY
+    name: SPDR S&P 500 ETF Trust
+    yahoo: SPY
+    benchmark: QQQ
+
 # Industry benchmark per symbol, drawn as a third line in the compare view
 # next to the market benchmark. Unmapped symbols render the two-line chart
 # exactly as before. Note MAGS listed in April 2023, so its history is much

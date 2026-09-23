@@ -55,12 +55,25 @@ def epoch_window(years: int, now: datetime) -> tuple[int, int]:
 
 
 def fetch_yahoo(
-    ticker: str, *, years: int, now: datetime | None = None
+    ticker: str,
+    *,
+    years: int,
+    now: datetime | None = None,
+    yahoo_ticker: str | None = None,
 ) -> list[dict[str, object]]:
-    """Daily bars with raw OHLCV and the adjusted close, oldest first."""
+    """Daily bars with raw OHLCV and the adjusted close, oldest first.
+
+    ``ticker`` is the storage symbol (path-safe, stamped on every bar).
+    ``yahoo_ticker`` overrides the vendor ticker sent to Yahoo — needed for
+    indices like ``^NDX``, whose caret is a legal Yahoo symbol but not a
+    safe path component. ``requests`` percent-encodes it for the URL.
+    """
     symbol = safe_ticker_component(ticker)
+    vendor = yahoo_ticker if yahoo_ticker is not None else symbol
+    if not isinstance(vendor, str) or not vendor.strip():
+        raise ValueError(f"yahoo ticker must be a non-empty string, got {yahoo_ticker!r}")
     p1, p2 = epoch_window(years, now or datetime.now(UTC))
-    payload = _http_get_json(_YAHOO_URL.format(symbol=symbol, p1=p1, p2=p2))
+    payload = _http_get_json(_YAHOO_URL.format(symbol=vendor, p1=p1, p2=p2))
 
     results = payload.get("chart", {}).get("result")
     if not results:

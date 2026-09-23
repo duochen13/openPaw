@@ -37,7 +37,7 @@ def factor_dashboard_data(
     window: int = FACTOR_WINDOW,
     snapshot: Snapshot | None = None,
 ) -> dict[str, object]:
-    """Daily trailing OLS beta / annualized alpha per ticker vs the benchmark.
+    """Daily trailing OLS beta / annualized alpha per ticker vs its benchmark.
 
     Returns ``{"dates", "stocks", "window", "benchmark", "asof"}`` where
     ``dates`` is the sorted union of the per-ticker aligned dates and each
@@ -48,20 +48,31 @@ def factor_dashboard_data(
     overlaps still appears with an all-``None`` series; a ticker or benchmark
     with no prices at all is a configuration error and raises.
 
+    Holdings are measured against the portfolio benchmark; index rows (#57)
+    against their configured benchmark, each row carrying its own
+    ``"benchmark"`` so the page can label it. A self-benchmark raises
+    instead of rendering a degenerate row.
+
     When ``snapshot`` is given, ``"holdings"`` carries the imported positions
     valued at the latest stored close, with the snapshot timestamp and age so
     a stale import is visible, not silent.
     """
-    benchmark = portfolio.benchmark
-    bench = store.adjusted_series(benchmark)
-    if not bench:
-        raise ValueError(f"no prices for benchmark {benchmark}")
-    per_ticker: dict[str, tuple[list[str], list[float | None], list[float | None], str]] = {}
-    for entry in portfolio.entries:
-        prices = store.adjusted_series(entry.symbol)
+    rows: list[tuple[str, str, str]] = [
+        (e.symbol, e.name, portfolio.benchmark_for(e.symbol)) for e in portfolio.entries
+    ] + [(i.symbol, i.name, portfolio.benchmark_for(i.symbol)) for i in portfolio.indices]
+    benches: dict[str, dict[str, float]] = {}
+    for _, _, benchmark in rows:
+        if benchmark not in benches:
+            series = store.adjusted_series(benchmark)
+            if not series:
+                raise ValueError(f"no prices for benchmark {benchmark}")
+            benches[benchmark] = series
+    per_ticker: dict[str, tuple[list[str], list[float | None], list[float | None], str, str]] = {}
+    for symbol, name, benchmark in rows:
+        prices = store.adjusted_series(symbol)
         if not prices:
-            raise ValueError(f"no prices for {entry.symbol}")
-        dates, asset_ret, bench_ret = aligned_returns(prices, bench)
+            raise ValueError(f"no prices for {symbol}")
+        dates, asset_ret, bench_ret = aligned_returns(prices, benches[benchmark])
         beta: list[float | None] = [None] * len(dates)
         alpha: list[float | None] = [None] * len(dates)
         for i in range(window - 1, len(dates)):
@@ -72,11 +83,13 @@ def factor_dashboard_data(
                 continue  # degenerate window: leave a gap, never a guess
             beta[i] = b
             alpha[i] = annualize_alpha(a)
-        per_ticker[entry.symbol] = (dates, beta, alpha, entry.name)
-    master = sorted({d for dates, _, _, _ in per_ticker.values() for d in dates})
+        per_ticker[symbol] = (dates, beta, alpha, name, benchmark)
+    master = sorted({d for dates, _, _, _, _ in per_ticker.values() for d in dates})
     at = {d: i for i, d in enumerate(master)}
     stocks: dict[str, dict[str, object]] = {}
-    for pos, (symbol, (dates, beta, alpha, name)) in enumerate(per_ticker.items()):
+    for pos, (symbol, (dates, beta, alpha, name, benchmark)) in enumerate(
+        per_ticker.items()
+    ):
         # Reindex onto the shared date axis; dates a ticker lacks stay None
         # so the union never invents observations for it.
         bcol: list[float | None] = [None] * len(master)
@@ -88,6 +101,7 @@ def factor_dashboard_data(
         stocks[symbol] = {
             "color": _PALETTE[pos % len(_PALETTE)],
             "name": name,
+            "benchmark": benchmark,
             "beta": bcol,
             "alpha": acol,
         }
@@ -95,7 +109,7 @@ def factor_dashboard_data(
         "dates": master,
         "stocks": stocks,
         "window": window,
-        "benchmark": benchmark,
+        "benchmark": portfolio.benchmark,
         "asof": master[-1] if master else "",
         "holdings": _holdings_payload(portfolio, store, stocks, snapshot),
     }
@@ -254,6 +268,7 @@ p.sub{color:var(--muted);margin:0 0 14px}
 .controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:14px 0}
 .chip{border:1px solid var(--line);background:var(--paper);border-radius:20px;padding:6px 12px;font:inherit;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:7px;color:var(--ink)}
 .chip .dot{width:10px;height:10px;border-radius:50%;flex:none}
+.chip .vs{font-size:11px;color:var(--muted)}
 .chip.off{opacity:.35}
 .chip:hover{border-color:var(--accent)}
 .presets{display:flex;gap:6px;margin-left:auto}
@@ -318,7 +333,8 @@ for (const t of ORDER) {
   const c = DATA.stocks[t];
   const b = document.createElement('button');
   b.className = 'chip'; b.dataset.t = t;
-  b.innerHTML = '<span class="dot" style="background:' + c.color + '"></span>' + esc(t);
+  const vs = (c.benchmark && c.benchmark !== DATA.benchmark) ? ' <span class="vs">vs ' + esc(c.benchmark) + '</span>' : '';
+  b.innerHTML = '<span class="dot" style="background:' + c.color + '"></span>' + esc(t) + vs;
   b.onclick = () => { visible.has(t) ? visible.delete(t) : visible.add(t); b.classList.toggle('off', !visible.has(t)); render(); };
   chipsEl.appendChild(b);
 }
