@@ -179,9 +179,18 @@ def collect_events(
     jobs: list[Move] = []
     for ticker in symbols:
         artifact = read_moves(moves_dir / f"{ticker}.json")
-        if artifact.ticker != ticker or artifact.benchmark != portfolio.benchmark:
+        if artifact.ticker != ticker or artifact.benchmark != portfolio.benchmark_for(
+            ticker
+        ):
             raise ValueError("move artifact does not match configured ticker/benchmark")
-        jobs.extend(move for move in artifact.moves if only_date is None or move.date == only_date)
+        # Indices have no company-specific events to collect (no earnings,
+        # no filings); their charts render the evidence section empty (#57).
+        jobs.extend(
+            move
+            for move in artifact.moves
+            if (only_date is None or move.date == only_date)
+            and not portfolio.is_index(move.ticker)
+        )
     if only_date and not jobs:
         raise ValueError(f"no flagged move on {only_date}")
     completed = deferred = 0
