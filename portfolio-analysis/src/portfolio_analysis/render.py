@@ -182,9 +182,7 @@ def _industry_factor(
     if len(asset_returns) < window:
         return None
     try:
-        beta, alpha = ols_regression(
-            asset_returns[-window:], industry_returns[-window:]
-        )
+        beta, alpha = ols_regression(asset_returns[-window:], industry_returns[-window:])
         rho = correlation(asset_returns[-window:], industry_returns[-window:])
     except ValueError:
         return None
@@ -431,13 +429,16 @@ def _pe_panel(
 
 
 def _kpi_data(store: Store, symbol: str) -> dict[str, Any] | None:
-    """Business-KPI panels for the per-stock chart (issues #29 + #59).
+    """Business-KPI panels for the per-stock chart (issues #29 + #59 + #67).
 
     EDGAR panels (#29) come first, then hand-entered manual panels (#59),
     each carrying ``"source": "manual"`` so the template can label them.
-    None when the ticker has neither EDGAR nor manual data - the template
-    hides the section, the same rule as the P/E and factor panels. A
-    broken KPI config degrades to a smaller section, never a crash.
+    Panels are then stably sorted into groups (issue #67) - "revenue"
+    (revenue & demand) before "cost" (cost control) - so related metrics
+    sit together regardless of config order. None when the ticker has
+    neither EDGAR nor manual data - the template hides the section, the
+    same rule as the P/E and factor panels. A broken KPI config degrades
+    to a smaller section, never a crash.
     """
     try:
         metric_keys = kpis_module.load_kpi_config().get(symbol, [])
@@ -452,12 +453,23 @@ def _kpi_data(store: Store, symbol: str) -> dict[str, Any] | None:
     except manual_kpis_module.ManualKpiError:
         manual_cfg = None
     if manual_cfg is not None:
-        metrics.extend(
-            manual_kpis_module.manual_kpi_panels(manual_cfg.metrics.get(symbol, {}))
-        )
+        metrics.extend(manual_kpis_module.manual_kpi_panels(manual_cfg.metrics.get(symbol, {})))
     if not metrics:
         return None
-    return {"metrics": metrics}
+    return {"metrics": order_panels_by_group(metrics)}
+
+
+#: Render order for KPI groups (issue #67): revenue & demand first, then
+#: cost control, then anything ungrouped. Stable sort keeps config order
+#: within a group.
+_GROUP_RANK = {"revenue": 0, "cost": 1, "other": 2}
+
+
+def order_panels_by_group(
+    panels: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Stable group sort for KPI panels (issue #67)."""
+    return sorted(panels, key=lambda p: _GROUP_RANK.get(p.get("group", "other"), 2))
 
 
 def _tldr_text(
@@ -549,8 +561,7 @@ def _tldr_text(
             ("Earnings reports", lambda label: label == "Quarterly earnings reported"),
             (
                 "SEC filings",
-                lambda label: label.startswith("8-K")
-                or "filing" in label.lower(),
+                lambda label: label.startswith("8-K") or "filing" in label.lower(),
             ),
             ("Macro releases", lambda label: "release" in label.lower()),
         ]
@@ -589,8 +600,7 @@ def _tldr_text(
             )
         elif alpha < 0:
             read = (
-                "Interpretation: \u03b1 is negative and deteriorating \u2014 "
-                "no sign of repair yet."
+                "Interpretation: \u03b1 is negative and deteriorating \u2014 no sign of repair yet."
             )
         else:
             read = (
@@ -683,13 +693,9 @@ def _merge_event_markers(
             continue
         ret = asset[day] / asset[dates[i - 1]] - 1
         bench_ret = benchmark[day] / benchmark[dates[i - 1]] - 1
-        asset_rets = [
-            asset[dates[j]] / asset[dates[j - 1]] - 1
-            for j in range(i - beta_window, i)
-        ]
+        asset_rets = [asset[dates[j]] / asset[dates[j - 1]] - 1 for j in range(i - beta_window, i)]
         bench_rets = [
-            benchmark[dates[j]] / benchmark[dates[j - 1]] - 1
-            for j in range(i - beta_window, i)
+            benchmark[dates[j]] / benchmark[dates[j - 1]] - 1 for j in range(i - beta_window, i)
         ]
         try:
             beta = ols_beta(asset_rets, bench_rets)
@@ -752,8 +758,7 @@ def chart_data(
     industry_factor: dict[str, object] | None = None
     if industry and industry_name:
         if any(
-            industry.get(d) is not None
-            and (not math.isfinite(industry[d]) or industry[d] <= 0)
+            industry.get(d) is not None and (not math.isfinite(industry[d]) or industry[d] <= 0)
             for d in dates
         ):
             raise ValueError("industry chart prices must be finite and positive")
@@ -851,8 +856,7 @@ def chart_data(
             # "250" is the default and matches artifact.params.beta_window.
             "default_window": "250",
             "windows": {
-                str(window): _regime_points(asset, benchmark, window)
-                for window in REGIME_WINDOWS
+                str(window): _regime_points(asset, benchmark, window) for window in REGIME_WINDOWS
             },
             # Daily-resolution tail for zoomed-in views (issue #41). The
             # template picks daily/weekly/monthly by visible range and falls
@@ -871,9 +875,7 @@ def chart_data(
             "wls_half_lives": [str(h) for h in WLS_HALF_LIVES],
             "wls_default": str(DEFAULT_WLS_HALF_LIFE),
             "wls": {
-                str(half_life): _regime_points(
-                    asset, benchmark, half_life=float(half_life)
-                )
+                str(half_life): _regime_points(asset, benchmark, half_life=float(half_life))
                 for half_life in WLS_HALF_LIVES
             },
             "wls_fine": {
@@ -914,6 +916,7 @@ def render_html(data: dict[str, Any]) -> str:
     payload = (
         payload.replace(">", "\\u003e").replace("\u2028", "\\u2028").replace("\u2029", "\\u2029")
     )
+
     def fallback_row(m: dict[str, Any]) -> str:
         # Event-driven markers have no z (it was never estimated for them).
         z = "—" if m["z"] is None else f"{m['z']:+.2f}"
@@ -936,7 +939,7 @@ def render_html(data: dict[str, Any]) -> str:
             + html.escape(safe_ticker_component(stock["symbol"]), quote=True)
             + '.html"'
             + (' aria-current="page"' if stock["symbol"] == data["ticker"] else "")
-            + '><strong>'
+            + "><strong>"
             + html.escape(stock["symbol"])
             + "</strong><span>"
             + html.escape(stock["name"])
@@ -970,9 +973,7 @@ def render_chart(
         # The industry benchmark is best-effort: a mapped ticker with no
         # stored prices renders the two-line chart, not an error.
         industry_ticker = portfolio.industry_benchmark(symbol)
-        industry_series = (
-            store.adjusted_series(industry_ticker) if industry_ticker else {}
-        )
+        industry_series = store.adjusted_series(industry_ticker) if industry_ticker else {}
         if portfolio.is_index(symbol):
             display_name = portfolio.index_entry(symbol).name
             aliases: tuple[str, ...] = ()
