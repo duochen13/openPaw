@@ -38,76 +38,262 @@
 
 manual_kpis:
   NOW:
-    subscription_revenue: # RAW USD millions->units: 3005000000 renders as $3.0B
-      - quarter: "2024-09-30"
-        value: 2715000000
-        source: "ServiceNow Q3 2024 earnings release, 2024-10-23 (newsroom.servicenow.com)"
-        date_recorded: "2026-09-23"
-      - quarter: "2024-12-31"
-        value: 2866000000
-        source: "ServiceNow Q4 2024 earnings release, 2025-01-29 (newsroom.servicenow.com)"
-        date_recorded: "2026-09-23"
-      - quarter: "2025-03-31"
-        value: 3005000000
-        source: "ServiceNow Q1 2025 earnings release, 2025-04-23 (newsroom.servicenow.com)"
-        date_recorded: "2026-09-23"
-      - quarter: "2025-06-30"
-        value: 3113000000
-        source: "ServiceNow Q2 2025 earnings release, 2025-07-23 (newsroom.servicenow.com)"
-        date_recorded: "2026-09-23"
-      - quarter: "2025-09-30"
-        value: 3299000000
-        source: "ServiceNow Q3 2025 earnings release, 2025-10-29 (newsroom.servicenow.com)"
-        date_recorded: "2026-09-23"
-      - quarter: "2025-12-31"
-        value: 3466000000
-        source: "ServiceNow Q4 2025 earnings release, 2026-01-28 (newsroom.servicenow.com)"
-        date_recorded: "2026-09-23"
-      - quarter: "2026-03-31"
-        value: 3671000000
-        source: "ServiceNow Q1 2026 earnings release, 2026-04-22 (newsroom.servicenow.com)"
-        date_recorded: "2026-09-23"
-      - quarter: "2026-06-30"
-        value: 3877000000
-        source: "ServiceNow Q2 2026 earnings release, 2026-07-22 (investor.servicenow.com)"
-        date_recorded: "2026-09-23"
-
+    subscription_revenue:
+    - quarter: '2024-09-30'
+      value: 2715000000
+      source: ServiceNow Q3 2024 earnings release, 2024-10-23 (newsroom.servicenow.com)
+      date_recorded: '2026-09-23'
+    - quarter: '2024-12-31'
+      value: 2866000000
+      source: ServiceNow Q4 2024 earnings release, 2025-01-29 (newsroom.servicenow.com)
+      date_recorded: '2026-09-23'
+    - quarter: '2025-03-31'
+      value: 3005000000
+      source: ServiceNow Q1 2025 earnings release, 2025-04-23 (newsroom.servicenow.com)
+      date_recorded: '2026-09-23'
+    - quarter: '2025-06-30'
+      value: 3113000000
+      source: ServiceNow Q2 2025 earnings release, 2025-07-23 (newsroom.servicenow.com)
+      date_recorded: '2026-09-23'
+    - quarter: '2025-09-30'
+      value: 3299000000
+      source: ServiceNow Q3 2025 earnings release, 2025-10-29 (newsroom.servicenow.com)
+      date_recorded: '2026-09-23'
+    - quarter: '2025-12-31'
+      value: 3466000000
+      source: ServiceNow Q4 2025 earnings release, 2026-01-28 (newsroom.servicenow.com)
+      date_recorded: '2026-09-23'
+    - quarter: '2026-03-31'
+      value: 3671000000
+      source: ServiceNow Q1 2026 earnings release, 2026-04-22 (newsroom.servicenow.com)
+      date_recorded: '2026-09-23'
+    - quarter: '2026-06-30'
+      value: 3877000000
+      source: ServiceNow Q2 2026 earnings release, 2026-07-22 (investor.servicenow.com)
+      date_recorded: '2026-09-23'
+    crpo:
+    - quarter: '2025-03-31'
+      value: 10310000000
+      source: ServiceNow Q1 2025 earnings release, 2025-04-23. GAAP cRPO $10.31B (non-GAAP
+        identical).
+      date_recorded: '2026-09-25'
+    - quarter: '2025-06-30'
+      value: 10920000000
+      source: ServiceNow Q2 2025 earnings release, 2025-07-23. GAAP cRPO $10.92B (non-GAAP
+        constant-currency $10.65B).
+      date_recorded: '2026-09-25'
+    - quarter: '2025-09-30'
+      value: 11350000000
+      source: ServiceNow Q3 2025 earnings release, 2025-10-29. GAAP cRPO $11.35B (non-GAAP
+        $11.27B).
+      date_recorded: '2026-09-25'
+    - quarter: '2025-12-31'
+      value: 12850000000
+      source: ServiceNow Q4 2025 earnings release, 2026-01-28. GAAP cRPO $12.85B (non-GAAP
+        $12.44B).
+      date_recorded: '2026-09-25'
+    - quarter: '2026-03-31'
+      value: 12640000000
+      source: ServiceNow Q1 2026 earnings release, 2026-04-22. GAAP cRPO $12.64B (non-GAAP
+        $12.45B).
+      date_recorded: '2026-09-25'
+    - quarter: '2026-06-30'
+      value: 13200000000
+      source: ServiceNow Q2 2026 earnings release, 2026-07-22 (hand-verified). GAAP
+        cRPO $13.20B (non-GAAP $13.28B).
+      date_recorded: '2026-09-25'
+    cogs_subscription:
+    - quarter: '2025-03-31'
+      value: 561000000
+      source: 'ServiceNow Q1 2025 earnings release, 2025-04-23 (servicenow.com press
+        room). Derived: subscription revenue $3,005M - subscription gross profit $2,444M.'
+      date_recorded: '2026-09-25'
+    - quarter: '2025-06-30'
+      value: 625000000
+      source: 'ServiceNow Q2 2025 earnings release, 2025-07-23 (newsroom.servicenow.com).
+        Derived: subscription revenue $3,113M - subscription gross profit $2,488M.'
+      date_recorded: '2026-09-25'
+    - quarter: '2025-09-30'
+      value: 666000000
+      source: 'ServiceNow Q3 2025 earnings release, 2025-10-29 (newsroom.servicenow.com).
+        Derived: subscription revenue $3,299M - subscription gross profit $2,633M.'
+      date_recorded: '2026-09-25'
+    - quarter: '2025-12-31'
+      value: 717000000
+      source: 'ServiceNow Q4 2025 earnings release, 2026-01-28 (investor.servicenow.com).
+        Derived: subscription revenue $3,466M - subscription gross profit $2,749M.'
+      date_recorded: '2026-09-25'
+    - quarter: '2026-03-31'
+      value: 820000000
+      source: 'ServiceNow Q1 2026 earnings release, 2026-04-22 (investor.servicenow.com).
+        Derived: subscription revenue $3,671M - subscription gross profit $2,851M.'
+      date_recorded: '2026-09-25'
+    - quarter: '2026-06-30'
+      value: 1030000000
+      source: 'ServiceNow Q2 2026 earnings release, 2026-07-22 (newsroom.servicenow.com,
+        hand-verified). Derived: subscription revenue $3,877M - subscription gross
+        profit $2,847M.'
+      date_recorded: '2026-09-25'
+    cogs_ps:
+    - quarter: '2025-03-31'
+      value: 90000000
+      source: 'ServiceNow Q1 2025 earnings release, 2025-04-23. Derived: PS revenue
+        $83M - PS gross profit -$7M.'
+      date_recorded: '2026-09-25'
+    - quarter: '2025-06-30'
+      value: 99000000
+      source: 'ServiceNow Q2 2025 earnings release, 2025-07-23. Derived: PS revenue
+        $102M - PS gross profit $3M.'
+      date_recorded: '2026-09-25'
+    - quarter: '2025-09-30'
+      value: 108000000
+      source: ServiceNow Q3 2025 earnings release, 2025-10-29. Release shows GAAP
+        PS gross profit as '$-' (~$0M, 0.5% margin); derived as total COGS ($774M)
+        - subscription COGS ($666M).
+      date_recorded: '2026-09-25'
+    - quarter: '2025-12-31'
+      value: 117000000
+      source: 'ServiceNow Q4 2025 earnings release, 2026-01-28. Derived: PS revenue
+        $102M - PS gross loss -$15M.'
+      date_recorded: '2026-09-25'
+    - quarter: '2026-03-31'
+      value: 120000000
+      source: 'ServiceNow Q1 2026 earnings release, 2026-04-22. Derived: PS revenue
+        $99M - PS gross loss -$21M.'
+      date_recorded: '2026-09-25'
+    - quarter: '2026-06-30'
+      value: 139000000
+      source: 'ServiceNow Q2 2026 earnings release, 2026-07-22 (hand-verified). Derived:
+        PS revenue $110M - PS gross loss -$29M.'
+      date_recorded: '2026-09-25'
+    nongaap_subscription_gross_margin:
+    - quarter: '2025-03-31'
+      value: 0.845
+      source: ServiceNow Q1 2025 earnings release, 2025-04-23. Non-GAAP subscription
+        gross profit $2,532M / 84.5%.
+      date_recorded: '2026-09-25'
+    - quarter: '2025-06-30'
+      value: 0.83
+      source: ServiceNow Q2 2025 earnings release, 2025-07-23. Non-GAAP subscription
+        gross profit $2,590M / 83%.
+      date_recorded: '2026-09-25'
+    - quarter: '2025-09-30'
+      value: 0.83
+      source: ServiceNow Q3 2025 earnings release, 2025-10-29. Non-GAAP subscription
+        gross profit $2,744M / 83%.
+      date_recorded: '2026-09-25'
+    - quarter: '2025-12-31'
+      value: 0.825
+      source: ServiceNow Q4 2025 earnings release, 2026-01-28. Non-GAAP subscription
+        gross profit $2,867M / 82.5%.
+      date_recorded: '2026-09-25'
+    - quarter: '2026-03-31'
+      value: 0.815
+      source: ServiceNow Q1 2026 earnings release, 2026-04-22. Non-GAAP subscription
+        gross profit $2,997M / 81.5%.
+      date_recorded: '2026-09-25'
+    - quarter: '2026-06-30'
+      value: 0.805
+      source: ServiceNow Q2 2026 earnings release, 2026-07-22 (hand-verified). Non-GAAP
+        subscription gross profit $3,123M / 80.5%.
+      date_recorded: '2026-09-25'
+    nongaap_gross_margin:
+    - quarter: '2025-03-31'
+      value: 0.82
+      source: ServiceNow Q1 2025 earnings release, 2025-04-23. Non-GAAP total gross
+        profit $2,536M / 82%.
+      date_recorded: '2026-09-25'
+    - quarter: '2025-06-30'
+      value: 0.81
+      source: ServiceNow Q2 2025 earnings release, 2025-07-23. Non-GAAP total gross
+        profit $2,604M / 81%.
+      date_recorded: '2026-09-25'
+    - quarter: '2025-09-30'
+      value: 0.81
+      source: ServiceNow Q3 2025 earnings release, 2025-10-29. Non-GAAP total gross
+        profit $2,756M / 81%.
+      date_recorded: '2026-09-25'
+    - quarter: '2025-12-31'
+      value: 0.805
+      source: ServiceNow Q4 2025 earnings release, 2026-01-28. Non-GAAP total gross
+        profit $2,865M / 80.5%.
+      date_recorded: '2026-09-25'
+    - quarter: '2026-03-31'
+      value: 0.795
+      source: ServiceNow Q1 2026 earnings release, 2026-04-22. Non-GAAP total gross
+        profit $2,988M / 79.5%.
+      date_recorded: '2026-09-25'
+    - quarter: '2026-06-30'
+      value: 0.78
+      source: ServiceNow Q2 2026 earnings release, 2026-07-22 (hand-verified). Non-GAAP
+        total gross profit $3,107M / 78%.
+      date_recorded: '2026-09-25'
+    nongaap_operating_margin:
+    - quarter: '2025-03-31'
+      value: 0.31
+      source: ServiceNow Q1 2025 earnings release, 2025-04-23. Non-GAAP income from
+        operations $953M / 31%.
+      date_recorded: '2026-09-25'
+    - quarter: '2025-06-30'
+      value: 0.295
+      source: ServiceNow Q2 2025 earnings release, 2025-07-23. Non-GAAP income from
+        operations $955M / 29.5%.
+      date_recorded: '2026-09-25'
+    - quarter: '2025-09-30'
+      value: 0.335
+      source: ServiceNow Q3 2025 earnings release, 2025-10-29. Non-GAAP income from
+        operations $1,140M / 33.5%.
+      date_recorded: '2026-09-25'
+    - quarter: '2025-12-31'
+      value: 0.31
+      source: ServiceNow Q4 2025 earnings release, 2026-01-28. Non-GAAP income from
+        operations $1,101M / 31%.
+      date_recorded: '2026-09-25'
+    - quarter: '2026-03-31'
+      value: 0.32
+      source: ServiceNow Q1 2026 earnings release, 2026-04-22. Non-GAAP income from
+        operations $1,199M / 32%.
+      date_recorded: '2026-09-25'
+    - quarter: '2026-06-30'
+      value: 0.295
+      source: ServiceNow Q2 2026 earnings release, 2026-07-22 (hand-verified). Non-GAAP
+        income from operations $1,173M / 29.5%.
+      date_recorded: '2026-09-25'
   META:
-    daily_active_people: # plain counts: 3560000000 renders as 3.56B
-      - quarter: "2024-09-30"
-        value: 3290000000
-        source: "Meta Q3 2025 earnings release, 2025-10-29 (+250M YoY vs Q3 2024)"
-        date_recorded: "2026-09-23"
-      - quarter: "2024-12-31"
-        value: 3350000000
-        source: "Meta Q4 2025 earnings release (Exhibit 99.1), 2026-01-28 (+230M YoY vs Q4 2024)"
-        date_recorded: "2026-09-23"
-      - quarter: "2025-03-31"
-        value: 3430000000
-        source: "Meta Q1 2026 earnings release, 2026-04-29 (+130M YoY vs Q1 2025)"
-        date_recorded: "2026-09-23"
-      - quarter: "2025-06-30"
-        value: 3480000000
-        source: "Meta Q2 2026 earnings release, 2026-07-29 (+3% YoY vs Q2 2025)"
-        date_recorded: "2026-09-23"
-      - quarter: "2025-09-30"
-        value: 3540000000
-        source: "Meta Q3 2025 earnings release, 2025-10-29 (DAP 3.54B, +8% YoY)"
-        date_recorded: "2026-09-23"
-      - quarter: "2025-12-31"
-        value: 3580000000
-        source: "Meta Q4 2025 earnings release (Exhibit 99.1), 2026-01-28 (DAP 3.58B, +7% YoY)"
-        date_recorded: "2026-09-23"
-      - quarter: "2026-03-31"
-        value: 3560000000
-        source: "Meta Q1 2026 earnings release, 2026-04-29 (DAP 3.56B, +4% YoY)"
-        date_recorded: "2026-09-23"
-      - quarter: "2026-06-30"
-        value: 3600000000
-        source: "Meta Q2 2026 earnings release, 2026-07-29 (DAP 3.60B, +3% YoY)"
-        date_recorded: "2026-09-23"
-
+    daily_active_people:
+    - quarter: '2024-09-30'
+      value: 3290000000
+      source: Meta Q3 2025 earnings release, 2025-10-29 (+250M YoY vs Q3 2024)
+      date_recorded: '2026-09-23'
+    - quarter: '2024-12-31'
+      value: 3350000000
+      source: Meta Q4 2025 earnings release (Exhibit 99.1), 2026-01-28 (+230M YoY
+        vs Q4 2024)
+      date_recorded: '2026-09-23'
+    - quarter: '2025-03-31'
+      value: 3430000000
+      source: Meta Q1 2026 earnings release, 2026-04-29 (+130M YoY vs Q1 2025)
+      date_recorded: '2026-09-23'
+    - quarter: '2025-06-30'
+      value: 3480000000
+      source: Meta Q2 2026 earnings release, 2026-07-29 (+3% YoY vs Q2 2025)
+      date_recorded: '2026-09-23'
+    - quarter: '2025-09-30'
+      value: 3540000000
+      source: Meta Q3 2025 earnings release, 2025-10-29 (DAP 3.54B, +8% YoY)
+      date_recorded: '2026-09-23'
+    - quarter: '2025-12-31'
+      value: 3580000000
+      source: Meta Q4 2025 earnings release (Exhibit 99.1), 2026-01-28 (DAP 3.58B,
+        +7% YoY)
+      date_recorded: '2026-09-23'
+    - quarter: '2026-03-31'
+      value: 3560000000
+      source: Meta Q1 2026 earnings release, 2026-04-29 (DAP 3.56B, +4% YoY)
+      date_recorded: '2026-09-23'
+    - quarter: '2026-06-30'
+      value: 3600000000
+      source: Meta Q2 2026 earnings release, 2026-07-29 (DAP 3.60B, +3% YoY)
+      date_recorded: '2026-09-23'
   GOOGL:
-    # No stable search-share provider/definition yet - leave empty so the
-    # dashboard renders "n/a". Never fabricate market-share figures.
     search_share: []
