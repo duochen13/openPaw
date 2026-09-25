@@ -972,6 +972,74 @@ def chart_data(
     return data
 
 
+def buy_timing_html(rows: list[positions_module.BuyTiming]) -> str:
+    """Static "Buy timing" section for the chart page; "" when there are no buys.
+
+    Rendered server-side so it works without JavaScript. Each buy is scored by
+    where its price landed inside the next 30 trading days' range: 0% caught
+    the low, 100% caught the high.
+    """
+    if not rows:
+        return ""
+    scored = [r for r in rows if r.score is not None]
+    near_low = sum(1 for r in scored if r.score is not None and r.score < 0.25)
+    summary = (
+        f"{near_low} of {len(scored)} scored buys landed near the 30-day low."
+        if scored
+        else "Buys are too recent to score — timing appears after a few sessions."
+    )
+    body = []
+    for r in rows:
+        if r.score is None:
+            timing = '<span class="small">too recent</span>'
+            span = '<span class="small">—</span>'
+        else:
+            pos = max(0.0, min(1.0, r.score)) * 100
+            if r.score < 0.25:
+                color, vclass = "#2e7d32", "up"
+            elif r.score > 0.75:
+                color, vclass = "#bc443b", "down"
+            else:
+                color, vclass = "var(--muted)", ""
+            bar = (
+                '<span style="display:inline-block;width:84px;height:8px;'
+                "background:var(--grid);border-radius:4px;position:relative;"
+                'vertical-align:middle;margin-right:8px">'
+                f'<i style="position:absolute;top:-3px;width:3px;height:14px;'
+                f'background:{color};left:{pos:.0f}%;border-radius:2px"></i></span>'
+            )
+            verdict = f'<span class="{vclass}">{r.verdict}</span>' if vclass else r.verdict
+            timing = f"{bar}{r.score:.0%} · {verdict}"
+            span = f"${r.fwd_low:,.2f} - ${r.fwd_high:,.2f}"
+        if r.ret_since is None:
+            ret = '<span class="small">—</span>'
+        else:
+            rclass = "up" if r.ret_since >= 0 else "down"
+            ret = f'<span class="{rclass}">{r.ret_since:+.1%}</span>'
+        body.append(
+            "<tr>"
+            f"<td>{html.escape(r.date)}</td>"
+            f"<td>{r.qty:g} @ ${r.price:,.2f}</td>"
+            f"<td>${r.cost:,.0f}</td>"
+            f"<td>{timing}</td>"
+            f"<td>{span}</td>"
+            f"<td>{ret}</td>"
+            "</tr>"
+        )
+    return (
+        '<section class="chart-box" id="buy-timing-box" aria-label="Buy timing">'
+        '<div class="toolbar"><div><h2 class="chart-title">Buy timing</h2>'
+        '<p class="small">Where each buy landed inside the next 30 trading days\' range — '
+        "0% caught the low, 100% caught the high. "
+        f"{html.escape(summary)} Past execution, not a forecast.</p>"
+        "</div></div>"
+        '<div style="overflow-x:auto"><table><thead><tr>'
+        "<th>Date</th><th>Buy</th><th>Cost</th><th>Timing</th>"
+        "<th>30-day range</th><th>Since buy</th>"
+        "</tr></thead><tbody>" + "".join(body) + "</tbody></table></div></section>"
+    )
+
+
 def render_html(data: dict[str, Any]) -> str:
     template = Path(__file__).with_name("templates").joinpath("chart.html").read_text()
     # JSON is inert text. Escape HTML delimiters so hostile article text cannot
@@ -1014,6 +1082,7 @@ def render_html(data: dict[str, Any]) -> str:
         template.replace("__TITLE__", html.escape(f"{data['ticker']} · Price & events"))
         .replace("__STOCK_LINKS__", stock_links)
         .replace("__FALLBACK_ROWS__", rows)
+        .replace("__BUY_TIMING__", data.get("buy_timing_html", ""))
         .replace("__DATA__", payload)
     )
 
@@ -1044,9 +1113,10 @@ def render_chart(
         else:
             display_name = portfolio.entry(symbol).name
             aliases = portfolio.entry(symbol).aliases
+        price_series = store.adjusted_series(symbol)
         data = chart_data(
             artifact,
-            store.adjusted_series(symbol),
+            price_series,
             store.adjusted_series(artifact.benchmark),
             events_dir,
             name=display_name,
@@ -1074,10 +1144,15 @@ def render_chart(
             all_trades = positions_module.load_trades()
         except ValueError as exc:
             raise ValueError(f"trade history: {exc}") from exc
+        symbol_trades = positions_module.trades_for_symbol(all_trades, symbol)
         data["trades"] = [
-            {"date": t.date, "side": t.side, "qty": t.qty, "price": t.price}
-            for t in positions_module.trades_for_symbol(all_trades, symbol)
+            {"date": t.date, "side": t.side, "qty": t.qty, "price": t.price} for t in symbol_trades
         ]
+        # Buy timing section: score each buy against the next 30 trading
+        # days. Static HTML, rendered for every build.
+        data["buy_timing_html"] = buy_timing_html(
+            positions_module.buy_timing(symbol_trades, price_series)
+        )
     finally:
         store.close()
     out_dir.mkdir(parents=True, exist_ok=True)

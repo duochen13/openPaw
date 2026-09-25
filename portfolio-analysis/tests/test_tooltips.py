@@ -9,7 +9,6 @@ functions themselves from being silently deleted.
 from pathlib import Path
 
 from portfolio_analysis.render import _regime_points
-
 from tests.test_render import data as make_data
 
 TEMPLATE = Path(__file__).resolve().parent.parent / "src/portfolio_analysis/templates/chart.html"

@@ -11,9 +11,12 @@ dashboard instead of silently drifting from the real account.
 
 from __future__ import annotations
 
+import bisect
 import csv
 import math
 import re
+from collections import Counter
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -284,6 +287,7 @@ class Trade:
     side: str  # "buy" | "sell"
     qty: float
     price: float
+    source: str | None = None  # provenance tag: "plaid" | "robinhood-csv" | "manual"
 
 
 @dataclass(frozen=True)
@@ -465,24 +469,34 @@ def write_trades(
     trades: TradeImportResult | tuple[Trade, ...] | list[Trade],
     path: str | Path | None = None,
     *,
-    source: str = "robinhood-csv",
+    source: str | None = "robinhood-csv",
 ) -> Path:
-    """Write the trade history consumed by the per-stock dashboards (#65)."""
+    """Write the trade history consumed by the per-stock dashboards (#65).
+
+    Every trade is stamped with a provenance tag (its own ``source`` when
+    set, else the ``source`` argument) so a later refresh from another
+    origin can replace just its own trades instead of clobbering the file.
+    """
     if isinstance(trades, TradeImportResult):
         trades = trades.trades
     target = Path(path) if path is not None else default_trades_path()
+    entries = []
+    for t in trades:
+        entry: dict[str, Any] = {
+            "symbol": t.symbol,
+            "date": t.date,
+            "side": t.side,
+            "qty": t.qty,
+            "price": round(t.price, 4),
+        }
+        tag = t.source or source
+        if tag:
+            entry["source"] = tag
+        entries.append(entry)
+    tags = sorted({tag for t in trades if (tag := t.source or source)})
     doc: dict[str, Any] = {
-        "meta": {"source": source},
-        "trades": [
-            {
-                "symbol": t.symbol,
-                "date": t.date,
-                "side": t.side,
-                "qty": t.qty,
-                "price": round(t.price, 4),
-            }
-            for t in trades
-        ],
+        "meta": {"source": source or ", ".join(tags) or None},
+        "trades": entries,
     }
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
@@ -507,6 +521,10 @@ def load_trades(path: str | Path | None = None) -> list[Trade] | None:
     raw_trades = doc.get("trades", [])
     if not isinstance(raw_trades, list):
         raise ValueError(f"{target}: 'trades' must be a list")
+    meta = doc.get("meta", {})
+    legacy_source = meta.get("source") if isinstance(meta, dict) else None
+    if legacy_source is not None and not isinstance(legacy_source, str):
+        raise ValueError(f"{target}: meta.source must be a string")
     trades: list[Trade] = []
     for i, item in enumerate(raw_trades):
         if not isinstance(item, dict):
@@ -516,6 +534,7 @@ def load_trades(path: str | Path | None = None) -> list[Trade] | None:
         side = item.get("side")
         qty = item.get("qty")
         price = item.get("price")
+        source = item.get("source", legacy_source)
         if not isinstance(symbol, str) or not _EQUITY_SYMBOL.match(symbol.strip().upper()):
             raise ValueError(f"{target}: trade #{i} has an invalid symbol {symbol!r}")
         if not isinstance(date, str):
@@ -530,6 +549,8 @@ def load_trades(path: str | Path | None = None) -> list[Trade] | None:
             raise ValueError(f"{target}: trade #{i} has invalid qty {qty!r}")
         if not isinstance(price, (int, float)) or not math.isfinite(price) or price < 0:
             raise ValueError(f"{target}: trade #{i} has invalid price {price!r}")
+        if source is not None and not isinstance(source, str):
+            raise ValueError(f"{target}: trade #{i} has invalid source {source!r}")
         trades.append(
             Trade(
                 symbol=symbol.strip().upper(),
@@ -537,10 +558,26 @@ def load_trades(path: str | Path | None = None) -> list[Trade] | None:
                 side=side,
                 qty=float(qty),
                 price=float(price),
+                source=source,
             )
         )
     trades.sort(key=lambda t: (t.date, t.symbol, t.side))
     return trades
+
+
+def read_trades_meta(path: str | Path | None = None) -> dict[str, Any]:
+    """Return the ``meta`` mapping of a trades file ({} when absent)."""
+    target = Path(path) if path is not None else default_trades_path()
+    if not target.exists():
+        return {}
+    try:
+        doc = yaml.safe_load(target.read_text(encoding="utf-8"))
+    except yaml.YAMLError as exc:
+        raise ValueError(f"{target}: invalid YAML ({exc})") from exc
+    if not isinstance(doc, dict):
+        return {}
+    meta = doc.get("meta", {})
+    return meta if isinstance(meta, dict) else {}
 
 
 def trades_for_symbol(trades: list[Trade] | None, symbol: str) -> list[Trade]:
@@ -549,3 +586,199 @@ def trades_for_symbol(trades: list[Trade] | None, symbol: str) -> list[Trade]:
         return []
     want = symbol.strip().upper()
     return [t for t in trades if t.symbol == want]
+
+
+# Minimum forward trading days before a buy gets a timing score. Fewer than
+# this (a buy from the last few sessions) renders as "too recent".
+TIMING_MIN_FORWARD_DAYS = 5
+
+
+@dataclass(frozen=True)
+class BuyTiming:
+    """Where one buy landed inside the ``window`` trading days after it.
+
+    ``score`` is ``(buy_price - fwd_low) / (fwd_high - fwd_low)``: 0% means the
+    buy caught the forward low, 100% the forward high. It can dip below 0%
+    (the low kept rising after the buy) or above 100% (bought above the
+    subsequent range). ``None`` when fewer than ``TIMING_MIN_FORWARD_DAYS``
+    forward sessions exist yet — too recent to judge.
+    """
+
+    date: str
+    qty: float
+    price: float
+    cost: float
+    fwd_days: int
+    fwd_low: float | None
+    fwd_high: float | None
+    score: float | None
+    ret_since: float | None  # latest close vs buy price, None without prices
+
+    @property
+    def verdict(self) -> str:
+        if self.score is None:
+            return "too recent"
+        if self.score < 0.25:
+            return "near low"
+        if self.score > 0.75:
+            return "near high"
+        return "mid-range"
+
+
+def buy_timing(
+    trades: Iterable[Trade],
+    prices: Mapping[str, float],
+    *,
+    window: int = 30,
+) -> list[BuyTiming]:
+    """Score each buy's timing against the ``window`` trading days after it.
+
+    ``prices`` maps ISO date -> adjusted close. Sells are excluded: sell
+    timing (opportunity cost) is a different question from buy execution.
+    """
+    bars = sorted(prices.items())  # date strings sort chronologically as ISO
+    dates = [d for d, _ in bars]
+    out: list[BuyTiming] = []
+    for trade in trades:
+        if trade.side != "buy":
+            continue
+        idx = bisect.bisect_left(dates, trade.date)
+        fwd = bars[idx + 1 : idx + 1 + window] if idx < len(bars) else []
+        closes = [c for _, c in fwd]
+        latest = bars[-1][1] if bars else None
+        lo: float | None
+        hi: float | None
+        score: float | None
+        if len(closes) >= TIMING_MIN_FORWARD_DAYS:
+            lo, hi = min(closes), max(closes)
+            score = (trade.price - lo) / (hi - lo) if hi > lo else 0.0
+        else:
+            lo = hi = score = None
+        out.append(
+            BuyTiming(
+                date=trade.date,
+                qty=trade.qty,
+                price=trade.price,
+                cost=trade.qty * trade.price,
+                fwd_days=len(closes),
+                fwd_low=lo,
+                fwd_high=hi,
+                score=score,
+                ret_since=(latest / trade.price - 1) if latest else None,
+            )
+        )
+    return out
+
+
+PLAID_TRADE_SOURCE = "plaid"
+
+
+def plaid_transactions_to_trades(payload: Any) -> list[Trade]:
+    """Convert a ``plaid investments-transactions`` JSON payload to trades.
+
+    Accepts either the raw CLI envelope (``{"body": {...}}``) or the body
+    itself. Only buy/sell investment transactions become trades; cash
+    activity (dividends, interest, fees, transfers) is skipped. Malformed
+    rows are skipped rather than failing the whole refresh.
+    """
+    if not isinstance(payload, dict):
+        return []
+    body = payload.get("body", payload)
+    if not isinstance(body, dict):
+        return []
+    raw_txs = body.get("investment_transactions", []) or []
+    raw_secs = body.get("securities", []) or []
+    tickers: dict[Any, str] = {}
+    for sec in raw_secs:
+        if not isinstance(sec, dict):
+            continue
+        ticker = (sec.get("ticker_symbol") or "").strip().upper()
+        if ticker and _EQUITY_SYMBOL.match(ticker):
+            tickers[sec.get("security_id")] = ticker
+    trades: list[Trade] = []
+    for n, tx in enumerate(raw_txs):
+        if not isinstance(tx, dict):
+            continue
+        if tx.get("type") not in ("buy", "sell"):
+            continue
+        symbol = tickers.get(tx.get("security_id"))
+        if not symbol:
+            continue
+        raw_qty = tx.get("quantity")
+        raw_price = tx.get("price")
+        if raw_qty is None or raw_price is None:
+            continue
+        try:
+            qty = abs(float(raw_qty))
+            price = float(raw_price)
+        except (TypeError, ValueError):
+            continue
+        if not math.isfinite(qty) or qty <= 0:
+            continue
+        if not math.isfinite(price) or price < 0:
+            continue
+        raw_date = tx.get("date")
+        if not isinstance(raw_date, str):
+            continue
+        try:
+            date = _parse_trade_date(raw_date, n)
+        except ValueError:
+            continue
+        trades.append(
+            Trade(
+                symbol=symbol,
+                date=date,
+                side=tx["type"],
+                qty=qty,
+                price=price,
+                source=PLAID_TRADE_SOURCE,
+            )
+        )
+    trades.sort(key=lambda t: (t.date, t.symbol, t.side))
+    return trades
+
+
+def trade_key(t: Trade) -> tuple[str, str, str, float, float]:
+    """Identity of a trade for merge/dedupe.
+
+    Price is rounded to the cent: Plaid revises fill prices by fractions
+    of a cent between pulls (56.05 -> 56.0502), and that revision noise
+    must not read as a new trade.
+    """
+    return (t.date, t.side, t.symbol, t.qty, round(t.price, 2))
+
+
+def merge_trades(
+    existing: list[Trade] | None,
+    fresh: list[Trade],
+    *,
+    fresh_source: str = PLAID_TRADE_SOURCE,
+    legacy_source: str | None = None,
+) -> list[Trade]:
+    """Merge freshly pulled trades into the stored history.
+
+    Existing trades whose effective provenance (their own ``source`` tag,
+    else ``legacy_source`` from the file's ``meta`` block) matches
+    ``fresh_source`` are replaced by the fresh pull; trades from any other
+    origin (CSV import, manual entries) are kept. Dedupe is
+    occurrence-aware (multiset): two genuinely separate but identical
+    orders in the fresh pull are both kept — only occurrences already
+    recorded from a non-fresh origin are skipped, so a manual entry for
+    the same execution is not double-counted. Re-running a refresh is
+    idempotent.
+    """
+    kept: list[Trade] = []
+    for t in existing or []:
+        if (t.source or legacy_source) == fresh_source:
+            continue
+        kept.append(t)
+    kept_counts = Counter(trade_key(t) for t in kept)
+    merged = list(kept)
+    for t in fresh:
+        key = trade_key(t)
+        if kept_counts[key] > 0:
+            kept_counts[key] -= 1
+            continue
+        merged.append(t)
+    merged.sort(key=lambda t: (t.date, t.symbol, t.side))
+    return merged
