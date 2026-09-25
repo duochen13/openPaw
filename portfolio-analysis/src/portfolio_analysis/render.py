@@ -446,6 +446,17 @@ def _kpi_data(store: Store, symbol: str) -> dict[str, Any] | None:
         metric_keys = []
     series = {key: store.kpi_quarters(symbol, key) for key in metric_keys}
     series = {key: rows for key, rows in series.items() if rows}
+    # Derived metrics (kind "spread") are computed at render time from the
+    # stored component series - they are never fetched or stored.
+    for key in metric_keys:
+        spec = kpis_module.METRIC_DEFS.get(key)
+        if not spec or spec.get("kind") != "spread" or key in series:
+            continue
+        num_key, den_key = spec["components"]
+        if num_key in series and den_key in series:
+            spread = kpis_module.spread_from_series(series[num_key], series[den_key])
+            if spread:
+                series[key] = spread
     panels = kpis_module.kpi_panels(series, metric_keys)
     metrics: list[dict[str, Any]] = list(panels["metrics"]) if panels else []
     try:
