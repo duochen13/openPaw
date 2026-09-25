@@ -132,9 +132,7 @@ def test_plaid_parse_keeps_only_buys_and_sells() -> None:
 
 def test_plaid_parse_skips_malformed_rows() -> None:
     trades = plaid_transactions_to_trades(PLAID_MESSY)
-    assert [(t.symbol, t.side, t.qty, t.price) for t in trades] == [
-        ("NOW", "buy", 2.0, 109.63)
-    ]
+    assert [(t.symbol, t.side, t.qty, t.price) for t in trades] == [("NOW", "buy", 2.0, 109.63)]
 
 
 def test_plaid_parse_not_a_dict() -> None:
@@ -176,15 +174,34 @@ def test_merge_legacy_file_without_per_trade_source(tmp_path: Path) -> None:
     ]
 
 
-def test_merge_is_idempotent_and_dedupes() -> None:
+def test_merge_keeps_two_identical_plaid_orders() -> None:
+    # Regression: two genuinely separate but identical orders (same day,
+    # side, symbol, qty, price) in one Plaid pull must both survive. The
+    # old set-based dedupe collapsed the second into the first and lost
+    # 35 NOW shares.
     fresh = [
-        Trade("NOW", "2026-09-09", "buy", 45.0, 133.0, source="plaid"),
-        Trade("NOW", "2026-09-09", "buy", 45.0, 133.0, source="plaid"),
+        Trade("NOW", "2026-09-01", "buy", 35.0, 142.25, source="plaid"),
+        Trade("NOW", "2026-09-01", "buy", 35.0, 142.25, source="plaid"),
     ]
-    once = merge_trades(None, fresh)
-    assert len(once) == 1
-    twice = merge_trades(once, fresh)
-    assert twice == once
+    merged = merge_trades(None, fresh)
+    assert len(merged) == 2
+    assert sum(t.qty for t in merged) == 70.0
+    # Re-running the same pull stays idempotent.
+    assert merge_trades(merged, fresh) == merged
+
+
+def test_merge_skips_only_recorded_manual_occurrences() -> None:
+    # One manual entry for an execution suppresses exactly one matching
+    # fresh occurrence; a second identical fresh order is still kept.
+    existing = [Trade("NOW", "2026-09-01", "buy", 35.0, 142.25, source="manual")]
+    fresh = [
+        Trade("NOW", "2026-09-01", "buy", 35.0, 142.25, source="plaid"),
+        Trade("NOW", "2026-09-01", "buy", 35.0, 142.25, source="plaid"),
+    ]
+    merged = merge_trades(existing, fresh)
+    assert len(merged) == 2  # manual entry + one genuinely separate order
+    assert sum(1 for t in merged if t.source == "manual") == 1
+    assert sum(1 for t in merged if t.source == "plaid") == 1
 
 
 def test_refresh_round_trip_preserves_provenance(tmp_path: Path) -> None:
@@ -195,9 +212,7 @@ def test_refresh_round_trip_preserves_provenance(tmp_path: Path) -> None:
     target = write_trades(existing, tmp_path / "trades.yaml", source=None)
     loaded = load_trades(target)
     assert loaded is not None
-    merged = merge_trades(
-        loaded, plaid_transactions_to_trades(PLAID_BASIC), legacy_source=None
-    )
+    merged = merge_trades(loaded, plaid_transactions_to_trades(PLAID_BASIC), legacy_source=None)
     write_trades(merged, target, source=None)
     reloaded = load_trades(target)
     assert reloaded is not None
