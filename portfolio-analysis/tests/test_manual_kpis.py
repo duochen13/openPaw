@@ -120,7 +120,7 @@ def test_tickers_uppercased(tmp_path):
 def test_panels_carry_manual_source_and_citation():
     cfg = load_manual_kpis(REAL_CONFIG)
     panels = manual_kpis.manual_kpi_panels(cfg.metrics["NOW"])
-    (panel,) = panels
+    panel = next(p for p in panels if p["key"] == "subscription_revenue")
     assert panel["key"] == "subscription_revenue"
     assert panel["label"] == "Subscription revenue"
     assert panel["format"] == "currency"
@@ -134,7 +134,8 @@ def test_panels_carry_manual_source_and_citation():
 
 def test_panels_yoy_fractional_for_currency():
     cfg = load_manual_kpis(REAL_CONFIG)
-    (panel,) = manual_kpis.manual_kpi_panels(cfg.metrics["NOW"])
+    panels = manual_kpis.manual_kpi_panels(cfg.metrics["NOW"])
+    panel = next(p for p in panels if p["key"] == "subscription_revenue")
     # Q3 2025 vs Q3 2024: (3299 - 2715) / 2715
     i = panel["quarters"].index("2025-09-30")
     assert panel["yoy"][i] == pytest.approx((3299000000 - 2715000000) / 2715000000)
