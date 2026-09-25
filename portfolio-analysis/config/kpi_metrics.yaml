@@ -32,6 +32,7 @@ kpis:
     - revenue
     - rpo
     - cogs
+    - cogs_revenue_spread
     - gross_margin
     - operating_margin
     - capex
