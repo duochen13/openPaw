@@ -40,6 +40,32 @@ _AVG_COST_COLUMNS = {
 # with a reason rather than corrupting the snapshot.
 _EQUITY_SYMBOL = re.compile(r"^[A-Z]{1,6}(\.[A-Z])?$")
 
+# ---------------------------------------------------------------------------
+# Trade history (issue #65): buy/sell markers for the per-stock dashboards.
+# ---------------------------------------------------------------------------
+
+# Robinhood order-history CSV exports ("Activity Date", "Instrument",
+# "Trans Code", "Quantity", "Price", ...). Header names are matched
+# tolerantly, the same convention as the positions import.
+_TRADE_DATE_COLUMNS = {
+    "activity date",
+    "date",
+    "trade date",
+    "execution date",
+    "executed on",
+}
+_SIDE_COLUMNS = {"trans code", "transaction code", "side", "action", "type"}
+_FILL_PRICE_COLUMNS = {
+    "price",
+    "fill price",
+    "execution price",
+    "avg fill price",
+    "fill",
+}
+
+_BUY_CODES = {"buy", "bought", "purchase", "purchased"}
+_SELL_CODES = {"sell", "sold"}
+
 
 @dataclass(frozen=True)
 class Position:
@@ -244,3 +270,282 @@ def load_snapshot(path: str | Path | None = None) -> Snapshot | None:
         source=str(meta.get("source", "")),
         positions=tuple(positions),
     )
+
+
+# ---------------------------------------------------------------------------
+# Trade history (issue #65)
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class Trade:
+    symbol: str
+    date: str  # ISO YYYY-MM-DD
+    side: str  # "buy" | "sell"
+    qty: float
+    price: float
+
+
+@dataclass(frozen=True)
+class TradeImportResult:
+    trades: tuple[Trade, ...]
+    skipped: tuple[SkippedRow, ...]
+    filtered_out: int = 0
+
+
+def _read_headers(path: Path) -> list[str]:
+    with path.open(newline="", encoding="utf-8-sig") as handle:
+        reader = csv.reader(handle)
+        try:
+            return next(reader)
+        except StopIteration:
+            raise ValueError(f"{path}: empty CSV, no header row") from None
+
+
+def detect_robinhood_csv_kind(path: str | Path) -> str:
+    """Classify a Robinhood CSV export as ``"orders"`` or ``"positions"``.
+
+    An export with a side column (Trans Code / Side) plus a date column is
+    order history; one with an average-cost column is a positions snapshot.
+    Raises ``ValueError`` when the headers match neither flavor.
+    """
+    headers = _read_headers(Path(path))
+    has_side = _find_column(headers, _SIDE_COLUMNS) is not None
+    has_date = _find_column(headers, _TRADE_DATE_COLUMNS) is not None
+    has_cost = _find_column(headers, _AVG_COST_COLUMNS) is not None
+    if has_side and has_date:
+        return "orders"
+    if has_cost:
+        return "positions"
+    raise ValueError(
+        f"{path}: cannot tell positions from order history (headers seen: {', '.join(headers)})"
+    )
+
+
+def _normalize_side(raw: str, row: int) -> str | None:
+    """Map a Trans Code to "buy"/"sell"; None for non-trade activity.
+
+    Dividends, fees, interest, transfers, and deposits are skipped with a
+    recorded reason instead of failing the import.
+    """
+    code = raw.strip().lower()
+    if code in _BUY_CODES:
+        return "buy"
+    if code in _SELL_CODES:
+        return "sell"
+    return None
+
+
+_TRADE_DATE_FORMATS = ("%Y-%m-%d", "%m/%d/%Y", "%m/%d/%y", "%Y/%m/%d")
+
+
+def _parse_trade_date(raw: str, row: int) -> str:
+    text = raw.strip()
+    for fmt in _TRADE_DATE_FORMATS:
+        try:
+            return datetime.strptime(text, fmt).date().isoformat()
+        except ValueError:
+            continue
+    try:
+        return datetime.fromisoformat(text).date().isoformat()
+    except ValueError:
+        raise ValueError(f"row {row}: trade date {raw!r} is not a recognized date") from None
+
+
+def parse_robinhood_orders_csv(
+    path: str | Path,
+    *,
+    start_date: str | None = None,
+    end_date: str | None = None,
+) -> TradeImportResult:
+    """Parse a Robinhood order-history CSV export into buy/sell trades.
+
+    Only buy/sell executions become trades; dividends, fees, interest, and
+    transfers are skipped with a reason. ``start_date``/``end_date``
+    (``YYYY-MM-DD``, inclusive) filter the trades after parsing.
+    """
+    for label, value in (("start_date", start_date), ("end_date", end_date)):
+        if value is not None:
+            try:
+                datetime.strptime(value, "%Y-%m-%d")
+            except ValueError:
+                raise ValueError(f"{label} {value!r} is not YYYY-MM-DD") from None
+    if start_date and end_date and start_date > end_date:
+        raise ValueError(f"start_date {start_date} is after end_date {end_date}")
+
+    path = Path(path)
+    with path.open(newline="", encoding="utf-8-sig") as handle:
+        reader = csv.reader(handle)
+        try:
+            headers = next(reader)
+        except StopIteration:
+            raise ValueError(f"{path}: empty CSV, no header row") from None
+        date_col = _find_column(headers, _TRADE_DATE_COLUMNS)
+        sym_col = _find_column(headers, _SYMBOL_COLUMNS | {"instrument"})
+        side_col = _find_column(headers, _SIDE_COLUMNS)
+        qty_col = _find_column(headers, _SHARES_COLUMNS)
+        price_col = _find_column(headers, _FILL_PRICE_COLUMNS)
+        missing = [
+            name
+            for name, col in (
+                ("trade date", date_col),
+                ("symbol", sym_col),
+                ("side", side_col),
+                ("quantity", qty_col),
+                ("price", price_col),
+            )
+            if col is None
+        ]
+        if missing:
+            raise ValueError(
+                f"{path}: missing required column(s): {', '.join(missing)} "
+                f"(headers seen: {', '.join(headers)})"
+            )
+        assert (
+            date_col is not None
+            and sym_col is not None
+            and side_col is not None
+            and qty_col is not None
+            and price_col is not None
+        )
+
+        trades: list[Trade] = []
+        skipped: list[SkippedRow] = []
+        filtered_out = 0
+        for row_no, row in enumerate(reader, start=2):
+            if not row or all(not cell.strip() for cell in row):
+                continue
+            symbol = row[sym_col].strip().upper() if sym_col < len(row) else ""
+            if not symbol:
+                skipped.append(SkippedRow(row_no, "", "blank symbol"))
+                continue
+            if not _EQUITY_SYMBOL.match(symbol):
+                skipped.append(
+                    SkippedRow(row_no, symbol, "not an equity ticker (options/crypto skipped)")
+                )
+                continue
+            raw_side = row[side_col] if side_col < len(row) else ""
+            side = _normalize_side(raw_side, row_no)
+            if side is None:
+                skipped.append(
+                    SkippedRow(row_no, symbol, f"non-trade activity {raw_side.strip()!r} skipped")
+                )
+                continue
+            try:
+                date = _parse_trade_date(row[date_col], row_no)
+                qty = _parse_number(row[qty_col], "quantity", row_no)
+                price = _parse_number(row[price_col], "price", row_no)
+            except (IndexError, ValueError) as exc:
+                skipped.append(SkippedRow(row_no, symbol, str(exc)))
+                continue
+            if qty <= 0:
+                skipped.append(SkippedRow(row_no, symbol, f"non-positive quantity {qty}"))
+                continue
+            if price < 0:
+                skipped.append(SkippedRow(row_no, symbol, f"negative price {price}"))
+                continue
+            if (start_date and date < start_date) or (end_date and date > end_date):
+                filtered_out += 1
+                continue
+            trades.append(Trade(symbol=symbol, date=date, side=side, qty=qty, price=price))
+
+    trades.sort(key=lambda t: (t.date, t.symbol, t.side))
+    return TradeImportResult(
+        trades=tuple(trades), skipped=tuple(skipped), filtered_out=filtered_out
+    )
+
+
+def default_trades_path() -> Path:
+    from portfolio_analysis.config import PROJECT_ROOT
+
+    return PROJECT_ROOT / "config" / "trades.yaml"
+
+
+def write_trades(
+    trades: TradeImportResult | tuple[Trade, ...] | list[Trade],
+    path: str | Path | None = None,
+    *,
+    source: str = "robinhood-csv",
+) -> Path:
+    """Write the trade history consumed by the per-stock dashboards (#65)."""
+    if isinstance(trades, TradeImportResult):
+        trades = trades.trades
+    target = Path(path) if path is not None else default_trades_path()
+    doc: dict[str, Any] = {
+        "meta": {"source": source},
+        "trades": [
+            {
+                "symbol": t.symbol,
+                "date": t.date,
+                "side": t.side,
+                "qty": t.qty,
+                "price": round(t.price, 4),
+            }
+            for t in trades
+        ],
+    }
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+    return target
+
+
+def load_trades(path: str | Path | None = None) -> list[Trade] | None:
+    """Load the trade history, or ``None`` when no order import has happened.
+
+    A present-but-malformed file raises ``ValueError``: dashboards must not
+    silently render corrupt trade markers.
+    """
+    target = Path(path) if path is not None else default_trades_path()
+    if not target.exists():
+        return None
+    try:
+        doc = yaml.safe_load(target.read_text(encoding="utf-8"))
+    except yaml.YAMLError as exc:
+        raise ValueError(f"{target}: invalid YAML ({exc})") from exc
+    if not isinstance(doc, dict):
+        raise ValueError(f"{target}: expected a mapping at the top level")
+    raw_trades = doc.get("trades", [])
+    if not isinstance(raw_trades, list):
+        raise ValueError(f"{target}: 'trades' must be a list")
+    trades: list[Trade] = []
+    for i, item in enumerate(raw_trades):
+        if not isinstance(item, dict):
+            raise ValueError(f"{target}: trade #{i} must be a mapping")
+        symbol = item.get("symbol")
+        date = item.get("date")
+        side = item.get("side")
+        qty = item.get("qty")
+        price = item.get("price")
+        if not isinstance(symbol, str) or not _EQUITY_SYMBOL.match(symbol.strip().upper()):
+            raise ValueError(f"{target}: trade #{i} has an invalid symbol {symbol!r}")
+        if not isinstance(date, str):
+            raise ValueError(f"{target}: trade #{i} has an invalid date {date!r}")
+        try:
+            date = _parse_trade_date(date, i)
+        except ValueError:
+            raise ValueError(f"{target}: trade #{i} has an invalid date {date!r}") from None
+        if side not in ("buy", "sell"):
+            raise ValueError(f"{target}: trade #{i} has an invalid side {side!r}")
+        if not isinstance(qty, (int, float)) or not math.isfinite(qty) or qty <= 0:
+            raise ValueError(f"{target}: trade #{i} has invalid qty {qty!r}")
+        if not isinstance(price, (int, float)) or not math.isfinite(price) or price < 0:
+            raise ValueError(f"{target}: trade #{i} has invalid price {price!r}")
+        trades.append(
+            Trade(
+                symbol=symbol.strip().upper(),
+                date=date,
+                side=side,
+                qty=float(qty),
+                price=float(price),
+            )
+        )
+    trades.sort(key=lambda t: (t.date, t.symbol, t.side))
+    return trades
+
+
+def trades_for_symbol(trades: list[Trade] | None, symbol: str) -> list[Trade]:
+    """This ticker's trades only — dashboards never show another stock's."""
+    if not trades:
+        return []
+    want = symbol.strip().upper()
+    return [t for t in trades if t.symbol == want]

@@ -473,15 +473,77 @@ def _dashboard(args: argparse.Namespace) -> int:
 
 
 def _import_robinhood_csv(args: argparse.Namespace) -> int:
-    """Import a Robinhood positions CSV export into the holdings snapshot (#55).
+    """Import a Robinhood CSV export: positions snapshot or order history (#65).
 
-    v1 is CSV-only and read-only: zero credentials, zero ToS risk. The
-    snapshot is timestamped so a stale import is visible in the dashboards.
+    The flavor is auto-detected from the headers unless --kind forces one.
+    Positions behavior is unchanged; an order-history CSV populates
+    config/trades.yaml, which the per-stock dashboards render as buy/sell
+    markers.
     """
     src = Path(args.file)
     if not src.is_file():
         print(f"import-robinhood-csv: no such file: {src}", file=sys.stderr)
         return 2
+    kind = args.kind
+    if kind == "auto":
+        try:
+            kind = positions_module.detect_robinhood_csv_kind(src)
+        except ValueError as exc:
+            print(f"import-robinhood-csv: {exc}", file=sys.stderr)
+            return 1
+    if kind == "orders":
+        return _import_robinhood_orders(args, src)
+    if args.start_date or args.end_date:
+        print(
+            "import-robinhood-csv: --start-date/--end-date only apply to order "
+            "history; ignoring for a positions import",
+            file=sys.stderr,
+        )
+    return _import_robinhood_positions(args, src)
+
+
+def _import_robinhood_orders(args: argparse.Namespace, src: Path) -> int:
+    """Import a Robinhood order-history CSV export into config/trades.yaml."""
+    try:
+        result = positions_module.parse_robinhood_orders_csv(
+            src, start_date=args.start_date, end_date=args.end_date
+        )
+    except ValueError as exc:
+        print(f"import-robinhood-csv: {exc}", file=sys.stderr)
+        return 1
+    if not result.trades:
+        print(
+            f"import-robinhood-csv: no buy/sell trades found in {src} "
+            f"({len(result.skipped)} rows skipped, {result.filtered_out} filtered by date)",
+            file=sys.stderr,
+        )
+        return 1
+    print(f"trades from {src}:")
+    for trade in result.trades:
+        print(
+            f"  {trade.date} {trade.side:4s} {trade.symbol:6s} "
+            f"{trade.qty:>10g} @ ${trade.price:,.2f}"
+        )
+    for skip in result.skipped:
+        print(f"  skipped row {skip.row} ({skip.symbol or '?'}): {skip.reason}")
+    if result.filtered_out:
+        print(f"  {result.filtered_out} trade(s) outside --start-date/--end-date")
+    if args.dry_run:
+        print("dry run: trades not written")
+        return 0
+    target = positions_module.write_trades(result, args.out)
+    trades = positions_module.load_trades(target)
+    assert trades is not None
+    print(f"wrote {len(trades)} trades -> {target}")
+    return 0
+
+
+def _import_robinhood_positions(args: argparse.Namespace, src: Path) -> int:
+    """Import a Robinhood positions CSV export into the holdings snapshot (#55).
+
+    v1 is CSV-only and read-only: zero credentials, zero ToS risk. The
+    snapshot is timestamped so a stale import is visible in the dashboards.
+    """
     try:
         result = positions_module.parse_robinhood_csv(src)
     except ValueError as exc:
@@ -667,13 +729,29 @@ def main(argv: list[str] | None = None) -> int:
 
     import_csv = sub.add_parser(
         "import-robinhood-csv",
-        help="import a Robinhood positions CSV export into the holdings snapshot",
+        help="import a Robinhood CSV export: positions snapshot or order history",
     )
-    import_csv.add_argument("file", help="Robinhood positions CSV export")
+    import_csv.add_argument("file", help="Robinhood positions or order-history CSV export")
+    import_csv.add_argument(
+        "--kind",
+        choices=["auto", "positions", "orders"],
+        default="auto",
+        help="CSV flavor: auto-detect from headers (default), or force one",
+    )
     import_csv.add_argument(
         "--out",
         default=None,
-        help="snapshot path (default config/positions.yaml)",
+        help="output path (default config/positions.yaml, or config/trades.yaml for orders)",
+    )
+    import_csv.add_argument(
+        "--start-date",
+        default=None,
+        help="orders only: keep trades on or after YYYY-MM-DD (default: all)",
+    )
+    import_csv.add_argument(
+        "--end-date",
+        default=None,
+        help="orders only: keep trades on or before YYYY-MM-DD (default: all)",
     )
     import_csv.add_argument(
         "--dry-run", action="store_true", help="parse and print, write nothing"

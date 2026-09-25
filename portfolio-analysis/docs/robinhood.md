@@ -40,6 +40,47 @@ not silent.
 
 `config/positions.yaml` is gitignored: your holdings never enter the repo.
 
+## Order history → trade markers (issue #65)
+
+The same command also imports Robinhood **order history** — it auto-detects
+the CSV flavor from the headers (a Trans Code / Side + date column means
+orders; an average-cost column means positions), or force one with `--kind`:
+
+```bash
+# In the Robinhood app: Account → Statements & History → Export (order history)
+python run portfolio-analysis import-robinhood-csv ~/Downloads/robinhood-orders.csv
+python run portfolio-analysis import-robinhood-csv ~/Downloads/robinhood-orders.csv \
+  --start-date 2026-06-01 --end-date 2026-09-24 --dry-run
+```
+
+What it does:
+
+- Parses date, ticker, side (buy/sell), quantity, and fill price. Header
+  names are matched tolerantly (`Activity Date`/`Trade Date`,
+  `Instrument`/`Symbol`, `Trans Code`/`Side`, `Quantity`/`Qty`,
+  `Price`/`Fill Price`, case-insensitive).
+- Keeps only buy/sell executions. Dividends, fees, interest, transfers, and
+  deposits are skipped with a recorded reason, as are options and crypto rows.
+- `--start-date` / `--end-date` (inclusive, `YYYY-MM-DD`) filter the trades;
+  the default is all trades in the file.
+- Writes `config/trades.yaml` (also gitignored):
+
+```yaml
+meta:
+  source: robinhood-csv
+trades:
+  - symbol: GOOGL
+    date: '2026-09-23'
+    side: buy
+    qty: 6.0
+    price: 349.93
+```
+
+Each per-stock dashboard (`NOW.html`, …) then renders this ticker's trades
+as vertical markers — green for buys, red for sells, tooltip with qty @
+price — on the price chart **and** on the beta / R² / alpha / alpha-slope
+sparklines, so entries can be checked against the alpha signals directly.
+
 ## v2: unofficial API sync (NOT built — read this first)
 
 Robinhood has **no official public API**. Community clients (`robin_stocks`

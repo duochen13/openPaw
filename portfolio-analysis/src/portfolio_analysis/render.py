@@ -14,6 +14,7 @@ from urllib.parse import urlsplit
 
 from portfolio_analysis import kpis as kpis_module
 from portfolio_analysis import manual_kpis as manual_kpis_module
+from portfolio_analysis import positions as positions_module
 from portfolio_analysis.artifacts import MovesArtifact, read_moves
 from portfolio_analysis.bundle import SCHEMA_VERSION, bundle_hash, move_payload
 from portfolio_analysis.config import Portfolio
@@ -999,6 +1000,18 @@ def render_chart(
             default=None,
         )
         data["fundamentals_as_of"] = fund_at[:10] if fund_at else None
+        # Trade markers (issue #65): this ticker's buy/sell history for the
+        # vertical markers on the price chart and the regime sparklines. A
+        # missing trades file renders exactly as before; a corrupt one fails
+        # loud instead of silently dropping markers.
+        try:
+            all_trades = positions_module.load_trades()
+        except ValueError as exc:
+            raise ValueError(f"trade history: {exc}") from exc
+        data["trades"] = [
+            {"date": t.date, "side": t.side, "qty": t.qty, "price": t.price}
+            for t in positions_module.trades_for_symbol(all_trades, symbol)
+        ]
     finally:
         store.close()
     out_dir.mkdir(parents=True, exist_ok=True)
