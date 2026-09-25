@@ -26,10 +26,14 @@ kpis:
     - operating_margin
     - capex
   NOW:
+    # Grouped per issue #67: revenue & demand first, then cost control.
+    # (render.py stably sorts panels by group anyway; this keeps the
+    # config readable in display order.)
     - revenue
+    - rpo
+    - cogs
     - gross_margin
     - operating_margin
-    - rpo
     - capex
   GOOGL:
     - revenue
