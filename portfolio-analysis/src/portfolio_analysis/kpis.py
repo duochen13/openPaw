@@ -57,10 +57,13 @@ _REVENUE_SOURCES = [
 ]
 
 #: Metric registry: key -> definition. ``kind`` is "absolute" (currency
-#: bars, e.g. revenue) or "margin" (percent bars derived as
-#: numerator/denominator, e.g. operating margin). ``yoy`` selects the
-#: growth line: percent change for absolute metrics, percentage-point
-#: change for margins. ``group`` is the dashboard section the panel
+#: bars, e.g. revenue), "margin" (percent bars derived as
+#: numerator/denominator, e.g. operating margin), or "spread" (percentage-
+#: point bars derived as YoY(num) minus YoY(den), e.g. COGS growth minus
+#: revenue growth). ``yoy`` selects the growth line: percent change for
+#: absolute metrics, percentage-point change for margins; spreads carry no
+#: YoY line because the bars already are a growth comparison. ``group`` is
+#: the dashboard section the panel
 #: renders under (issue #67): "revenue" (revenue & demand) or "cost"
 #: (cost control). Panels sort by group at render time so related
 #: metrics sit together regardless of config order.
@@ -134,6 +137,20 @@ METRIC_DEFS: dict[str, dict[str, Any]] = {
             "XBRL after 2018, so the split is hand-entered (see manual KPIs)."
         ),
     },
+    "cogs_revenue_spread": {
+        "label": "COGS vs revenue growth spread",
+        "kind": "spread",
+        "format": "pp",
+        "period": "quarter",
+        "components": ("cogs", "revenue"),
+        "yoy": False,
+        "group": "cost",
+        "blurb": (
+            "COGS YoY growth minus revenue YoY growth, in percentage points. "
+            "Positive = costs growing faster than revenue (margin pressure); "
+            "negative = operating leverage. Built from EDGAR total COGS and revenue."
+        ),
+    },
 }
 
 #: Year-ago comparison must be ~4 quarters back, not merely 4 rows back:
@@ -180,6 +197,54 @@ def _as_magnitude(
     return [(q, f, abs(v)) for q, f, v in series]
 
 
+def _component_series(facts: dict[str, Any], key: str) -> list[tuple[str, str, float]]:
+    """Absolute quarterly series for one component of a spread metric."""
+    spec = METRIC_DEFS[key]
+    series = fundamentals.parse_quarterly_fact(facts, spec["sources"], period=spec["period"])
+    return _as_magnitude(series, spec.get("magnitude", False))
+
+
+def spread_from_series(
+    num_series: list[tuple[str, str, float]],
+    den_series: list[tuple[str, str, float]],
+) -> list[tuple[str, str, float]]:
+    """YoY(num) minus YoY(den) per quarter, in fractions.
+
+    A quarter is kept only when both sides have a defined year-ago quarter;
+    a missing year-ago on either side drops the quarter, never an
+    interpolated guess. Works on stored ``(quarter, filed, value)`` series
+    as well as freshly parsed ones.
+    """
+
+    def yoy_by_quarter(
+        series: list[tuple[str, str, float]],
+    ) -> dict[str, tuple[str, float | None]]:
+        filed_by_q = {q: f for q, f, _ in series}
+        return {q: (filed_by_q[q], y) for q, _, y in with_yoy(series)}
+
+    num = yoy_by_quarter(num_series)
+    den = yoy_by_quarter(den_series)
+    joined = []
+    for q, (f_num, y_num) in num.items():
+        side = den.get(q)
+        if side is None:
+            continue
+        f_den, y_den = side
+        if y_num is None or y_den is None:
+            continue
+        joined.append((q, max(f_num, f_den), y_num - y_den))
+    joined.sort(key=lambda t: t[0])
+    return joined
+
+
+def _spread_series(
+    facts: dict[str, Any], components: tuple[str, str]
+) -> list[tuple[str, str, float]]:
+    """Spread from raw companyfacts, via the two component series."""
+    num_key, den_key = components
+    return spread_from_series(_component_series(facts, num_key), _component_series(facts, den_key))
+
+
 def build_kpi_series(
     facts: dict[str, Any], metric_keys: list[str]
 ) -> dict[str, list[tuple[str, str, float]]]:
@@ -193,6 +258,11 @@ def build_kpi_series(
     revenue_cache: list[tuple[str, str, float]] | None = None
     for key in metric_keys:
         spec = METRIC_DEFS[key]
+        if spec["kind"] == "spread":
+            series = _spread_series(facts, spec["components"])
+            if series:
+                out[key] = series
+            continue
         if spec["kind"] == "margin":
             num = fundamentals.parse_quarterly_fact(facts, spec["numerator"], period=spec["period"])
             if revenue_cache is None:
@@ -263,6 +333,30 @@ def kpi_panels(
         if not series:
             continue
         spec = METRIC_DEFS[key]
+        if spec["kind"] == "spread":
+            # Spread values already are a growth comparison (YoY(num) minus
+            # YoY(den)); no YoY sparkline on top of that.
+            quarters = [q for q, _, _ in series]
+            values = [v for _, _, v in series]
+            panels.append(
+                {
+                    "key": key,
+                    "label": spec["label"],
+                    "kind": spec["kind"],
+                    "format": spec["format"],
+                    "group": spec.get("group", "other"),
+                    "blurb": spec["blurb"],
+                    "quarters": quarters,
+                    "values": values,
+                    "yoy": [None] * len(series),
+                    "yoy_unit": "pp",
+                    "current": values[-1],
+                    "current_yoy": None,
+                    "as_of": quarters[-1],
+                    "quarters_reported": len(quarters),
+                }
+            )
+            continue
         pp = spec["kind"] == "margin"
         dated = with_yoy(series, pp=pp)
         quarters = [q for q, _, _ in dated]
