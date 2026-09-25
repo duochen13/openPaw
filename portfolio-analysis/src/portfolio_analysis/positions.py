@@ -11,9 +11,12 @@ dashboard instead of silently drifting from the real account.
 
 from __future__ import annotations
 
+import bisect
 import csv
 import math
 import re
+from collections import Counter
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -585,6 +588,88 @@ def trades_for_symbol(trades: list[Trade] | None, symbol: str) -> list[Trade]:
     return [t for t in trades if t.symbol == want]
 
 
+# Minimum forward trading days before a buy gets a timing score. Fewer than
+# this (a buy from the last few sessions) renders as "too recent".
+TIMING_MIN_FORWARD_DAYS = 5
+
+
+@dataclass(frozen=True)
+class BuyTiming:
+    """Where one buy landed inside the ``window`` trading days after it.
+
+    ``score`` is ``(buy_price - fwd_low) / (fwd_high - fwd_low)``: 0% means the
+    buy caught the forward low, 100% the forward high. It can dip below 0%
+    (the low kept rising after the buy) or above 100% (bought above the
+    subsequent range). ``None`` when fewer than ``TIMING_MIN_FORWARD_DAYS``
+    forward sessions exist yet — too recent to judge.
+    """
+
+    date: str
+    qty: float
+    price: float
+    cost: float
+    fwd_days: int
+    fwd_low: float | None
+    fwd_high: float | None
+    score: float | None
+    ret_since: float | None  # latest close vs buy price, None without prices
+
+    @property
+    def verdict(self) -> str:
+        if self.score is None:
+            return "too recent"
+        if self.score < 0.25:
+            return "near low"
+        if self.score > 0.75:
+            return "near high"
+        return "mid-range"
+
+
+def buy_timing(
+    trades: Iterable[Trade],
+    prices: Mapping[str, float],
+    *,
+    window: int = 30,
+) -> list[BuyTiming]:
+    """Score each buy's timing against the ``window`` trading days after it.
+
+    ``prices`` maps ISO date -> adjusted close. Sells are excluded: sell
+    timing (opportunity cost) is a different question from buy execution.
+    """
+    bars = sorted(prices.items())  # date strings sort chronologically as ISO
+    dates = [d for d, _ in bars]
+    out: list[BuyTiming] = []
+    for trade in trades:
+        if trade.side != "buy":
+            continue
+        idx = bisect.bisect_left(dates, trade.date)
+        fwd = bars[idx + 1 : idx + 1 + window] if idx < len(bars) else []
+        closes = [c for _, c in fwd]
+        latest = bars[-1][1] if bars else None
+        lo: float | None
+        hi: float | None
+        score: float | None
+        if len(closes) >= TIMING_MIN_FORWARD_DAYS:
+            lo, hi = min(closes), max(closes)
+            score = (trade.price - lo) / (hi - lo) if hi > lo else 0.0
+        else:
+            lo = hi = score = None
+        out.append(
+            BuyTiming(
+                date=trade.date,
+                qty=trade.qty,
+                price=trade.price,
+                cost=trade.qty * trade.price,
+                fwd_days=len(closes),
+                fwd_low=lo,
+                fwd_high=hi,
+                score=score,
+                ret_since=(latest / trade.price - 1) if latest else None,
+            )
+        )
+    return out
+
+
 PLAID_TRADE_SOURCE = "plaid"
 
 
@@ -675,21 +760,25 @@ def merge_trades(
     Existing trades whose effective provenance (their own ``source`` tag,
     else ``legacy_source`` from the file's ``meta`` block) matches
     ``fresh_source`` are replaced by the fresh pull; trades from any other
-    origin (CSV import, manual entries) are kept. Exact duplicates are
-    collapsed, so re-running a refresh is idempotent.
+    origin (CSV import, manual entries) are kept. Dedupe is
+    occurrence-aware (multiset): two genuinely separate but identical
+    orders in the fresh pull are both kept — only occurrences already
+    recorded from a non-fresh origin are skipped, so a manual entry for
+    the same execution is not double-counted. Re-running a refresh is
+    idempotent.
     """
     kept: list[Trade] = []
     for t in existing or []:
         if (t.source or legacy_source) == fresh_source:
             continue
         kept.append(t)
-    seen = {trade_key(t) for t in kept}
+    kept_counts = Counter(trade_key(t) for t in kept)
     merged = list(kept)
     for t in fresh:
         key = trade_key(t)
-        if key in seen:
+        if kept_counts[key] > 0:
+            kept_counts[key] -= 1
             continue
-        seen.add(key)
         merged.append(t)
     merged.sort(key=lambda t: (t.date, t.symbol, t.side))
     return merged
