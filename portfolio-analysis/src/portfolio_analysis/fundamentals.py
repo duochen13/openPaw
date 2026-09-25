@@ -43,7 +43,7 @@ XBRL parsing notes:
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from datetime import date
 from typing import Any
 
@@ -351,34 +351,108 @@ def parse_quarterly_eps(facts: dict[str, Any]) -> list[dict[str, object]]:
     ]
 
 
-def ttm_eps_on(
-    day: str, quarters: list[tuple[str, str, float]]
-) -> float | None:
+def parse_operating_eps(facts: dict[str, Any]) -> list[dict[str, object]]:
+    """Operating EPS excluding gains/losses on equity securities, oldest first.
+
+    Each entry is ``{"quarter": end_date, "filed": filed_date,
+    "eps": float | None}``. ``eps`` is None (a gap, never a silent fallback)
+    where a material investment gain/loss cannot be tax-adjusted because net
+    income or tax expense is missing, or pre-tax income is non-positive.
+
+    Formula per quarter, with ``ni`` = NetIncomeLoss, ``gain`` =
+    EquitySecuritiesFvNiGainLoss, ``tax`` = IncomeTaxExpenseBenefit:
+
+    - ``gain`` missing or zero -> operating EPS = GAAP diluted EPS (the
+      natural fallback for tickers/quarters without the tag);
+    - otherwise ``tau = tax / (ni + tax)`` clamped to [0, 1) (the quarter's
+      effective tax rate as a proxy for the tax on the gain - a documented
+      approximation), ``shares = ni / eps``, and
+      ``operating = eps - gain * (1 - tau) / shares``.
+      Negative gains (losses) are added back symmetrically.
+
+    All three inputs go through ``parse_quarterly_fact`` so amendments are
+    deduped (latest filed wins) and Q4 is derived FY-minus-Q1-Q3 exactly as
+    for GAAP EPS. ``filed`` is the latest filing date across the components
+    that contributed, so the chart never shows a value before it was
+    knowable.
+    """
+    ni = {
+        q: (f, v) for q, f, v in parse_quarterly_fact(facts, [("us-gaap", "NetIncomeLoss", "USD")])
+    }
+    gain = {
+        q: (f, v)
+        for q, f, v in parse_quarterly_fact(
+            facts, [("us-gaap", "EquitySecuritiesFvNiGainLoss", "USD")]
+        )
+    }
+    tax = {
+        q: (f, v)
+        for q, f, v in parse_quarterly_fact(facts, [("us-gaap", "IncomeTaxExpenseBenefit", "USD")])
+    }
+    out: list[dict[str, object]] = []
+    for row in parse_quarterly_eps(facts):
+        quarter = str(row["quarter"])
+        eps_filed = str(row["filed"])
+        eps = float(row["eps"])  # type: ignore[arg-type]
+        g = gain.get(quarter)
+        if g is None or g[1] == 0:
+            out.append({"quarter": quarter, "filed": eps_filed, "eps": eps})
+            continue
+        g_filed, g_val = g
+        n = ni.get(quarter)
+        t = tax.get(quarter)
+        filed_parts = [eps_filed, g_filed]
+        if n is not None:
+            filed_parts.append(n[0])
+        if t is not None:
+            filed_parts.append(t[0])
+        filed = max(filed_parts)
+        operating: float | None = None
+        if n is not None and t is not None and eps != 0:
+            n_val, t_val = n[1], t[1]
+            pretax = n_val + t_val
+            if pretax > 0:
+                tau = max(0.0, min(t_val / pretax, 1.0 - 1e-9))
+                shares = n_val / eps
+                operating = eps - g_val * (1.0 - tau) / shares
+        out.append({"quarter": quarter, "filed": filed, "eps": operating})
+    return out
+
+
+def ttm_eps_on(day: str, quarters: Sequence[tuple[str, str, float | None]]) -> float | None:
     """TTM EPS knowable on ``day``: the four latest quarters filed by then.
 
     ``quarters`` is ``(quarter_end, filed, eps)``. Filing date, not quarter
     end, gates eligibility: the chart never sees earnings before they
-    existed.
+    existed. A quarter whose EPS is None (an indeterminate operating value)
+    poisons the TTM into a gap rather than an invented number.
     """
-    eligible = sorted(
-        (end, eps) for end, filed, eps in quarters if filed <= day
-    )
+    eligible = sorted((end, eps) for end, filed, eps in quarters if filed <= day)
     if len(eligible) < _TTM_QUARTERS:
         return None
-    return sum(eps for _, eps in eligible[-_TTM_QUARTERS:])
+    last4 = eligible[-_TTM_QUARTERS:]
+    if any(eps is None for _, eps in last4):
+        return None
+    return sum(eps for _, eps in last4 if eps is not None)
 
 
 def pe_series(
-    prices: dict[str, float], quarters: list[tuple[str, str, float]]
-) -> dict[str, dict[str, float | None]]:
-    """Daily rolling TTM P/E: ``date -> {"pe", "ttm_eps"}``.
+    prices: dict[str, float],
+    quarters: Sequence[tuple[str, str, float | None]],
+    *,
+    eps_source: str = "gaap",
+) -> dict[str, dict[str, Any]]:
+    """Daily rolling TTM P/E: ``date -> {"pe", "ttm_eps", "eps_source"}``.
 
-    ``pe`` is None where TTM EPS is unknown (fewer than four quarters filed)
-    or non-positive (a P/E over negative earnings is meaningless, not large).
+    ``eps_source`` labels which EPS series backs the ratio ("gaap" or
+    "operating"); the caller selects the series by passing different
+    ``quarters``. ``pe`` is None where TTM EPS is unknown (fewer than four
+    quarters filed), indeterminate (an operating quarter is a gap), or
+    non-positive (a P/E over negative earnings is meaningless, not large).
     """
-    out: dict[str, dict[str, float | None]] = {}
+    out: dict[str, dict[str, Any]] = {}
     for day in sorted(prices):
         ttm = ttm_eps_on(day, quarters)
         pe = prices[day] / ttm if ttm is not None and ttm > 0 else None
-        out[day] = {"pe": pe, "ttm_eps": ttm}
+        out[day] = {"pe": pe, "ttm_eps": ttm, "eps_source": eps_source}
     return out

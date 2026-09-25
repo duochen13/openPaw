@@ -301,6 +301,26 @@ def _fetch_fundamentals(args: argparse.Namespace) -> int:
             first = quarters[0]["quarter"] if quarters else "-"
             last = quarters[-1]["quarter"] if quarters else "-"
             print(f"{symbol}: {written} quarter(s) upserted, {first} .. {last}")
+            # Operating EPS (ex-investment gains, issue #70): derived from
+            # the same companyfacts at fetch time; the upsert is idempotent
+            # so refetch rewrites restated quarters cleanly.
+            op_quarters = fundamentals.parse_operating_eps(facts)
+            op_rows = [
+                {
+                    "ticker": symbol,
+                    "quarter": q["quarter"],
+                    "filed": q["filed"],
+                    "eps": q["eps"],
+                    "source": "derived:ex-investment-gains",
+                }
+                for q in op_quarters
+            ]
+            op_written = store.upsert_operating_eps_quarters(op_rows)
+            op_adjusted = sum(1 for q in op_quarters if q["eps"] is not None)
+            print(
+                f"{symbol}: {op_written} operating EPS quarter(s) upserted "
+                f"({op_adjusted} with values)"
+            )
             if metric_keys:
                 kpi_series = kpis_module.build_kpi_series(facts, metric_keys)
                 kpi_rows = [

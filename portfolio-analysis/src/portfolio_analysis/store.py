@@ -64,6 +64,16 @@ CREATE TABLE IF NOT EXISTS eps_quarter (
     PRIMARY KEY (ticker, quarter)
 );
 
+CREATE TABLE IF NOT EXISTS operating_eps_quarter (
+    ticker     TEXT NOT NULL,
+    quarter    TEXT NOT NULL CHECK (typeof(quarter) = 'text' AND quarter GLOB '{_ISO_DATE}'),
+    filed      TEXT NOT NULL CHECK (typeof(filed) = 'text' AND filed GLOB '{_ISO_DATE}'),
+    eps        REAL,
+    source     TEXT NOT NULL,
+    fetched_at TEXT NOT NULL,
+    PRIMARY KEY (ticker, quarter)
+);
+
 CREATE TABLE IF NOT EXISTS kpi_quarter (
     ticker     TEXT NOT NULL,
     metric     TEXT NOT NULL,
@@ -85,6 +95,7 @@ _MOVE_COLUMNS = (
     "beta", "alpha", "abnormal_return", "sigma_60", "z", "computed_at",
 )
 _EPS_COLUMNS = ("ticker", "quarter", "filed", "eps", "source", "fetched_at")
+_OPERATING_EPS_COLUMNS = ("ticker", "quarter", "filed", "eps", "source", "fetched_at")
 _KPI_COLUMNS = ("ticker", "metric", "quarter", "filed", "value", "source", "fetched_at")
 
 
@@ -183,6 +194,49 @@ class Store:
         """Newest fetch timestamp for ``ticker``'s EPS quarters, if any."""
         cursor = self._conn.execute(
             "SELECT MAX(fetched_at) AS latest FROM eps_quarter WHERE ticker = ?",
+            (ticker.upper(),),
+        )
+        row = cursor.fetchone()
+        return str(row["latest"]) if row and row["latest"] else None
+
+    def upsert_operating_eps_quarters(self, quarters: Iterable[Mapping[str, object]]) -> int:
+        """Upsert derived operating EPS (ex-investment gains, issue #70).
+
+        ``eps`` may be None: a quarter whose investment gain cannot be
+        tax-adjusted is stored as an explicit gap, never silently filled
+        with the GAAP value. Keyed by (ticker, quarter) so a refetch is
+        idempotent and restatements rewrite cleanly.
+        """
+        return self._upsert(
+            "operating_eps_quarter",
+            _OPERATING_EPS_COLUMNS,
+            quarters,
+            key_columns=("ticker", "quarter"),
+        )
+
+    def operating_eps_quarters(self, ticker: str) -> list[tuple[str, str, float | None]]:
+        """(quarter_end, filed, operating_eps) ascending for ``ticker``.
+
+        ``operating_eps`` is None for gap quarters.
+        """
+        cursor = self._conn.execute(
+            "SELECT quarter, filed, eps FROM operating_eps_quarter "
+            "WHERE ticker = ? ORDER BY quarter",
+            (ticker.upper(),),
+        )
+        return [
+            (
+                row["quarter"],
+                row["filed"],
+                float(row["eps"]) if row["eps"] is not None else None,
+            )
+            for row in cursor
+        ]
+
+    def operating_eps_fetched_at(self, ticker: str) -> str | None:
+        """Newest fetch timestamp for ``ticker``'s operating EPS, if any."""
+        cursor = self._conn.execute(
+            "SELECT MAX(fetched_at) AS latest FROM operating_eps_quarter WHERE ticker = ?",
             (ticker.upper(),),
         )
         row = cursor.fetchone()
