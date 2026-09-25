@@ -126,7 +126,12 @@ def test_trades_round_trip(tmp_path: Path) -> None:
     result = parse_robinhood_orders_csv(_write(tmp_path, ORDERS_BASIC))
     target = write_trades(result, tmp_path / "trades.yaml")
     loaded = load_trades(target)
-    assert loaded == list(result.trades)
+    assert loaded is not None
+    # write_trades stamps the import provenance on every trade
+    assert [(t.symbol, t.date, t.side, t.qty, t.price) for t in loaded] == [
+        (t.symbol, t.date, t.side, t.qty, t.price) for t in result.trades
+    ]
+    assert all(t.source == "robinhood-csv" for t in loaded)
 
 
 def test_load_trades_missing_file(tmp_path: Path) -> None:
