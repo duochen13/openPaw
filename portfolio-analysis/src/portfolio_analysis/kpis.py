@@ -242,9 +242,7 @@ def _spread_series(
 ) -> list[tuple[str, str, float]]:
     """Spread from raw companyfacts, via the two component series."""
     num_key, den_key = components
-    return spread_from_series(
-        _component_series(facts, num_key), _component_series(facts, den_key)
-    )
+    return spread_from_series(_component_series(facts, num_key), _component_series(facts, den_key))
 
 
 def build_kpi_series(
