@@ -26,7 +26,11 @@ Data reality, measured 2026-09-19 against EDGAR companyfacts:
 - Not available in companyfacts, hence not definable here: segment
   revenue (no dimensional breakdowns), DAU/MAU (not XBRL-tagged), TSLA
   deliveries (not in XBRL), NOW subscription revenue (tag abandoned
-  after 2014), META/GOOGL gross profit (not tagged).
+  after 2014), META/GOOGL gross profit (not tagged). NOW's COGS split
+  (subscription vs professional-services cost) is likewise gone from
+  XBRL - ``CostOfGoodsSoldSubscription`` stops in 2018 and
+  ``CostOfServices`` in 2014 - so only total ``CostOfRevenue`` is
+  definable here; the split lives in manual KPIs (issue #67).
 """
 
 from __future__ import annotations
@@ -56,7 +60,10 @@ _REVENUE_SOURCES = [
 #: bars, e.g. revenue) or "margin" (percent bars derived as
 #: numerator/denominator, e.g. operating margin). ``yoy`` selects the
 #: growth line: percent change for absolute metrics, percentage-point
-#: change for margins.
+#: change for margins. ``group`` is the dashboard section the panel
+#: renders under (issue #67): "revenue" (revenue & demand) or "cost"
+#: (cost control). Panels sort by group at render time so related
+#: metrics sit together regardless of config order.
 METRIC_DEFS: dict[str, dict[str, Any]] = {
     "revenue": {
         "label": "Revenue",
@@ -65,6 +72,7 @@ METRIC_DEFS: dict[str, dict[str, Any]] = {
         "period": "quarter",
         "sources": _REVENUE_SOURCES,
         "yoy": True,
+        "group": "revenue",
         "blurb": "Quarterly revenue as XBRL-tagged in 10-Q/10-K filings.",
     },
     "gross_margin": {
@@ -75,6 +83,7 @@ METRIC_DEFS: dict[str, dict[str, Any]] = {
         "numerator": [("us-gaap", "GrossProfit", "USD")],
         "denominator": _REVENUE_SOURCES,
         "yoy": True,
+        "group": "cost",
         "blurb": "Gross profit / revenue. Not tagged by every filer.",
     },
     "operating_margin": {
@@ -85,6 +94,7 @@ METRIC_DEFS: dict[str, dict[str, Any]] = {
         "numerator": [("us-gaap", "OperatingIncomeLoss", "USD")],
         "denominator": _REVENUE_SOURCES,
         "yoy": True,
+        "group": "cost",
         "blurb": "Operating income / revenue.",
     },
     "capex": {
@@ -95,6 +105,7 @@ METRIC_DEFS: dict[str, dict[str, Any]] = {
         "sources": [("us-gaap", "PaymentsToAcquirePropertyPlantAndEquipment", "USD")],
         "magnitude": True,
         "yoy": True,
+        "group": "cost",
         "blurb": "Quarterly capex de-accumulated from YTD cash-flow statements.",
     },
     "rpo": {
@@ -104,7 +115,24 @@ METRIC_DEFS: dict[str, dict[str, Any]] = {
         "period": "instant",
         "sources": [("us-gaap", "RevenueRemainingPerformanceObligation", "USD")],
         "yoy": True,
+        "group": "revenue",
         "blurb": "Contracted revenue not yet recognized; backlog proxy.",
+    },
+    "cogs": {
+        "label": "COGS",
+        "kind": "absolute",
+        "format": "currency",
+        "period": "quarter",
+        "sources": [("us-gaap", "CostOfRevenue", "USD")],
+        "yoy": True,
+        "group": "cost",
+        "blurb": (
+            "Total cost of revenues (COGS, cost of goods sold). AI/inference "
+            "costs land here inside subscription COGS but are not separately "
+            "disclosed - this is a proxy for AI cost pressure, not a direct "
+            "readout. NOW's subscription/PS split tags were abandoned in "
+            "XBRL after 2018, so the split is hand-entered (see manual KPIs)."
+        ),
     },
 }
 
@@ -138,8 +166,7 @@ def load_kpi_config(path: str | Path | None = None) -> dict[str, list[str]]:
         for key in keys:
             if key not in METRIC_DEFS:
                 raise ConfigError(
-                    f"{source}: unknown metric {key!r} for {ticker!r}; "
-                    f"known: {sorted(METRIC_DEFS)}"
+                    f"{source}: unknown metric {key!r} for {ticker!r}; known: {sorted(METRIC_DEFS)}"
                 )
         out[str(ticker).upper()] = [str(k) for k in keys]
     return out
@@ -167,9 +194,7 @@ def build_kpi_series(
     for key in metric_keys:
         spec = METRIC_DEFS[key]
         if spec["kind"] == "margin":
-            num = fundamentals.parse_quarterly_fact(
-                facts, spec["numerator"], period=spec["period"]
-            )
+            num = fundamentals.parse_quarterly_fact(facts, spec["numerator"], period=spec["period"])
             if revenue_cache is None:
                 revenue_cache = fundamentals.parse_quarterly_fact(
                     facts, spec["denominator"], period=spec["period"]
@@ -249,6 +274,7 @@ def kpi_panels(
                 "label": spec["label"],
                 "kind": spec["kind"],
                 "format": spec["format"],
+                "group": spec.get("group", "other"),
                 "blurb": spec["blurb"],
                 "quarters": quarters,
                 "values": values,
