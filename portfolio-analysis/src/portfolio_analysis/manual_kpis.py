@@ -40,13 +40,16 @@ _CONFIG_PATH = Path(__file__).resolve().parents[2] / "config" / "kpi_manual.yaml
 #: template's vocabulary: "currency" (raw USD, $3.0B), "count" (plain
 #: numbers, 3.56B people), "percent" (fraction, 0.9 -> 90%). A
 #: percent-formatted metric gets its YoY in percentage points, like the
-#: EDGAR margin panels. Keys not listed here still render - with a generic
-#: label and "count" formatting - so the schema stays open for future
-#: per-company metrics without a code change.
+#: EDGAR margin panels. ``group`` mirrors kpis.METRIC_DEFS: panels sort
+#: into "revenue" (revenue & demand) and "cost" (cost control) sections
+#: at render time (issue #67). Keys not listed here still render - with
+#: a generic label and "count" formatting - so the schema stays open for
+#: future per-company metrics without a code change.
 KNOWN_MANUAL_METRICS: dict[str, dict[str, str]] = {
     "subscription_revenue": {
         "label": "Subscription revenue",
         "format": "currency",
+        "group": "revenue",
         "blurb": (
             "Quarterly subscription revenue, hand-entered from ServiceNow "
             "earnings releases (the us-gaap:SubscriptionRevenue XBRL tag "
@@ -56,6 +59,7 @@ KNOWN_MANUAL_METRICS: dict[str, dict[str, str]] = {
     "daily_active_people": {
         "label": "Daily active people",
         "format": "count",
+        "group": "revenue",
         "blurb": (
             "Meta Family daily active people (DAP), hand-entered from Meta "
             "earnings releases. Not the legacy Facebook-only DAU."
@@ -64,9 +68,72 @@ KNOWN_MANUAL_METRICS: dict[str, dict[str, str]] = {
     "search_share": {
         "label": "Search market share",
         "format": "percent",
+        "group": "other",
         "blurb": (
             "Google search market share - no stable provider or definition "
             "chosen yet; values pending."
+        ),
+    },
+    "cogs_subscription": {
+        "label": "Subscription COGS",
+        "format": "currency",
+        "group": "cost",
+        "blurb": (
+            "Cost of subscription revenues, hand-entered from ServiceNow "
+            "earnings releases (the us-gaap:CostOfGoodsSoldSubscription "
+            "XBRL tag was abandoned after 2018). This is where AI/inference "
+            "costs land - the closest observable proxy for GPU usage cost "
+            "pressure."
+        ),
+    },
+    "cogs_ps": {
+        "label": "Professional services COGS",
+        "format": "currency",
+        "group": "cost",
+        "blurb": (
+            "Cost of professional services and other revenues, hand-entered "
+            "from ServiceNow earnings releases (the us-gaap:CostOfServices "
+            "XBRL tag was abandoned after 2014)."
+        ),
+    },
+    "crpo": {
+        "label": "Current RPO",
+        "format": "currency",
+        "group": "revenue",
+        "blurb": (
+            "Current remaining performance obligations (the ~12-month "
+            "slice of RPO), hand-entered from ServiceNow earnings releases. "
+            "Not XBRL-tagged. More sensitive near-term demand signal than "
+            "total RPO."
+        ),
+    },
+    "nongaap_subscription_gross_margin": {
+        "label": "Non-GAAP subscription gross margin",
+        "format": "percent",
+        "group": "cost",
+        "blurb": (
+            "Non-GAAP subscription gross margin from ServiceNow earnings "
+            "releases (press-release only, never XBRL-tagged). Compare "
+            "against GAAP gross margin: the gap is mostly stock-based "
+            "compensation."
+        ),
+    },
+    "nongaap_gross_margin": {
+        "label": "Non-GAAP gross margin",
+        "format": "percent",
+        "group": "cost",
+        "blurb": (
+            "Non-GAAP total gross margin from ServiceNow earnings releases "
+            "(press-release only, never XBRL-tagged)."
+        ),
+    },
+    "nongaap_operating_margin": {
+        "label": "Non-GAAP operating margin",
+        "format": "percent",
+        "group": "cost",
+        "blurb": (
+            "Non-GAAP operating margin from ServiceNow earnings releases "
+            "(press-release only, never XBRL-tagged)."
         ),
     },
 }
@@ -168,6 +235,7 @@ def _display_spec(key: str) -> dict[str, str]:
     return {
         "label": key.replace("_", " ").title(),
         "format": "count",
+        "group": "other",
         "blurb": "Hand-entered metric (no display label configured).",
     }
 
@@ -194,6 +262,7 @@ def manual_kpi_panels(
                     "label": spec["label"],
                     "kind": "absolute",
                     "format": spec["format"],
+                    "group": spec.get("group", "other"),
                     "blurb": spec["blurb"],
                     "quarters": [],
                     "values": [],
@@ -223,6 +292,7 @@ def manual_kpi_panels(
                 "label": spec["label"],
                 "kind": "absolute",
                 "format": spec["format"],
+                "group": spec.get("group", "other"),
                 "blurb": spec["blurb"],
                 "quarters": quarters,
                 "values": values,
