@@ -397,16 +397,42 @@ def _wls_slope_payload(
     return payload
 
 
+def _operating_differs(
+    quarters: list[tuple[str, str, float]],
+    operating_quarters: list[tuple[str, str, float | None]],
+) -> bool:
+    """True when the operating series actually adjusts GAAP anywhere.
+
+    A quarter counts as differing when its operating EPS is a gap (None) or
+    numerically different from GAAP. Fallback quarters copy the GAAP float
+    exactly, so plain inequality is safe.
+    """
+    gaap = {q: eps for q, _, eps in quarters}
+    for q, _, op_eps in operating_quarters:
+        if q not in gaap:
+            continue
+        if op_eps is None or op_eps != gaap[q]:
+            return True
+    return False
+
+
 def _pe_panel(
     asset: dict[str, float],
     quarters: list[tuple[str, str, float]],
+    operating_quarters: list[tuple[str, str, float | None]] | None = None,
 ) -> dict[str, object] | None:
-    """Rolling TTM P/E panel data (issue #28).
+    """Rolling TTM P/E panel data (issue #28), plus operating P/E (#70).
 
     Daily adjusted close over the TTM EPS in effect that day. Returns None
     when no quarter is stored at all - the template hides the section, the
     same rule as the factor strips. Days before the fourth reported quarter
     (or with non-positive TTM EPS) carry None: gaps, never invented numbers.
+
+    ``operating_quarters`` carries the derived operating EPS series
+    (ex-investment gains). The ``"operating"`` sub-panel is populated only
+    when it actually differs from GAAP; otherwise ``"operating"`` is None
+    and the template shows a "no adjustment available" note instead of a
+    meaningless toggle.
     """
     if not quarters:
         return None
@@ -417,7 +443,7 @@ def _pe_panel(
     defined = [(d, v) for d, v in zip(dates, pe, strict=True) if v is not None]
     current = defined[-1] if defined else (None, None)
     current_ttm = ttm[dates.index(current[0])] if current[0] else None
-    return {
+    panel: dict[str, object] = {
         "dates": dates,
         "pe": pe,
         "ttm_eps": ttm,
@@ -425,7 +451,33 @@ def _pe_panel(
         "current_ttm_eps": current_ttm,
         "as_of": current[0],
         "quarters_reported": len(quarters),
+        "operating": None,
+        "has_operating_adjustment": False,
+        "methodology": (
+            "Operating EPS excludes realized/unrealized gains (losses) on "
+            "equity securities, tax-adjusted at the quarter's effective tax "
+            "rate - an approximation, not the company's reported non-GAAP EPS."
+        ),
     }
+    if operating_quarters and _operating_differs(quarters, operating_quarters):
+        op_series = pe_series(asset, operating_quarters, eps_source="operating")
+        op_dates = sorted(op_series)
+        op_pe = [op_series[d]["pe"] for d in op_dates]
+        op_ttm = [op_series[d]["ttm_eps"] for d in op_dates]
+        op_defined = [(d, v) for d, v in zip(op_dates, op_pe, strict=True) if v is not None]
+        op_current = op_defined[-1] if op_defined else (None, None)
+        op_current_ttm = op_ttm[op_dates.index(op_current[0])] if op_current[0] else None
+        panel["operating"] = {
+            "dates": op_dates,
+            "pe": op_pe,
+            "ttm_eps": op_ttm,
+            "current_pe": op_current[1],
+            "current_ttm_eps": op_current_ttm,
+            "as_of": op_current[0],
+            "quarters_reported": len(operating_quarters),
+        }
+        panel["has_operating_adjustment"] = True
+    return panel
 
 
 def _kpi_data(store: Store, symbol: str) -> dict[str, Any] | None:
@@ -746,6 +798,7 @@ def chart_data(
     industry: dict[str, float] | None = None,
     industry_name: str | None = None,
     eps_quarters: list[tuple[str, str, float]] | None = None,
+    operating_eps_quarters: list[tuple[str, str, float | None]] | None = None,
     kpis: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     dates = sorted(set(asset) & set(benchmark))
@@ -860,7 +913,7 @@ def chart_data(
         "factor": _trailing_factor(
             asset, benchmark, artifact.params.beta_window, artifact.benchmark
         ),
-        "pe": _pe_panel(asset, eps_quarters or []),
+        "pe": _pe_panel(asset, eps_quarters or [], operating_eps_quarters or []),
         "kpis": kpis,
         "regime": {
             # The window switch (issue #19) offers 60/125/250-session OLS;
@@ -1001,6 +1054,7 @@ def render_chart(
             industry=industry_series or None,
             industry_name=industry_ticker if industry_series else None,
             eps_quarters=store.eps_quarters(symbol),
+            operating_eps_quarters=store.operating_eps_quarters(symbol),
             kpis=_kpi_data(store, symbol),
         )
         # Prominent as-of dates (#56): price coverage and fundamentals
