@@ -11,6 +11,7 @@ import json
 import shutil
 import subprocess
 import sys
+from collections import Counter
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -652,8 +653,14 @@ def _refresh_trades(args: argparse.Namespace) -> int:
     existing = positions_module.load_trades(target)
     legacy_source = positions_module.read_trades_meta(target).get("source")
     merged = positions_module.merge_trades(existing, fresh, legacy_source=legacy_source)
-    before = {positions_module.trade_key(t) for t in (existing or [])}
-    new = [t for t in merged if positions_module.trade_key(t) not in before]
+    before = Counter(positions_module.trade_key(t) for t in (existing or []))
+    new = []
+    for t in merged:
+        key = positions_module.trade_key(t)
+        if before[key] > 0:
+            before[key] -= 1
+        else:
+            new.append(t)
     print(f"trades from {origin}: {len(fresh)} buy/sell in pull")
     for trade in new:
         print(
