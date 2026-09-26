@@ -15,6 +15,7 @@ import argparse
 import time
 from datetime import datetime, timezone
 
+from . import collectors as collectors_mod
 from . import paths
 from . import store as store_mod
 from .stages import collect as st_collect
@@ -28,6 +29,19 @@ def _utc_ts():
     return datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
 
 
+def _collector_source_label(run_collector, raw):
+    """Best-effort source label for the places of one run.
+
+    Collector instance identity wins; otherwise the raw file's own
+    "source" field (the rednote script writes "source": "rednote"). Returns
+    None when nothing trustworthy is available — replayed analyses then keep
+    the labels the analyzer already emitted.
+    """
+    if isinstance(run_collector, collectors_mod.Collector):
+        return run_collector.source
+    return (raw or {}).get("source")
+
+
 def research(destination=None, *, vibe="all", dates=None, budget_tier=None,
              queries=None, n_per_query=6,
              from_raw=None, from_analysis=None, analyzer=None,
@@ -35,6 +49,11 @@ def research(destination=None, *, vibe="all", dates=None, budget_tier=None,
     """Run the full pipeline and record it. Returns the completed run record.
 
     dates: optional {"start": "YYYY-MM-DD", "end": "YYYY-MM-DD"}.
+    collector: a Collector instance (travel_assistant.collectors) or any
+        callable with the signature collector(destination, queries,
+        n_per_query=6) -> raw_path. Defaults to the rednote collector.
+        A Collector's `source` label ("rednote" / "websearch") is stamped
+        onto every place that does not already carry one.
     """
     t0 = time.monotonic()
     started_at = datetime.now(timezone.utc).isoformat()
@@ -66,6 +85,7 @@ def research(destination=None, *, vibe="all", dates=None, budget_tier=None,
             started_at=started_at)
         try:
             # -- collect + analyze (skipped when replaying a saved analysis)
+            ran_collector = None
             if analysis is None:
                 if from_raw:
                     raw_path = str(from_raw)
@@ -79,10 +99,18 @@ def research(destination=None, *, vibe="all", dates=None, budget_tier=None,
                     raw_path = run_collector(destination, list(queries),
                                              n_per_query)
                     raw = st_collect.load_raw(raw_path)
+                    ran_collector = run_collector
                 analysis = st_analyze.analyze_raw(
                     raw, destination=destination, vibe=vibe, analyzer=analyzer)
                 store.update_run(run_id, raw_path=raw_path,
                                  source_mode=analysis.get("source_mode"))
+            else:
+                raw = None
+
+            # -- per-place source label: the collector that produced the raw
+            #    file stamps its label; replays keep the analyzer's own.
+            collectors_mod.label_places(
+                analysis, _collector_source_label(ran_collector, raw))
 
             # -- validate (raises on INVALID; run marked failed below)
             st_validate.check(analysis)
@@ -138,6 +166,11 @@ def main(argv=None):
     ap.add_argument("--queries",
                     help="comma-separated rednote search terms for collect")
     ap.add_argument("--n", type=int, default=6, dest="n_per_query")
+    ap.add_argument("--collector", default="rednote",
+                    choices=["rednote", "websearch"],
+                    help="which source collector to run (default: rednote); "
+                         "websearch needs a configured search backend and "
+                         "will fail loudly without one")
     ap.add_argument("--from-raw",
                     help="replay a saved data/raw/*.json (skip collect)")
     ap.add_argument("--from-analysis",
@@ -160,6 +193,7 @@ def main(argv=None):
         queries=[q.strip() for q in a.queries.split(",")] if a.queries else None,
         n_per_query=a.n_per_query,
         from_raw=a.from_raw, from_analysis=a.from_analysis,
+        collector=collectors_mod.collector_for(a.collector)(),
         skip_geocode=a.skip_geocode, region=a.region, db_path=a.db)
     art = rec["artifacts"]
     print(f"run #{rec['id']} [{rec['status']}] {rec['destination']} "
