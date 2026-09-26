@@ -1,0 +1,6 @@
+# travel-assistant package dependencies.
+# fastapi/uvicorn/httpx added for the async API service (issue #79);
+# httpx also backs fastapi.testclient in tests.
+fastapi
+uvicorn
+httpx
