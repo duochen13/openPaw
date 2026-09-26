@@ -96,6 +96,43 @@ than snapshot refs — refs are invalidated on every navigation.
 Google will also drop the session partway through a long run, so detect a
 redirect to `accounts.google.com` and re-import before retrying.
 
+## Python package (`travel_assistant`)
+
+The same pipeline as an importable package with clean stages
+(collect → analyze → validate → geocode → map). Every run is recorded in a
+SQLite run store at `data/runs/runs.db` (params, per-place results, artifact
+paths, timing, status).
+
+```bash
+cd travel-assistant
+# replay a saved analysis (no browser / LLM / network with --skip-geocode)
+python3 -m travel_assistant.research --from-analysis data/analysis/vancouver_places_20260709_030913.json --skip-geocode
+# live collect (needs the browse browser + logged-in xiaohongshu session)
+python3 -m travel_assistant.research --destination "Kyoto" --vibe food --queries "京都美食,京都必去,Kyoto food"
+# query past runs
+python3 -m travel_assistant.runs list
+python3 -m travel_assistant.runs show 3 --places
+```
+
+Programmatic use:
+
+```python
+from travel_assistant import research
+rec = research(destination="Kyoto", vibe="food",
+               from_analysis="data/analysis/kyoto_places_20260701.json",
+               skip_geocode=True)
+```
+
+Notes:
+- The analyze step is the LLM subagent pass (SKILL.md Step 3); the package
+  defines the stage interface but ships no default analyzer — pass
+  `analyzer=<callable>` or replay with `--from-analysis`.
+- Set `TA_OFFLINE=1` to forbid network geocoding (raises instead of calling
+  Nominatim); `TA_DATA_ROOT` redirects the whole data tree (tests use this).
+- `python3 -m travel_assistant.tests.test_research` runs the end-to-end test
+  (replays the Vancouver fixture; asserts the KML pins match the committed
+  `data/maps/vancouver_bc.kml`).
+
 ## Scripts
 - `scripts/collect_rednote.py` — rednote collector (drives the browse browser).
 - `scripts/validate_places.py` — validates analyzer output before publishing.
