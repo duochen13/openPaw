@@ -132,6 +132,38 @@ Notes:
 - `python3 -m travel_assistant.tests.test_research` runs the end-to-end test
   (replays the Vancouver fixture; asserts the KML pins match the committed
   `data/maps/vancouver_bc.kml`).
+- `python3 -m travel_assistant.tests.test_mcp_server` drives both MCP tools
+  end-to-end through a real stdio client (fixture replay, offline).
+
+## MCP server (`travel_assistant.mcp_server`)
+
+A thin MCP wrapper around the local package — the zero-friction way for an
+MCP-capable client (Claude Code, Claude Desktop) to use the pipeline with one
+config line. No API keys, no network service, no signup: it runs the local
+package in-process over stdio.
+
+Tools:
+- `research_destination(destination, vibe="all", queries=None,
+  from_analysis=None, from_raw=None, skip_geocode=False, region="",
+  n_per_query=6)` — runs the research pipeline and returns run_id, status,
+  structured places (name, category, lat/lng, why_loved, source_urls,
+  price_hint), and the map bundle paths (KML + map HTML + CSV). A live
+  collect takes several minutes of headless-browser time and runs
+  synchronously; replaying a saved analysis with `from_analysis` +
+  `skip_geocode=true` is the fast offline path.
+- `get_research_result(run_id, include_places=true)` — fetches the run record
+  and places from the SQLite run store (poll/fetch semantics).
+
+Install the SDK (`pip install -r requirements.txt` — only the official `mcp`
+package), then add one line to the client's `mcpServers` config
+(Claude Code: `.mcp.json`; Claude Desktop: `claude_desktop_config.json`):
+
+```json
+{"mcpServers": {"travel-assistant": {"command": "python3", "args": ["-m", "travel_assistant.mcp_server"], "cwd": "<absolute path to travel-assistant>"}}}
+```
+
+Optional `env` entries: `TA_DATA_ROOT` to point the server at a different
+data tree, `TA_RUNS_DB` to point at a different run-store SQLite file.
 
 ## Scripts
 - `scripts/collect_rednote.py` — rednote collector (drives the browse browser).
