@@ -133,6 +133,44 @@ Notes:
   (replays the Vancouver fixture; asserts the KML pins match the committed
   `data/maps/vancouver_bc.kml`).
 
+## Local dashboard (`travel-assistant ui`)
+
+An MLflow-style local dashboard over the run store — the same core pipeline,
+rendered as maps instead of metrics. Stdlib only (`http.server`); the server
+reads `data/runs/runs.db` and takes no API keys. Pure renderer: no pipeline
+changes, no auth, no network service.
+
+Install (once) and run:
+
+```bash
+cd travel-assistant
+pip install -e .
+travel-assistant ui                      # serves http://127.0.0.1:8000
+travel-assistant ui --port 8899 --db /tmp/demo/runs.db
+python -m travel_assistant ui           # same, without installing
+```
+
+Pages:
+
+- `/` — every past run (destination, vibe, date, # places, status), plus a
+  two-run picker for side-by-side comparison.
+- `/runs/<id>` — run detail: keyless self-contained SVG map with per-type
+  colored pins (same palette as `scripts/build_gmap_html.py`), click-a-pin
+  popups with the "why people love it" quote + source link, a cost rollup,
+  and the full place list (places without coordinates are listed too).
+- `/compare?a=<id>&b=<id>` — both trips' maps, rollups, and place lists
+  side by side.
+
+Why SVG instead of the Google Maps embeds from `scripts/build_gmap_html.py`:
+those need `GOOGLE_MAPS_API_KEY` in the viewer's browser and render nothing
+without one; the dashboard is keyless by design, so it draws its own map and
+works fully offline.
+
+Cost rollup: an estimate aggregated from the per-place `price_hint` values
+recorded in the run store. The v1 analyzer never emits price hints, so v1
+runs show "no price hints recorded" rather than invented totals. If a future
+stage fills `price_hint`, the rollup picks it up with no code changes.
+
 ## Scripts
 - `scripts/collect_rednote.py` — rednote collector (drives the browse browser).
 - `scripts/validate_places.py` — validates analyzer output before publishing.
