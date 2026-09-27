@@ -142,8 +142,8 @@ def _trailing_factor(
     if len(asset_returns) < window:
         return None
     try:
-        beta, alpha, r_squared = ols_regression(
-            asset_returns[-window:], benchmark_returns[-window:], r_squared=True
+        beta, alpha, r_squared, t_stat = ols_regression(
+            asset_returns[-window:], benchmark_returns[-window:], r_squared=True, t_stat=True
         )
     except ValueError:
         return None
@@ -151,6 +151,9 @@ def _trailing_factor(
         "beta": beta,
         "r_squared": r_squared,
         "alpha_annualized": annualize_alpha(alpha),
+        # t-statistic of the intercept (issue #49): credibility measure shown
+        # next to alpha in the factor strip ("alpha +60.0%/yr (t=2.3)").
+        "alpha_t": t_stat,
         "window": window,
         "as_of": dates[-1],
         "benchmark": benchmark_name,
@@ -198,6 +201,21 @@ def _industry_factor(
             "industry does not explain. A historical residual, not a forecast."
         ),
     }
+
+
+def _t_stat_or_none(fit: Callable[..., tuple[float, ...]], *args: object) -> float | None:
+    """t-statistic of the intercept, or ``None`` when it is undefined (issue #49).
+
+    The beta/R² leg of the same window already succeeded (the point exists
+    because ``rolling_alpha_daily`` produced an alpha there), so a
+    ``ValueError`` here can only come from the t leg: no effective degrees
+    of freedom under heavy decay weighting, or a perfect fit (zero residual
+    variance). The point keeps its beta/R²/alpha; the t column just gaps.
+    """
+    try:
+        return fit(*args, t_stat=True)[2]
+    except ValueError:
+        return None
 
 
 def _regime_ends(n: int, warmup_end: int, step: int, tail: int | None) -> list[int]:
@@ -255,6 +273,10 @@ def _regime_points(
         "beta": [],
         "r_squared": [],
         "alpha_annualized": [],
+        # t-statistic of the intercept (issue #49): credibility measure shown
+        # next to alpha in the dashboard ("alpha +60.0%/yr (t=2.3)") and used by
+        # the flip trigger's credibility gate. None where undefined.
+        "alpha_t": [],
         "alpha_slope": [],
         # Display-only smoothing of the slope (trailing average over the
         # sampled points). Signals and the TLDR keep the raw alpha_slope.
@@ -301,6 +323,11 @@ def _regime_points(
                 benchmark_returns[end - window : end],
                 r_squared=True,
             )
+            t_point = _t_stat_or_none(
+                ols_regression,
+                asset_returns[end - window : end],
+                benchmark_returns[end - window : end],
+            )
         else:
             weights = decay_weights(end, half_life)
             beta, _, r_squared = wls_regression(
@@ -309,10 +336,17 @@ def _regime_points(
                 weights,
                 r_squared=True,
             )
+            t_point = _t_stat_or_none(
+                wls_regression,
+                asset_returns[:end],
+                benchmark_returns[:end],
+                weights,
+            )
         out["dates"].append(dates[i])
         out["beta"].append(beta)
         out["r_squared"].append(r_squared)
         out["alpha_annualized"].append(alpha_ann)
+        out["alpha_t"].append(t_point)
         out["alpha_slope"].append(slope_daily[i])
         out["signals"].append(alpha_signal(alpha_ann, slope_daily[i]))
     out["alpha_slope_display"] = smooth_display(
