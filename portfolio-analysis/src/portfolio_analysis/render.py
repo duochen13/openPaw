@@ -15,6 +15,7 @@ from urllib.parse import urlsplit
 from portfolio_analysis import kpis as kpis_module
 from portfolio_analysis import manual_kpis as manual_kpis_module
 from portfolio_analysis import positions as positions_module
+from portfolio_analysis import rpo_alerts as rpo_alerts_module
 from portfolio_analysis.artifacts import MovesArtifact, read_moves
 from portfolio_analysis.bundle import SCHEMA_VERSION, bundle_hash, move_payload
 from portfolio_analysis.config import Portfolio
@@ -491,6 +492,11 @@ def _kpi_data(store: Store, symbol: str) -> dict[str, Any] | None:
     neither EDGAR nor manual data - the template hides the section, the
     same rule as the P/E and factor panels. A broken KPI config degrades
     to a smaller section, never a crash.
+
+    The issue-#36 RPO deceleration flag is attached to the ticker's RPO
+    panel (when one exists and the ticker is configured) as
+    ``"rpo_alert": {"flagged": True, "reason": ...}``; the template
+    renders it as a warning line.
     """
     try:
         metric_keys = kpis_module.load_kpi_config().get(symbol, [])
@@ -517,9 +523,35 @@ def _kpi_data(store: Store, symbol: str) -> dict[str, Any] | None:
         manual_cfg = None
     if manual_cfg is not None:
         metrics.extend(manual_kpis_module.manual_kpi_panels(manual_cfg.metrics.get(symbol, {})))
+    _attach_rpo_deceleration_alert(symbol, metrics)
     if not metrics:
         return None
     return {"metrics": order_panels_by_group(metrics)}
+
+
+def _attach_rpo_deceleration_alert(symbol: str, metrics: list[dict[str, Any]]) -> None:
+    """Issue #36: flag NOW-style RPO growth deceleration on the RPO panel.
+
+    Per-ticker thresholds come from ``config/kpi_metrics.yaml``
+    (``rpo_deceleration``); a ticker without an entry - or without an RPO
+    panel - is skipped. A broken alert config degrades to "no alert",
+    never a crash.
+    """
+    try:
+        alert_cfg = rpo_alerts_module.load_rpo_deceleration_config().get(symbol)
+    except rpo_alerts_module.RpoAlertConfigError:
+        return
+    if alert_cfg is None:
+        return
+    panel = next((m for m in metrics if m.get("key") == "rpo" and not m.get("empty")), None)
+    if panel is None:
+        return
+    flag = rpo_alerts_module.rpo_deceleration_flag(
+        [(q, y) for q, y in zip(panel["quarters"], panel["yoy"], strict=True)],
+        alert_cfg,
+    )
+    if flag.flagged:
+        panel["rpo_alert"] = {"flagged": True, "reason": flag.reason}
 
 
 #: Render order for KPI groups (issue #67): revenue & demand first, then
