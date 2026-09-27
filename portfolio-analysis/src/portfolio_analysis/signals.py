@@ -59,6 +59,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
+from typing import Literal, overload
 
 from portfolio_analysis.moves import annualize_alpha, decay_weights, ols_regression, wls_regression
 
@@ -159,13 +160,35 @@ def smooth_display(
     return out
 
 
+@overload
 def rolling_alpha_daily(
     asset_returns: Sequence[float],
     benchmark_returns: Sequence[float],
     window: int | None,
     *,
     half_life: float | None = None,
-) -> list[float | None]:
+) -> list[float | None]: ...
+
+
+@overload
+def rolling_alpha_daily(
+    asset_returns: Sequence[float],
+    benchmark_returns: Sequence[float],
+    window: int | None,
+    *,
+    half_life: float | None = None,
+    with_t: Literal[True],
+) -> tuple[list[float | None], list[float | None]]: ...
+
+
+def rolling_alpha_daily(
+    asset_returns: Sequence[float],
+    benchmark_returns: Sequence[float],
+    window: int | None,
+    *,
+    half_life: float | None = None,
+    with_t: bool = False,
+) -> list[float | None] | tuple[list[float | None], list[float | None]]:
     """Trailing alpha (annualized) for every return index.
 
     Exactly one of ``window`` / ``half_life`` must be set:
@@ -182,6 +205,12 @@ def rolling_alpha_daily(
       ``H - 1`` (fewer than one half-life of data) and degenerate fits are
       ``None``.
 
+    Pass ``with_t=True`` (issue #49) to also return the intercept's
+    t-statistic series ``t = alpha / SE(alpha)`` from the same windows -
+    the credibility measure the flip trigger gates on. A window whose
+    t-stat is undefined (no effective degrees of freedom, perfect fit)
+    leaves *both* entries ``None``: a gap, never a fabricated alpha.
+
     Both modes are causal: the value at index ``i`` uses only entries at
     indices <= ``i``. Passing both or neither raises ``ValueError``.
     """
@@ -191,30 +220,50 @@ def rolling_alpha_daily(
         raise ValueError(
             f"series must be the same length, got {len(asset_returns)} and {len(benchmark_returns)}"
         )
-    out: list[float | None] = [None] * len(asset_returns)
+    out_alpha: list[float | None] = [None] * len(asset_returns)
+    out_t: list[float | None] = [None] * len(asset_returns)
     if half_life is None:
         assert window is not None
         for i in range(window - 1, len(asset_returns)):
             segment = slice(i - window + 1, i + 1)
             try:
-                _, alpha = ols_regression(asset_returns[segment], benchmark_returns[segment])
+                if with_t:
+                    _, alpha, t = ols_regression(
+                        asset_returns[segment], benchmark_returns[segment], t_stat=True
+                    )
+                else:
+                    _, alpha = ols_regression(asset_returns[segment], benchmark_returns[segment])
             except ValueError:
                 continue
-            out[i] = annualize_alpha(alpha)
-        return out
-    warmup = max(2, int(half_life))
-    for i in range(warmup - 1, len(asset_returns)):
-        segment = slice(0, i + 1)
-        try:
-            _, alpha = wls_regression(
-                asset_returns[segment],
-                benchmark_returns[segment],
-                decay_weights(i + 1, half_life),
-            )
-        except ValueError:
-            continue
-        out[i] = annualize_alpha(alpha)
-    return out
+            out_alpha[i] = annualize_alpha(alpha)
+            if with_t:
+                out_t[i] = t
+    else:
+        warmup = max(2, int(half_life))
+        for i in range(warmup - 1, len(asset_returns)):
+            segment = slice(0, i + 1)
+            try:
+                if with_t:
+                    _, alpha, t = wls_regression(
+                        asset_returns[segment],
+                        benchmark_returns[segment],
+                        decay_weights(i + 1, half_life),
+                        t_stat=True,
+                    )
+                else:
+                    _, alpha = wls_regression(
+                        asset_returns[segment],
+                        benchmark_returns[segment],
+                        decay_weights(i + 1, half_life),
+                    )
+            except ValueError:
+                continue
+            out_alpha[i] = annualize_alpha(alpha)
+            if with_t:
+                out_t[i] = t
+    if with_t:
+        return out_alpha, out_t
+    return out_alpha
 
 
 #: The only signal kind emitted by :func:`alpha_signal` (issue #39).
@@ -254,6 +303,18 @@ FLIP_PERSISTENCE = 3
 #: still qualify.
 FLIP_MIN_R_SQUARED = 0.5
 
+#: Credibility gate (issue #49): a flip only counts when the alpha t-statistic
+#: clears this at flip time. One-sided (we require alpha > 0), so 1.5 rather
+#: than the two-sided |t| > 2 significance bar. Hard gate for flip *alerts*
+#: only - the dashboard shows t display-only everywhere else.
+FLIP_MIN_T = 1.5
+
+#: Optional economic-size guard (issue #49): the suggested annualized-alpha
+#: floor for a flip, so a statistically-significant-but-tiny flip
+#: (-1% -> +1%, t=3) does not qualify - significance is not economic size.
+#: Disabled by default (``min_alpha=None``); pass this value to enable it.
+FLIP_MIN_ALPHA_LEVEL = 0.05
+
 
 @dataclass(frozen=True)
 class AlphaFlip:
@@ -279,10 +340,13 @@ def detect_alpha_flips(
     alpha: Sequence[float | None],
     slope: Sequence[float | None],
     r_squared: Sequence[float | None] | None = None,
+    t_stats: Sequence[float | None] | None = None,
     *,
     lookback: int = FLIP_LOOKBACK,
     persistence: int = FLIP_PERSISTENCE,
     min_r_squared: float = FLIP_MIN_R_SQUARED,
+    min_t: float = FLIP_MIN_T,
+    min_alpha: float | None = None,
 ) -> list[AlphaFlip]:
     """Detect alpha regime flips: slope crossing from negative to positive.
 
@@ -301,6 +365,16 @@ def detect_alpha_flips(
        defined and ``>= min_r_squared`` - a flip on a fit the benchmark does
        not explain is noise, not a regime change. Pass ``None`` to skip the
        gate (not recommended for production watchers).
+    5. **Credibility gate** (issue #49): when ``t_stats`` is given,
+       ``t_stats[i]`` must be defined and ``>= min_t`` (default 1.5,
+       one-sided since flips require alpha > 0) - a flip whose alpha the
+       data cannot distinguish from noise does not count. Pass ``None`` to
+       skip the gate.
+    6. **Economic-size guard** (issue #49, optional): when ``min_alpha`` is
+       given, ``alpha[i]`` must be ``>= min_alpha`` (annualized) -
+       significance is not economic size, so a significant-but-tiny flip
+       (-1% -> +1%) does not qualify. ``None`` (default) disables it;
+       ``FLIP_MIN_ALPHA_LEVEL`` (5%/yr) is the suggested value.
 
     The trigger latches: after firing it stays silent until the slope goes
     non-positive again, so one regime change yields exactly one alert.
@@ -311,7 +385,8 @@ def detect_alpha_flips(
     notification machinery here) fires its ping when the newest returned
     flip sits on the newest session, e.g.::
 
-        flips = detect_alpha_flips(alpha, slope, r_squared)
+        flips = detect_alpha_flips(alpha, slope, r_squared, t_stats,
+                                   min_alpha=FLIP_MIN_ALPHA_LEVEL)
         if flips and flips[-1].index == len(alpha) - 1:
             ping(f"alpha flip: {ticker} slope turned up "
                  f"(alpha={flips[-1].alpha:+.1%}/yr)")
@@ -324,6 +399,8 @@ def detect_alpha_flips(
         raise ValueError(
             f"r_squared must match alpha length, got {len(r_squared)} and {len(alpha)}"
         )
+    if t_stats is not None and len(t_stats) != len(alpha):
+        raise ValueError(f"t_stats must match alpha length, got {len(t_stats)} and {len(alpha)}")
     flips: list[AlphaFlip] = []
     armed = True
     # Most recent session with a defined, non-positive slope. A None slope
@@ -356,6 +433,12 @@ def detect_alpha_flips(
             r2 = r_squared[i]
             if r2 is None or r2 < min_r_squared:
                 continue
+        if t_stats is not None:
+            t = t_stats[i]
+            if t is None or t < min_t:
+                continue
+        if min_alpha is not None and a < min_alpha:
+            continue
         if not armed:
             continue
         flips.append(AlphaFlip(index=i, alpha=a, slope=s, acceleration=acceleration, r_squared=r2))
