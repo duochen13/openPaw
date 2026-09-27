@@ -46,15 +46,19 @@ forward returns - never buy signals.
 ``smooth_display`` is presentation-only smoothing for the slope sparkline;
 it is deliberately not used by ``alpha_signal``.
 
-Impact on issue #32 (alpha-reversal alert): the slope sign-change detection
-it needs is unaffected - the slope series is kept. What changed is that the
-alert can no longer require acceleration confirmation, and the "early-watch"
-(deterioration slowing while still falling) state is gone.
+Issue #32 (alpha-flip alert) builds on this module: :func:`detect_alpha_flips`
+finds the slope's neg→pos crossing and confirms it with acceleration,
+persistence, and a rolling-R² noise gate. Issue #39 removed the
+acceleration *series* from the product (it duplicated the slope panel),
+but the trigger does not need the stored series - it differentiates the
+slope series itself (``slope[i] - slope[i-1]``), so the slope sign-change
+detection the alert needs is unaffected.
 """
 
 from __future__ import annotations
 
 from collections.abc import Sequence
+from dataclasses import dataclass
 
 from portfolio_analysis.moves import annualize_alpha, decay_weights, ols_regression, wls_regression
 
@@ -231,3 +235,129 @@ def alpha_signal(alpha: float | None, slope: float | None) -> str | None:
     if alpha < 0 and slope > 0:
         return TURNAROUND
     return None
+
+
+#: Alpha-flip alert trigger (issue #32). The neg→pos slope crossing must have
+#: happened within this many sessions of the alert: an older crossing is stale
+#: regime history, not an inflection point.
+FLIP_LOOKBACK = 20
+
+#: Sessions the slope must stay positive after the crossing before the alert
+#: fires (issue #32 suggests 3-5; 3 is the responsive end of that range).
+#: Kills one-session whipsaws.
+FLIP_PERSISTENCE = 3
+
+#: Noise gate (issue #32): the rolling R² of the alpha fit must clear this at
+#: flip time, so flips on alphas the benchmark does not explain (flat/noisy
+#: fits) never page anyone. The dashboard calls R² ≥ 0.70 "β reasonably
+#: trustworthy"; the alert uses a looser 0.5 floor so real but imperfect fits
+#: still qualify.
+FLIP_MIN_R_SQUARED = 0.5
+
+
+@dataclass(frozen=True)
+class AlphaFlip:
+    """One fired alpha-flip alert (issue #32).
+
+    ``index`` is the session the trigger fired on - the first session where
+    the crossing had persisted ``persistence`` sessions with acceleration > 0
+    and the R² gate held. ``alpha`` is the annualized alpha there, ``slope``
+    the per-session slope, ``acceleration`` the one-session slope change
+    (``slope[i] - slope[i-1]``), and ``r_squared`` the rolling fit R² (``None``
+    when the caller did not pass an R² series and the noise gate was
+    skipped).
+    """
+
+    index: int
+    alpha: float
+    slope: float
+    acceleration: float
+    r_squared: float | None
+
+
+def detect_alpha_flips(
+    alpha: Sequence[float | None],
+    slope: Sequence[float | None],
+    r_squared: Sequence[float | None] | None = None,
+    *,
+    lookback: int = FLIP_LOOKBACK,
+    persistence: int = FLIP_PERSISTENCE,
+    min_r_squared: float = FLIP_MIN_R_SQUARED,
+) -> list[AlphaFlip]:
+    """Detect alpha regime flips: slope crossing from negative to positive.
+
+    Trigger definition (issue #32), evaluated causally at every session ``i``:
+
+    1. **Sign change**: the most recent session ``j < i`` with
+       ``slope[j] <= 0`` is at most ``lookback`` sessions back, and the slope
+       has been strictly positive ever since (no re-crossing in between).
+    2. **Persistence**: ``i - j >= persistence`` - the crossing is
+       ``persistence`` sessions old, so one-session whipsaws never fire.
+    3. **Acceleration**: ``slope[i] - slope[i-1] > 0`` - the improvement is
+       itself speeding up at fire time. Computed from the slope series
+       inside the trigger; issue #39 removed the product acceleration
+       *series*, which this does not need.
+    4. **Noise gate**: when ``r_squared`` is given, ``r_squared[i]`` must be
+       defined and ``>= min_r_squared`` - a flip on a fit the benchmark does
+       not explain is noise, not a regime change. Pass ``None`` to skip the
+       gate (not recommended for production watchers).
+
+    The trigger latches: after firing it stays silent until the slope goes
+    non-positive again, so one regime change yields exactly one alert.
+    ``None`` entries (warmup, degenerate windows) never fire and break the
+    positive run - a data gap is not evidence of persistence.
+
+    A silent watcher (the existing watcher pattern: trigger-only, no
+    notification machinery here) fires its ping when the newest returned
+    flip sits on the newest session, e.g.::
+
+        flips = detect_alpha_flips(alpha, slope, r_squared)
+        if flips and flips[-1].index == len(alpha) - 1:
+            ping(f"alpha flip: {ticker} slope turned up "
+                 f"(alpha={flips[-1].alpha:+.1%}/yr)")
+    """
+    if len(alpha) != len(slope):
+        raise ValueError(
+            f"alpha and slope must be the same length, got {len(alpha)} and {len(slope)}"
+        )
+    if r_squared is not None and len(r_squared) != len(alpha):
+        raise ValueError(
+            f"r_squared must match alpha length, got {len(r_squared)} and {len(alpha)}"
+        )
+    flips: list[AlphaFlip] = []
+    armed = True
+    # Most recent session with a defined, non-positive slope. A None slope
+    # resets this: the next defined positive slope must re-establish a
+    # crossing instead of inheriting one across a data gap.
+    last_nonpositive: int | None = None
+    for i in range(len(alpha)):
+        s = slope[i]
+        if s is None:
+            last_nonpositive = None
+            continue
+        if s <= 0:
+            armed = True
+            last_nonpositive = i
+            continue
+        a = alpha[i]
+        if a is None or last_nonpositive is None:
+            continue
+        age = i - last_nonpositive
+        if age < persistence or age > lookback:
+            continue
+        prev = slope[i - 1]
+        if prev is None:
+            continue
+        acceleration = s - prev
+        if acceleration <= 0:
+            continue
+        r2: float | None = None
+        if r_squared is not None:
+            r2 = r_squared[i]
+            if r2 is None or r2 < min_r_squared:
+                continue
+        if not armed:
+            continue
+        flips.append(AlphaFlip(index=i, alpha=a, slope=s, acceleration=acceleration, r_squared=r2))
+        armed = False
+    return flips
