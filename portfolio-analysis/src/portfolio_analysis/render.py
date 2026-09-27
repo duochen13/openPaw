@@ -15,6 +15,7 @@ from urllib.parse import urlsplit
 from portfolio_analysis import kpis as kpis_module
 from portfolio_analysis import manual_kpis as manual_kpis_module
 from portfolio_analysis import positions as positions_module
+from portfolio_analysis import rpo_alerts as rpo_alerts_module
 from portfolio_analysis.artifacts import MovesArtifact, read_moves
 from portfolio_analysis.bundle import SCHEMA_VERSION, bundle_hash, move_payload
 from portfolio_analysis.config import Portfolio
@@ -525,6 +526,11 @@ def _kpi_data(store: Store, symbol: str) -> dict[str, Any] | None:
     neither EDGAR nor manual data - the template hides the section, the
     same rule as the P/E and factor panels. A broken KPI config degrades
     to a smaller section, never a crash.
+
+    The issue-#36 RPO deceleration flag is attached to the ticker's RPO
+    panel (when one exists and the ticker is configured) as
+    ``"rpo_alert": {"flagged": True, "reason": ...}``; the template
+    renders it as a warning line.
     """
     try:
         metric_keys = kpis_module.load_kpi_config().get(symbol, [])
@@ -551,9 +557,35 @@ def _kpi_data(store: Store, symbol: str) -> dict[str, Any] | None:
         manual_cfg = None
     if manual_cfg is not None:
         metrics.extend(manual_kpis_module.manual_kpi_panels(manual_cfg.metrics.get(symbol, {})))
+    _attach_rpo_deceleration_alert(symbol, metrics)
     if not metrics:
         return None
     return {"metrics": order_panels_by_group(metrics)}
+
+
+def _attach_rpo_deceleration_alert(symbol: str, metrics: list[dict[str, Any]]) -> None:
+    """Issue #36: flag NOW-style RPO growth deceleration on the RPO panel.
+
+    Per-ticker thresholds come from ``config/kpi_metrics.yaml``
+    (``rpo_deceleration``); a ticker without an entry - or without an RPO
+    panel - is skipped. A broken alert config degrades to "no alert",
+    never a crash.
+    """
+    try:
+        alert_cfg = rpo_alerts_module.load_rpo_deceleration_config().get(symbol)
+    except rpo_alerts_module.RpoAlertConfigError:
+        return
+    if alert_cfg is None:
+        return
+    panel = next((m for m in metrics if m.get("key") == "rpo" and not m.get("empty")), None)
+    if panel is None:
+        return
+    flag = rpo_alerts_module.rpo_deceleration_flag(
+        [(q, y) for q, y in zip(panel["quarters"], panel["yoy"], strict=True)],
+        alert_cfg,
+    )
+    if flag.flagged:
+        panel["rpo_alert"] = {"flagged": True, "reason": flag.reason}
 
 
 #: Render order for KPI groups (issue #67): revenue & demand first, then
@@ -713,6 +745,23 @@ def _tldr_text(
     return text
 
 
+def _read_event_catalog(events_dir: Path, symbol: str) -> dict[str, Any] | None:
+    """Validated catalog payload, or None when missing/corrupt/wrong-schema.
+
+    The stock page degrades to "event records not collected" on None, never
+    a crash.
+    """
+    try:
+        payload: dict[str, Any] = json.loads((events_dir / symbol / "event_dates.json").read_text())
+    except (OSError, ValueError):
+        return None
+    if payload.get("schema_version") != 1 or payload.get("ticker") != symbol:
+        return None
+    if not isinstance(payload.get("dates"), dict):
+        return None
+    return payload
+
+
 def _event_catalog(events_dir: Path, symbol: str) -> dict[str, list[dict[str, str]]]:
     """Dated events collected independently of the move filter.
 
@@ -721,16 +770,11 @@ def _event_catalog(events_dir: Path, symbol: str) -> dict[str, list[dict[str, st
     releases - never forum chatter). Missing, corrupt, or wrong-schema files
     degrade to no event markers, never a crash.
     """
-    try:
-        payload = json.loads((events_dir / symbol / "event_dates.json").read_text())
-    except (OSError, ValueError):
-        return {}
-    if payload.get("schema_version") != 1 or payload.get("ticker") != symbol:
-        return {}
-    raw = payload.get("dates")
-    if not isinstance(raw, dict):
+    payload = _read_event_catalog(events_dir, symbol)
+    if payload is None:
         return {}
     out: dict[str, list[dict[str, str]]] = {}
+    raw = payload["dates"]
     for day, entries in raw.items():
         if not isinstance(entries, list):
             continue
@@ -747,6 +791,33 @@ def _event_catalog(events_dir: Path, symbol: str) -> dict[str, list[dict[str, st
         if rows:
             out[str(day)] = sorted(rows, key=lambda row: row["label"])
     return out
+
+
+def _event_catalog_info(events_dir: Path, symbol: str) -> dict[str, Any]:
+    """Coverage metadata for the stock page (issue #44).
+
+    Presence, freshness, and contributing sources — so a missing or
+    earnings-less catalog is honestly visible instead of silently
+    marker-less.
+    """
+    payload = _read_event_catalog(events_dir, symbol)
+    if payload is None:
+        return {
+            "present": False,
+            "generated_at": None,
+            "dated_days": 0,
+            "sources": [],
+            "window": None,
+        }
+    dates = payload["dates"]
+    sources = payload.get("sources") or []
+    return {
+        "present": True,
+        "generated_at": payload.get("generated_at"),
+        "dated_days": len(dates),
+        "sources": [s for s in sources if isinstance(s, str)],
+        "window": payload.get("window"),
+    }
 
 
 def _merge_event_markers(
@@ -934,6 +1005,10 @@ def chart_data(
         "name": name,
         "benchmark": artifact.benchmark,
         "generated_at": datetime.now(UTC).isoformat(timespec="seconds"),
+        # Catalog coverage/freshness for the stock page (issue #44): when
+        # the catalog is absent the page says so instead of rendering
+        # marker-less without explanation.
+        "event_catalog": _event_catalog_info(events_dir, symbol),
         "dates": dates,
         "prices": [asset[d] for d in dates],
         "benchmark_prices": [benchmark[d] for d in dates],
