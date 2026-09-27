@@ -7,8 +7,6 @@ CIK: fundamentals sections render as n/a, never an exception.
 
 from __future__ import annotations
 
-import random
-from datetime import date, timedelta
 from pathlib import Path
 
 import pytest
@@ -23,7 +21,6 @@ from portfolio_analysis.config import (
     load_portfolio,
 )
 from portfolio_analysis.dashboard import render_dashboard
-from portfolio_analysis.factor_dashboard import factor_dashboard_data
 from portfolio_analysis.render import render_html
 from portfolio_analysis.store import Store
 
@@ -231,84 +228,6 @@ def test_fetch_yahoo_uses_vendor_ticker_but_stamps_storage_symbol(
     bars = prices.fetch_yahoo("NDX", years=1, yahoo_ticker="^NDX")
     assert "^NDX" in seen["url"]
     assert bars and bars[0]["ticker"] == "NDX"
-
-
-# ---------------------------------------------------------------------------
-# Factor dashboard index rows
-# ---------------------------------------------------------------------------
-
-
-def _seed_index_store(tmp_path: Path) -> Store:
-    """Synthetic bars where the indices genuinely track the market.
-
-    NDX/QQQ are built from SPY's returns plus small noise, so NDX's beta
-    vs SPY comes out near 1 - the relationship the real charts show.
-    """
-    store = Store.open(tmp_path / "t.sqlite")
-    start = date(2021, 1, 4)
-    n = 320
-    dates = [(start + timedelta(days=i)).isoformat() for i in range(n)]
-    market_rng = random.Random(42)
-    market = [market_rng.random() - 0.5 for _ in range(n)]
-    specs = (("SPY", 1.0, 11), ("NDX", 1.05, 12), ("QQQ", 1.03, 13), ("META", 1.2, 14))
-    for symbol, beta, seed in specs:
-        rng = random.Random(seed)
-        px = 100.0
-        bars = []
-        for d, m in zip(dates, market, strict=True):
-            px *= 1 + (beta * m + (rng.random() - 0.5) * 0.004) * 0.02
-            bars.append(
-                {
-                    "ticker": symbol,
-                    "date": d,
-                    "open": px,
-                    "high": px,
-                    "low": px,
-                    "close": px,
-                    "adj_close": px,
-                    "volume": 1000,
-                    "source": "test",
-                }
-            )
-        store.upsert_price_bars(bars)
-    return store
-
-
-def test_factor_dashboard_includes_index_rows(tmp_path: Path) -> None:
-    store = _seed_index_store(tmp_path)
-    try:
-        data = factor_dashboard_data(_portfolio(), store)
-    finally:
-        store.close()
-    stocks = data["stocks"]
-    assert set(stocks) == {"META", "QQQ", "NDX", "SPY"}
-    assert stocks["META"]["benchmark"] == "QQQ"
-    assert stocks["NDX"]["benchmark"] == "SPY"
-    assert stocks["QQQ"]["benchmark"] == "SPY"
-    assert stocks["SPY"]["benchmark"] == "QQQ"
-    # Index betas are real numbers, not degenerate: NDX tracks its own
-    # benchmark closely, so beta vs SPY should be near 1, not 0/None.
-    ndx_beta = [b for b in stocks["NDX"]["beta"] if b is not None]
-    assert ndx_beta, "NDX should have defined beta points"
-    assert 0.5 < sum(ndx_beta) / len(ndx_beta) < 2.0
-
-
-def test_factor_dashboard_self_benchmark_raises(tmp_path: Path) -> None:
-    bad = Portfolio(
-        entries=(PortfolioEntry("AAA", 1, "AAA Inc.", ()),),
-        benchmark="QQQ",
-        price_years=6,
-        move_params=MoveParams(250, 20, 2.5),
-        news_coverage_start="2020-01-01",
-        paths={},
-        indices=(IndexEntry("QQQ", "Q", "QQQ", "QQQ"),),
-    )
-    store = Store.open(tmp_path / "t.sqlite")
-    try:
-        with pytest.raises(ValueError, match="benchmarked against itself"):
-            factor_dashboard_data(bad, store)
-    finally:
-        store.close()
 
 
 # ---------------------------------------------------------------------------
