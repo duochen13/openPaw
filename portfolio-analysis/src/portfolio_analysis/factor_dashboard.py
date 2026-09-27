@@ -48,6 +48,16 @@ def factor_dashboard_data(
     overlaps still appears with an all-``None`` series; a ticker or benchmark
     with no prices at all is a configuration error and raises.
 
+    Both ``beta`` and ``alpha`` are emitted at daily (per-session) resolution:
+    each point is a trailing ``window``-session OLS fit, so the raw arrays
+    already support weekly/daily zoom. The page decimates them by visible
+    span (issue #41): over 1 yr -> monthly (last session of each month),
+    1-12 mo -> weekly (every 5th session), under 1 mo -> daily, capped at
+    600 rendered points per chart. Limits: the first ``window - 1`` sessions
+    are warmup gaps (``None``); consecutive daily points share almost all of
+    their trailing window, so they are highly autocorrelated - zooming in
+    reveals the recent path, not independent daily estimates.
+
     Holdings are measured against the portfolio benchmark; index rows (#57)
     against their configured benchmark, each row carrying its own
     ``"benchmark"`` so the page can label it. A self-benchmark raises
@@ -307,8 +317,8 @@ __HOLDINGS__
 <div class="chart-block"><h2>Alpha over time</h2><p class="cap">Annualized trailing residual, not a forecast. Zero line dashed.</p><div class="chart" id="alphaBox"><svg id="alphaSvg" viewBox="0 0 1000 340" preserveAspectRatio="none"></svg><div class="tip" id="alphaTip"></div></div></div>
 <div id="sliderWrap">
 <div class="controls" style="margin:0 0 4px"><span style="font-size:13px;color:var(--muted)">Time frame</span><div class="presets" style="margin-left:8px" id="presets">
-<button data-n="all" class="on">All</button><button data-n="756">3Y</button><button data-n="252">1Y</button><button data-n="126">6M</button>
-</div></div>
+<button data-n="all" class="on">All</button><button data-n="756">3Y</button><button data-n="252">1Y</button><button data-n="126">6M</button><button data-n="21">1M</button>
+</div><span id="granLabel" style="font-size:12px;color:var(--muted)"></span></div>
 <div id="slider"><div id="track"></div><div id="fill"></div><div class="handle" id="h0"></div><div class="handle" id="h1"></div></div>
 <div id="rangeLabels"><span id="d0"></span><span id="d1"></span></div>
 </div>
@@ -322,10 +332,59 @@ const N = DATA.dates.length;
 let i0 = 0, i1 = N - 1;
 const W = 1000, H = 340, PADL = 52, PADR = 8, PADT = 10, PADB = 26;
 const $ = id => document.getElementById(id);
-const fmtDate = d => { const [y,m,dd] = d.split('-').map(Number); return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][m-1] + ' ' + y; };
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const fmtDate = d => { const [y,m] = d.split('-').map(Number); return MONTHS[m-1] + ' ' + y; };
+/* Zoom -> resolution mapping (issue #41): the visible calendar-day span picks
+   the coarsest sampling that stays informative, so zoomed-out views render a
+   few dozen points instead of thousands of daily ones. The static page still
+   embeds the full daily payload (offline constraint); only rendering is
+   decimated, and GRAN_CAP bounds even pathological ranges. */
+const GRAN_CAP = 600;
+const spanDays = () => Math.round((Date.parse(DATA.dates[i1]) - Date.parse(DATA.dates[i0])) / 864e5);
+const granularity = () => { const d = spanDays(); return d > 365 ? 'monthly' : d > 31 ? 'weekly' : 'daily'; };
+function visibleIdx() {
+  const g = granularity(), out = [];
+  if (g === 'daily') { for (let i = i0; i <= i1; i++) out.push(i); }
+  else if (g === 'weekly') {
+    for (let i = i0; i <= i1; i += 5) out.push(i);
+    if (out[out.length - 1] !== i1) out.push(i1);  // always end on the latest session
+  } else {
+    let month = '', last = -1;  // last session of each calendar month
+    for (let i = i0; i <= i1; i++) {
+      const m = DATA.dates[i].slice(0, 7);
+      if (m !== month) { if (last >= 0) out.push(last); month = m; }
+      last = i;
+    }
+    if (last >= 0 && out[out.length - 1] !== last) out.push(last);
+  }
+  if (out.length > GRAN_CAP) {  // pixel-density guard: stride down, keep endpoints
+    const keep = [], step = Math.ceil(out.length / GRAN_CAP);
+    for (let k = 0; k < out.length; k += step) keep.push(out[k]);
+    if (keep[keep.length - 1] !== out[out.length - 1]) keep.push(out[out.length - 1]);
+    return keep;
+  }
+  return out;
+}
+/* Date labels reflect the actual sampling: month ticks when monthly, day
+   ticks when weekly/daily; range labels and tooltips always carry the year. */
+const splitDate = d => d.split('-').map(Number);
+function tickLabel(d, g) {
+  const [y,m,dd] = splitDate(d);
+  if (g === 'monthly') return MONTHS[m-1] + ' ' + y;
+  if (g === 'weekly') return 'w/o ' + MONTHS[m-1] + ' ' + dd;
+  return MONTHS[m-1] + ' ' + dd;
+}
+function rangeLabel(d, g) {
+  const [y,m,dd] = splitDate(d);
+  return g === 'monthly' ? MONTHS[m-1] + ' ' + y : MONTHS[m-1] + ' ' + dd + ', ' + y;
+}
+function tipDate(d, g) {
+  const [y,m,dd] = splitDate(d);
+  return MONTHS[m-1] + ' ' + dd + ', ' + y + ' · ' + g;
+}
 const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
 $('subline').textContent = 'Trailing ' + DATA.window + '-session OLS vs ' + DATA.benchmark + ' (as of ' + fmtDate(DATA.asof) + '). Drag the handles to change the time frame; tap a stock to show/hide it. Hover a chart for values.';
-$('noteline').textContent = '\\u03b2 = slope of stock returns on ' + DATA.benchmark + ' \\u00b7 \\u03b1 = intercept, annualized \\u00d7252 \\u00b7 R\\u00b2 and \\u03b1 slope live on each stock\\u2019s own chart.';
+$('noteline').textContent = '\\u03b2 = slope of stock returns on ' + DATA.benchmark + ' \\u00b7 \\u03b1 = intercept, annualized \\u00d7252 \\u00b7 R\\u00b2 and \\u03b1 slope live on each stock\\u2019s own chart. Zoom sets the resolution: over 1 yr \\u2192 monthly, 1\\u201312 mo \\u2192 weekly, under 1 mo \\u2192 daily. Every point is a trailing ' + DATA.window + '-session OLS estimate (slow-moving), so zooming in reveals the recent path, not new information; the first ' + (DATA.window - 1) + ' sessions are warmup gaps.';
 
 /* ---------- chips ---------- */
 const chipsEl = $('chips');
@@ -360,43 +419,49 @@ function yDomain(key) {
 function draw(svgId, key, fmt) {
   const svg = $(svgId);
   const [lo, hi] = yDomain(key);
-  const X = i => PADL + (i - i0) / Math.max(1, i1 - i0) * (W - PADL - PADR);
+  const idx = visibleIdx(), g = granularity(), n = idx.length;
+  const X = k => PADL + k / Math.max(1, n - 1) * (W - PADL - PADR);
   const Y = v => PADT + (1 - (v - lo) / (hi - lo)) * (H - PADT - PADB);
   let s = '';
   // gridlines + y labels (4)
-  for (let g = 0; g <= 3; g++) {
-    const v = lo + (hi - lo) * g / 3, y = Y(v);
+  for (let g2 = 0; g2 <= 3; g2++) {
+    const v = lo + (hi - lo) * g2 / 3, y = Y(v);
     s += '<line x1="' + PADL + '" y1="' + y.toFixed(1) + '" x2="' + (W - PADR) + '" y2="' + y.toFixed(1) + '" stroke="#e9e8dd" stroke-width="1"/>';
     s += '<text x="' + (PADL - 6) + '" y="' + (y + 4).toFixed(1) + '" text-anchor="end" font-size="11" fill="#65685f">' + esc(fmt(v)) + '</text>';
   }
   // zero line
   if (lo < 0 && hi > 0) { const y = Y(0); s += '<line x1="' + PADL + '" y1="' + y.toFixed(1) + '" x2="' + (W - PADR) + '" y2="' + y.toFixed(1) + '" stroke="#b9b8aa" stroke-width="1" stroke-dasharray="5 4"/>'; }
-  // x ticks (<=6)
-  const nt = Math.min(6, i1 - i0 + 1);
+  // x ticks (<=6), labeled for the actual sampling in use; edge ticks are
+  // nudged inside so the first/last label never clips off the chart
+  const nt = Math.min(6, n);
   for (let k = 0; k < nt; k++) {
-    const i = Math.round(i0 + (i1 - i0) * k / Math.max(1, nt - 1));
-    const x = X(i);
-    s += '<text x="' + x.toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle" font-size="11" fill="#65685f">' + fmtDate(DATA.dates[i]) + '</text>';
+    const j = Math.round((n - 1) * k / Math.max(1, nt - 1));
+    let x = X(j), anchor = 'middle';
+    if (x > W - PADR - 24) { x = W - PADR; anchor = 'end'; }
+    else if (x < PADL + 24) { x = PADL; anchor = 'start'; }
+    s += '<text x="' + x.toFixed(1) + '" y="' + (H - 8) + '" text-anchor="' + anchor + '" font-size="11" fill="#65685f">' + tickLabel(DATA.dates[idx[j]], g) + '</text>';
   }
   // series (split on nulls so gaps stay gaps)
   for (const t of visible) {
     const c = DATA.stocks[t], vals = c[key];
     let d = '', started = false;
-    for (let i = i0; i <= i1; i++) {
-      const v = vals[i]; if (v == null) { started = false; continue; }
-      d += (started ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(v).toFixed(1);
+    for (let k = 0; k < n; k++) {
+      const v = vals[idx[k]]; if (v == null) { started = false; continue; }
+      d += (started ? 'L' : 'M') + X(k).toFixed(1) + ' ' + Y(v).toFixed(1);
       started = true;
     }
     if (d) s += '<path d="' + d + '" fill="none" stroke="' + c.color + '" stroke-width="1.8"/>';
   }
   svg.innerHTML = s;
-  svg._geom = { key, fmt, X, lo, hi };
+  svg._geom = { key, fmt, X, idx, g, lo, hi };
 }
 function render() {
+  const g = granularity(), idx = visibleIdx();
   draw('betaSvg', 'beta', v => v.toFixed(2));
   draw('alphaSvg', 'alpha', v => (v * 100).toFixed(1) + '%');
-  $('d0').textContent = fmtDate(DATA.dates[i0]);
-  $('d1').textContent = fmtDate(DATA.dates[i1]);
+  $('d0').textContent = rangeLabel(DATA.dates[i0], g);
+  $('d1').textContent = rangeLabel(DATA.dates[i1], g);
+  $('granLabel').textContent = g.charAt(0).toUpperCase() + g.slice(1) + ' · ' + idx.length + ' points';
   const L = N - 1;
   $('h0').style.left = (i0 / L * 100) + '%';
   $('h1').style.left = (i1 / L * 100) + '%';
@@ -412,8 +477,9 @@ function hover(boxId, svgId, tipId) {
     const r = svg.getBoundingClientRect();
     const px = (e.clientX - r.left) / r.width * W;
     const frac = Math.min(1, Math.max(0, (px - PADL) / (W - PADL - PADR)));
-    const i = Math.round(i0 + frac * (i1 - i0));
-    const gx = g.X(i) / W * r.width;
+    const k = Math.round(frac * (g.idx.length - 1));
+    const i = g.idx[k];
+    const gx = g.X(k) / W * r.width;
     let rows = '';
     for (const t of visible) {
       const c = DATA.stocks[t], v = c[g.key][i];
@@ -421,7 +487,7 @@ function hover(boxId, svgId, tipId) {
       rows += '<div class="row"><span class="dot" style="background:' + c.color + '"></span><span>' + esc(t) + '</span><b>' + esc(g.fmt(v)) + '</b></div>';
     }
     if (!rows) { tip.style.display = 'none'; return; }
-    tip.innerHTML = '<div class="tdate">' + fmtDate(DATA.dates[i]) + '</div>' + rows;
+    tip.innerHTML = '<div class="tdate">' + tipDate(DATA.dates[i], g.g) + '</div>' + rows;
     tip.style.display = 'block';
     tip.style.left = Math.min(r.width - 170, Math.max(4, gx + 12)) + 'px';
     tip.style.top = '8px';
@@ -444,7 +510,7 @@ hover('alphaBox', 'alphaSvg', 'alphaTip');
 
 /* ---------- range slider ---------- */
 const slider = $('slider');
-const MIN_GAP = 30;
+const MIN_GAP = 10;  // ~2 trading weeks: the tightest zoom must reach daily resolution
 function setRange(a, b) {
   a = Math.max(0, Math.min(N - 1, Math.round(a)));
   b = Math.max(0, Math.min(N - 1, Math.round(b)));
