@@ -17,6 +17,11 @@ process-local (a lock-guarded dict); it does not survive restarts.
 
 Idempotency: POST honours `idempotency_key` — re-POSTing the same key returns
 the ORIGINAL job (202, original job_id, first-write-wins). Also process-local.
+Namespaced per API key (issue #141): two keys using the same
+idempotency_key get two distinct jobs, and replaying another key's
+idempotency_key returns nothing. Job ownership is recorded on the job dict
+(verified key_id at creation): GET /v1/research/{job_id} and
+GET /v1/maps/{job_id}.html refuse another key's jobs with 404.
 
 `cached` is always false for fresh pipeline runs here: #80 owns TTL caching
 and will add cache-hit semantics there. This field exists so clients can rely
@@ -40,8 +45,11 @@ of scope per #80). GET /v1/usage returns the calling key's own summary; it
 is a non-spec extra (not in the v1 spec), documented here.
 
 Cache: POST /v1/research (no idempotency_key, no fresh=true) first checks
-the TTL cache keyed by (destination, vibe, collector, region, queries-hash,
-skip_geocode, from_analysis). Hit within TTL -> 200 with the stored result,
+the TTL cache keyed by (key_id, destination, vibe, collector, region,
+queries-hash, skip_geocode, from_analysis). The key_id namespace (issue
+#139) means two keys never share an entry: no cross-key cache hits, and
+the map-bundle restart fallback (service.py find_job) is scoped to the
+calling key. Hit within TTL -> 200 with the stored result,
 `cached: true`, `cache_hit: true`, `ttl_remaining_s` — the pipeline is NOT
 re-run. TTLs are per-category (see cache.py CATEGORY_TTLS): a run's TTL is
 the SHORTEST category TTL among its places ("shortest-category wins", so a
@@ -67,9 +75,17 @@ of a real search backend / analyzer is deployment config, not #80.
 guarantee: from-analysis replays land in seconds; live rednote collection is
 minutes of browser work.
 
-`rate_limited` (429) is still a process-level placeholder: POST is rejected
-when the number of unfinished jobs (queued + running) reaches
-TA_SERVICE_MAX_QUEUED. Per-key quotas are future work, not #80.
+`rate_limited` (429) is rejected at two levels: when the number of
+unfinished jobs (queued + running) reaches TA_SERVICE_MAX_QUEUED (default
+8), and — even when the global queue has room — when the calling key's own
+unfinished jobs reach TA_SERVICE_MAX_QUEUED_PER_KEY (default 4, half the
+global bound; issue #142). The per-key cap keeps one key from 429-starving
+the others. Full per-key quotas / paid tiers are future work.
+
+`from_analysis` is path-confined (issue #140): the path is resolved and
+must live under the service's data/analysis directory (symlinks followed;
+absolute paths outside the data tree, `../` traversals, and
+tree-escaping symlinks are rejected with invalid_request/400).
 
 Error shape: application/problem+json with a machine-readable `code`:
   invalid_destination  (400) - missing/empty destination (or unreadable
@@ -126,6 +142,13 @@ PORT = int(os.environ.get("TA_SERVICE_PORT", "8000"))
 class _Config:
     """Mutable process knobs; tests may set these directly."""
     max_queued = int(os.environ.get("TA_SERVICE_MAX_QUEUED", "8"))
+    # Per-key cap on unfinished (queued+running) jobs (#142): one key may
+    # hold at most this many slots of the global max_queued, so a single
+    # key cannot fill the queue and 429-starve the other keys. Ratio is
+    # 4 of 8 by default: half the global queue per key. Full per-key
+    # quotas / paid tiers are future work.
+    max_queued_per_key = int(os.environ.get("TA_SERVICE_MAX_QUEUED_PER_KEY",
+                                            "4"))
     # Search backend for the websearch collector/fallback:
     #   search(query: str, n: int) -> [{"title", "url", "snippet"?}, ...]
     # None -> websearch live collects are refused (503) and the fallback
@@ -245,13 +268,20 @@ _RESEARCH_REQUEST_BODY = {
                     "idempotency_key": {
                         "type": "string",
                         "description": "Client-chosen key; re-POST returns the "
-                                       "ORIGINAL job (first-write-wins). Opts "
-                                       "the request out of the TTL result cache.",
+                                       "ORIGINAL job (first-write-wins). "
+                                       "Scoped per API key: another key's "
+                                       "identical value is a separate job. "
+                                       "Opts the request out of the TTL "
+                                       "result cache.",
                     },
                     "from_analysis": {
                         "type": "string",
                         "description": "Path to a saved analysis file to replay "
-                                       "instead of collecting.",
+                                       "instead of collecting. Confined to the "
+                                       "service's data/analysis directory: "
+                                       "absolute paths outside the data tree, "
+                                       "../ traversals, and tree-escaping "
+                                       "symlinks are rejected (400).",
                     },
                     "skip_geocode": {"type": "boolean", "default": False},
                     "region": {"type": "string", "default": ""},
@@ -450,14 +480,17 @@ class _Registry:
     def __init__(self):
         self._lock = threading.Lock()
         self._jobs = {}          # job_id -> job dict
-        self._by_idem = {}       # idempotency_key -> job_id
+        self._by_idem = {}       # (key_id, idempotency_key) -> job_id
 
-    def active_count(self):
+    def active_count(self, key_id=None):
+        """Unfinished (queued+running) jobs. key_id None -> global count;
+        a key_id restricts the count to that key's jobs (#142)."""
         with self._lock:
             return sum(1 for j in self._jobs.values()
-                       if j["status"] in ("queued", "running"))
+                       if j["status"] in ("queued", "running")
+                       and (key_id is None or j.get("key_id") == key_id))
 
-    def create(self, job_id, params, estimated_seconds):
+    def create(self, job_id, params, estimated_seconds, key_id):
         job = {
             "job_id": job_id,
             "status": "queued",
@@ -466,17 +499,26 @@ class _Registry:
             "created_at": datetime.now(timezone.utc).isoformat(),
             "result": None,          # filled on done
             "error": None,           # {"code","message"} on failed
+            # Creating-key identity (#139/#141/#142): ownership checks,
+            # per-key idempotency namespacing, and per-key queue caps all
+            # read this field.
+            "key_id": key_id,
         }
         with self._lock:
             self._jobs[job_id] = job
             key = params.get("idempotency_key")
             if key:
-                self._by_idem[key] = job_id
+                # Namespaced per key (#141): a different key's identical
+                # idempotency_key is a separate registration. fresh=true
+                # still overwrites, but only THIS key's registration.
+                self._by_idem[(key_id, key)] = job_id
         return job
 
-    def by_idempotency_key(self, key):
+    def by_idempotency_key(self, key, key_id):
+        """Replay lookup, namespaced per key (#141): never returns another
+        key's job."""
         with self._lock:
-            jid = self._by_idem.get(key)
+            jid = self._by_idem.get((key_id, key))
             return self._jobs.get(jid) if jid else None
 
     def get(self, job_id):
@@ -620,8 +662,12 @@ def _run_pipeline(params):
         return rec, True, fallback.source
 
 
-def _write_cache(params, job_id, result, rec):
+def _write_cache(params, job_id, result, rec, key_id):
     """Store a completed run's result in the TTL cache (issue #80).
+
+    The cache entry is keyed AND owned per API key (#139): key_id is part
+    of the cache key and stored on the row, so another key can neither hit
+    the entry nor resolve it via the map-bundle fallback.
 
     TTL is derived from the run's places via the documented
     shortest-category-wins rule (cache.ttl_for_places). Failures are
@@ -631,8 +677,8 @@ def _write_cache(params, job_id, result, rec):
         ttl_s = cache_mod.ttl_for_places(rec.get("places", []),
                                          destination=params.get("destination"))
         cache_mod.CacheStore().put(
-            cache_mod.cache_key_for(params), payload=result, ttl_s=ttl_s,
-            job_id=job_id, run_id=rec.get("id"))
+            cache_mod.cache_key_for(params, key_id), payload=result,
+            ttl_s=ttl_s, job_id=job_id, key_id=key_id, run_id=rec.get("id"))
     except Exception as e:  # noqa: BLE001
         print(f"[travel-assistant] cache write failed: {e!r}",
               file=sys.stderr)
@@ -661,7 +707,7 @@ def _execute_job(job_id):
         }
         # Cache BEFORE the done marker: a job that polls as "done" is then
         # always cache-visible to the next POST.
-        _write_cache(params, job_id, result, rec)
+        _write_cache(params, job_id, result, rec, key_id=job.get("key_id"))
         registry.set_done(job_id, result)
     except Exception as e:  # noqa: BLE001 - report any pipeline failure
         msg = f"{type(e).__name__}: {e}"
@@ -670,6 +716,39 @@ def _execute_job(job_id):
                 or "backend" in msg.lower()
                 else "pipeline_error")
         registry.set_failed(job_id, code, msg)
+
+
+def _analysis_allowed_dirs():
+    """Analysis-file allowlist roots (#140).
+
+    The effective analysis dir (TA_DATA_ROOT/data -> .../analysis) plus the
+    package-default data/analysis tree: the latter keeps the CLI/test replay
+    path working for the committed analysis fixtures, which live outside a
+    test-overridden TA_DATA_ROOT but are still in-tree.
+    """
+    return {
+        paths.analysis_dir().resolve(),
+        (paths.PROJECT_DIR / "data" / "analysis").resolve(),
+    }
+
+
+def _confine_analysis_path(raw):
+    """Resolve `from_analysis` and require it inside the analysis tree.
+
+    #140: the old code only checked is_file(), so any server-side path
+    (e.g. /etc/passwd — readable as "analysis JSON"? no, but a valid JSON
+    file anywhere on disk, or a symlink out of the data tree) could be
+    fed to load_analysis. Returns the resolved Path, or None when the path
+    escapes the allowed dirs. Symlinks are followed by resolve(), so a
+    symlink inside the tree pointing outside is rejected too.
+    """
+    try:
+        resolved = Path(raw).expanduser().resolve()
+    except (OSError, RuntimeError):
+        return None
+    if any(resolved.is_relative_to(d) for d in _analysis_allowed_dirs()):
+        return resolved
+    return None
 
 
 def _estimate_seconds(params):
@@ -725,9 +804,23 @@ def post_research(payload: dict, request: Request, fresh: bool = False):
         return _reject(400, "invalid_destination", "Unknown collector",
                        f"{e}")
     from_analysis = payload.get("from_analysis")
-    if from_analysis and not Path(from_analysis).is_file():
-        return _reject(400, "invalid_request", "Analysis file not found",
-                       f"from_analysis file does not exist: {from_analysis}")
+    if from_analysis:
+        # #140: confine the path BEFORE the is_file() check. resolve() is
+        # done once here; the pipeline later receives the resolved path so
+        # it can't be TOCTOU'd via a symlink swap between check and read.
+        confined = _confine_analysis_path(from_analysis)
+        if confined is None:
+            return _reject(
+                400, "invalid_request", "Analysis path rejected",
+                "from_analysis must be a file under the service's "
+                "data/analysis directory; absolute paths outside the data "
+                "tree, ../ traversals, and symlinks escaping the tree are "
+                f"rejected (got: {from_analysis})")
+        if not confined.is_file():
+            return _reject(400, "invalid_request", "Analysis file not found",
+                           f"from_analysis file does not exist: "
+                           f"{from_analysis}")
+        from_analysis = str(confined)
 
     params = {
         "destination": destination,
@@ -741,9 +834,11 @@ def post_research(payload: dict, request: Request, fresh: bool = False):
     }
 
     # Idempotency first — unless fresh=true wins (documented: fresh wins).
+    # Lookup is namespaced per API key (#141): a different key's identical
+    # idempotency_key never replays this key's job.
     idem = payload.get("idempotency_key")
     if idem and not fresh:
-        existing = registry.by_idempotency_key(str(idem))
+        existing = registry.by_idempotency_key(str(idem), key["id"])
         if existing is not None:
             _record_usage(key, request, cached=True, cost_tier="cached")
             return JSONResponse(
@@ -760,8 +855,11 @@ def post_research(payload: dict, request: Request, fresh: bool = False):
     # idempotency_key is present: idem-keyed requests dedup through the
     # idempotency registry instead (keeps #79's idempotency semantics
     # deterministic regardless of cache state).
+    # The cache key is per-API-key (#139): a hit here can only ever return
+    # this key's own stored payload, with this key's own job_id.
     if not fresh and not idem:
-        entry = cache_mod.CacheStore().get(cache_mod.cache_key_for(params))
+        entry = cache_mod.CacheStore().get(
+            cache_mod.cache_key_for(params, key["id"]))
         if entry is not None:
             hit = dict(entry["payload"])
             hit["cached"] = True
@@ -778,12 +876,21 @@ def post_research(payload: dict, request: Request, fresh: bool = False):
     if registry.active_count() >= config.max_queued:
         return _reject(429, "rate_limited", "Research queue full",
                        f"{config.max_queued} unfinished jobs already in the "
-                       "queue; poll an existing job or retry later. (Per-key "
-                       "quotas are future work, not #80.)")
+                       "queue; poll an existing job or retry later.")
+    if registry.active_count(key["id"]) >= config.max_queued_per_key:
+        # #142: per-key carve-out — this key's own slots are full while the
+        # global queue may still have room for other keys.
+        return _reject(429, "rate_limited", "Per-key queue full",
+                       f"this API key already has {config.max_queued_per_key} "
+                       "unfinished jobs in the queue; poll an existing job "
+                       "or retry later.")
 
     job_id = uuid.uuid4().hex
     estimated = _estimate_seconds(params)
-    registry.create(job_id, params, estimated)
+    # The creating key is recorded on the job dict (#139/#141/#142): cache
+    # isolation, idempotency namespacing, ownership checks, and the per-key
+    # queue cap all read it back.
+    registry.create(job_id, params, estimated, key["id"])
     _executor.submit(_execute_job, job_id)
     _record_usage(key, request, cached=False, cost_tier="fresh")
     return {"job_id": job_id, "status": "queued",
@@ -805,6 +912,11 @@ def get_research(job_id: str, request: Request):
     _record_usage(key, request, cached=True, cost_tier="cached")
     job = registry.get(job_id)
     if job is None:
+        return problem(404, "not_found", "Unknown job",
+                       f"no research job {job_id!r} in this process")
+    if job.get("key_id") != key["id"]:
+        # #141: another key's job id reveals nothing — same 404 as an
+        # unknown job (no existence oracle for cross-key probing).
         return problem(404, "not_found", "Unknown job",
                        f"no research job {job_id!r} in this process")
     if job["status"] in ("queued", "running"):
@@ -865,12 +977,19 @@ def get_map_bundle(job_id: str, request: Request):
         # Cache-hit results reference their ORIGINAL job id; after a process
         # restart that job is gone from the registry, but the map HTML
         # persists on disk — resolve via the cache entry's run_id.
-        entry = cache_mod.CacheStore().find_job(job_id)
+        # #139: the fallback is scoped to the calling key, so one key
+        # cannot fetch another key's stored bundle by job id.
+        entry = cache_mod.CacheStore().find_job(job_id, key["id"])
         if entry is not None:
             rec_path = _run_map_html_path({"result": {"run_id": entry["run_id"]}})
             if rec_path is not None and rec_path.is_file():
                 return FileResponse(str(rec_path), media_type="text/html",
                                     filename=f"{job_id}.html")
+        return problem(404, "not_found", "Unknown job",
+                       f"no research job {job_id!r} in this process")
+    if job.get("key_id") != key["id"]:
+        # #139: the stored map HTML belongs to the creating key; serve 404
+        # (not 403) so another key cannot probe for a job id's existence.
         return problem(404, "not_found", "Unknown job",
                        f"no research job {job_id!r} in this process")
     if job["status"] != "done":
