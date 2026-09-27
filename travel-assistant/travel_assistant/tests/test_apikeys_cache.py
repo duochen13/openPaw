@@ -219,11 +219,15 @@ def test_cache_key_varies_with_params():
     base = {"destination": "Kyoto", "vibe": "food", "collector": "rednote",
             "region": "", "queries": ["a"], "skip_geocode": True,
             "from_analysis": None}
-    k1 = cache_mod.cache_key_for(base)
-    assert k1 == cache_mod.cache_key_for(dict(base))  # deterministic
-    assert cache_mod.cache_key_for({**base, "region": "x"}) != k1
-    assert cache_mod.cache_key_for({**base, "vibe": "all"}) != k1
-    assert cache_mod.cache_key_for({**base, "skip_geocode": False}) != k1
+    k1 = cache_mod.cache_key_for(base, key_id=1)
+    assert k1 == cache_mod.cache_key_for(dict(base), key_id=1)  # deterministic
+    assert cache_mod.cache_key_for({**base, "region": "x"}, key_id=1) != k1
+    assert cache_mod.cache_key_for({**base, "vibe": "all"}, key_id=1) != k1
+    assert cache_mod.cache_key_for({**base, "skip_geocode": False},
+                                   key_id=1) != k1
+    # #139: the key namespace is part of the cache key — two API keys with
+    # identical params never share an entry.
+    assert cache_mod.cache_key_for(base, key_id=2) != k1
 
 
 def test_fresh_beats_idempotency_key():
