@@ -21,7 +21,8 @@
 # - GOOGL search market share: no stable provider/definition yet; the
 #   metric is registered so the dashboard renders "n/a" instead of
 #   silently omitting it. Do NOT fabricate market-share figures (#59).
-# - NOW seat-count proxies (issue #36) share this schema; see PR #37.
+# - NOW seat-count proxies (issue #36) share this schema; the alert
+#   itself lives in src/portfolio_analysis/rpo_alerts.py.
 #
 # Panels built from this file render in the dashboard's Business metrics
 # section visibly labeled as manual entries, with each value's source
@@ -259,6 +260,11 @@ manual_kpis:
       source: ServiceNow Q2 2026 earnings release, 2026-07-22 (hand-verified). Non-GAAP
         income from operations $1,173M / 29.5%.
       date_recorded: '2026-09-25'
+    # Seat-count proxies (issue #36): tracked but unfilled - hand-entered
+    # from ServiceNow earnings releases. Raw seat counts are not disclosed,
+    # so these are the closest published proxies. Do NOT fabricate values.
+    customers_1m_acv: []
+    net_revenue_retention: []
   META:
     daily_active_people:
     - quarter: '2024-09-30'
