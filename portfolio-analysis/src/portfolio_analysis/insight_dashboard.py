@@ -1,6 +1,6 @@
 """Insight dashboard: hidden AI leverage, in two sections (issues #34 + #35).
 
-One self-contained offline page, following the factor_dashboard.py pattern:
+One self-contained offline page:
 
 - Section A (#34): annual reported Big-4 AI capex vs reported + SPV /
   off-balance-sheet combined, from ``data/insight/spv_capex.csv``. Every
@@ -19,7 +19,7 @@ One self-contained offline page, following the factor_dashboard.py pattern:
 """
 
 # The embedded HTML/SVG is intentionally kept in one readable template
-# string, like factor_dashboard.py.
+# string so the page renders offline with no build step.
 # ruff: noqa: E501
 
 from __future__ import annotations
