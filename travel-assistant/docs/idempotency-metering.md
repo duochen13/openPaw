@@ -13,6 +13,11 @@
 - **`fresh=true` beats `idempotency_key`.** With `?fresh=true` (or
   `"fresh": true` in the body), the pipeline re-runs and the **new** job is
   registered under the key.
+- **Namespaced per API key.** Two keys using the same `idempotency_key`
+  get two distinct jobs; replaying another key's key never returns its
+  job. Job ownership (the verified `key_id`) is recorded at creation, and
+  `GET /v1/research/{job_id}` / `GET /v1/maps/{job_id}.html` return `404`
+  for another key's job ids — no cross-key polling.
 
 Keys are process-local (like jobs) and do not survive restarts. Choose
 keys deterministically (e.g. `f"{destination}-{vibe}-{collector}"`) so a
@@ -22,7 +27,8 @@ restarted client resumes rather than duplicates.
 
 A repeat `POST /v1/research` **without** `idempotency_key` and without
 `fresh=true` first checks the TTL cache, keyed by
-`(destination, vibe, collector, region, queries-hash, skip_geocode, from_analysis)`:
+`(key_id, destination, vibe, collector, region, queries-hash,
+skip_geocode, from_analysis)`:
 
 - **Hit** → `200` (note: not 202) with the stored result,
   `"cached": true`, `"cache_hit": true`, and `"ttl_remaining_s"`.
@@ -68,7 +74,14 @@ API: a broken usage store is logged and swallowed.
 
 ## Rate limits
 
-`429 rate_limited` is a **process-level** guard: `POST /v1/research` is
-rejected when unfinished jobs (`queued` + `running`) reach
-`TA_SERVICE_MAX_QUEUED` (default 8). Poll an existing job or retry later
-with backoff. Per-key quotas are future work.
+`429 rate_limited` is enforced at **two levels**:
+
+1. **Global.** `POST /v1/research` is rejected when unfinished jobs
+   (`queued` + `running`) reach `TA_SERVICE_MAX_QUEUED` (default 8).
+2. **Per-key.** Even when the global queue has room, a key is rejected
+   once its own unfinished jobs reach
+   `TA_SERVICE_MAX_QUEUED_PER_KEY` (default 4 — half the global bound),
+   so one key cannot fill the queue and 429-starve the others.
+
+Poll an existing job or retry later with backoff. Full per-key quotas /
+paid tiers are future work.
