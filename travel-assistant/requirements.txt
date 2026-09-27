@@ -1,6 +1,7 @@
-# travel-assistant package dependencies.
-# fastapi/uvicorn/httpx added for the async API service (issue #79);
-# httpx also backs fastapi.testclient in tests.
+# travel-assistant runtime dependencies.
+# fastapi/uvicorn/httpx: async API service (issue #79); httpx also backs fastapi.testclient in tests.
+# mcp<2: v2.x renamed FastMCP -> MCPServer; pin to the stable v1 API for now (issue #77).
 fastapi
 uvicorn
 httpx
+mcp<2
