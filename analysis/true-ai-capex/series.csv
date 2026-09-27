@@ -1,0 +1,14 @@
+year,scope,series,value_usd_b,anchor_deal,source,note
+2023,"Big-4 (MSFT+AMZN+GOOGL+META)",reported_capex,141,,Company 10-K filings / earnings calls (compiled in issue #34 - verified 2026-09-20),Calendar-year sum
+2024,"Big-4 (MSFT+AMZN+GOOGL+META)",reported_capex,220,,Company 10-K filings / earnings calls (compiled in issue #34 - verified 2026-09-20),Calendar-year sum
+2025,"Big-4 (MSFT+AMZN+GOOGL+META)",reported_capex,375,,Company 10-K filings / earnings calls (compiled in issue #34 - verified 2026-09-20),Calendar-year sum
+2026E,"Big-4 (MSFT+AMZN+GOOGL+META)",reported_capex,733,,Company guidance / earnings calls (compiled in issue #34 - verified 2026-09-20),2026 estimate
+FY2025,Oracle,reported_capex,21.2,,Oracle 10-K FY2025 (per issue #34 anchor - verified 2026-09-20),Fiscal year ending May
+FY2026E,Oracle,reported_capex,63,,Oracle guidance (per issue #34 anchor - verified 2026-09-20),"FY2026E range $56-70B; midpoint shown"
+2023,All,offbs_spv_estimate,0,No anchored SPV deals announced in 2023,,Zero by construction: no anchor deal = no estimate
+2024,"MSFT (GAIIP)",offbs_spv_estimate,100,"Global AI Infrastructure Investment Partnership (GAIIP): $30B private-equity target mobilizing up to $100B incl. debt financing; partners BlackRock/GIP/MGX/NVIDIA (announced 2024-09-17)","Microsoft newsroom press release 2024-09-17","Multi-year commitment; booked in announcement year per methodology (README)"
+2025,"ORCL/META/xAI/CRWV",offbs_spv_estimate,120,"FT Dec-2025: $120B+ AI debt moved off-BS via Pimco/BlackRock/Apollo/Blue Owl. Named components: META Hyperion $30B (SPV Beignet Investor LLC - $27B debt + $3B Blue Owl equity - Meta 20% JV - Oct-2025); ORCL Vantage $38B debt package (TX+WI sites); xAI $20B SPV (Nvidia-chip-secured debt)","Financial Times Dec-2025 (per issue #34 anchor); Hyperion/Vantage detail via techerati.com + news.superex.com Dec-2025","$120B+ aggregate used (not sum of components) to avoid double counting"
+2026,"META (El Paso)",offbs_spv_estimate,12.3,"Meta El Paso 'Sopaipilla' 1GW data center: ~$12.3B bonds via BlackRock 80/20 SPV (priced week of 2026-07-20 at 7.534% yield)","Bloomberg 2026-07-27 (via wsj-daily-summaries digest)","2026 off-BS tracking not exhaustive; new deals appended as verified"
+2026-06,All hyperscalers,offbs_commitment_stock,3000,WSJ Jun-2026: ~$3T off-balance-sheet commitments (STOCK),WSJ Jun-2026 (per issue #34 anchor - verified 2026-09-20),"STOCK of commitments - never plotted on the annual FLOW axis"
+2026,GOOGL,purchase_commitment_stock,811,GOOGL $811B purchase commitments (STOCK),Per issue #34 anchor (verified 2026-09-20),STOCK - shown in commitments panel only
+2026,META,uncommenced_lease_stock,347,META $347B uncommenced leases (STOCK),Per issue #34 anchor (verified 2026-09-20),STOCK - shown in commitments panel only
