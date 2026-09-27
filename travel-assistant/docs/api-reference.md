@@ -47,8 +47,8 @@ Content type: `application/json`
 | `vibe` | string | no | `all` | Place vibe filter, e.g. "food", "sights", "cafes", "nightlife", "all". |
 | `queries` | array of string | no |  | Extra search queries; null lets the pipeline derive them. |
 | `collector` | string (rednote | websearch) | no | `rednote` |  |
-| `idempotency_key` | string | no |  | Client-chosen key; re-POST returns the ORIGINAL job (first-write-wins). Opts the request out of the TTL result cache. |
-| `from_analysis` | string | no |  | Path to a saved analysis file to replay instead of collecting. |
+| `idempotency_key` | string | no |  | Client-chosen key; re-POST returns the ORIGINAL job (first-write-wins). Scoped per API key: another key's identical value is a separate job. Opts the request out of the TTL result cache. |
+| `from_analysis` | string | no |  | Path to a saved analysis file to replay instead of collecting. Confined to the service's data/analysis directory: absolute paths outside the data tree, ../ traversals, and tree-escaping symlinks are rejected (400). |
 | `skip_geocode` | boolean | no | `False` |  |
 | `region` | string | no |  |  |
 | `fresh` | boolean | no | `False` | Bypass the TTL cache and re-run the pipeline (beats idempotency_key). |

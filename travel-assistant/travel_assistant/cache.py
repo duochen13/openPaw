@@ -1,11 +1,15 @@
 """TTL result cache for the research API (issue #80).
 
 Cache key: sha256 of canonical JSON over
-    (destination, vibe, collector, region, queries-hash,
+    (key_id, destination, vibe, collector, region, queries-hash,
      skip_geocode, from_analysis).
 The issue names the first five; skip_geocode and from_analysis are added
 because they change the result bytes — a geocoded run and a skipped-geocode
 run must not share an entry. Documented here as a deliberate extension.
+
+Issue #139 (security): key_id is part of the key. Two API keys with
+identical request params never share a cache entry — no cross-key cache
+hits, and no cross-key access to another key's stored map-bundle payload.
 
 TTL table — KNOWN SPEC AMBIGUITY, documented interpretation (#80 defines no
 TTL values and no per-category mapping):
@@ -30,7 +34,7 @@ DEFAULT_TTL_S.
 
 Table `cache` (service DB): cache_key PK, payload (the done-result JSON),
 cached_at, ttl_s, job_id (the original job, for map-bundle fallback),
-run_id. Expired entries are treated as misses and lazily deleted.
+run_id, key_id (the API key that created the entry — #139 ownership). Expired entries are treated as misses and lazily deleted.
 
 No price points are recorded (business decision, out of scope per #80):
 cache hits are metered at cost tier "cached" vs "fresh" for pipeline runs.
@@ -51,7 +55,8 @@ CREATE TABLE IF NOT EXISTS cache (
   cached_at  TEXT NOT NULL,        -- UTC ISO
   ttl_s      REAL NOT NULL,
   job_id     TEXT NOT NULL,        -- original job (map-bundle fallback)
-  run_id     INTEGER
+  run_id     INTEGER,
+  key_id     INTEGER               -- #139: creating API key (ownership)
 );
 """
 
@@ -94,13 +99,19 @@ def ttl_for_places(places, destination=None):
     return min(ttls) if ttls else DEFAULT_TTL_S
 
 
-def cache_key_for(params):
-    """Deterministic cache key for a POST /v1/research param set."""
+def cache_key_for(params, key_id):
+    """Deterministic cache key for a POST /v1/research param set.
+
+    Namespaced per API key (#139): the verified key_id is part of the
+    canonical JSON, so two keys submitting identical params get distinct
+    entries and can never hit each other's cached results.
+    """
     queries = params.get("queries") or []
     queries_hash = hashlib.sha256(
         json.dumps(sorted(queries), ensure_ascii=False,
                    sort_keys=True).encode("utf-8")).hexdigest()[:16]
     canon = {
+        "key_id": key_id,
         "destination": (params.get("destination") or "").strip().lower(),
         "vibe": params.get("vibe") or "all",
         "collector": params.get("collector"),
@@ -128,6 +139,12 @@ class CacheStore:
         conn.row_factory = sqlite3.Row
         try:
             conn.executescript(SCHEMA)
+            # Migrate pre-#139 DBs: CREATE TABLE IF NOT EXISTS won't add the
+            # key_id column to an existing table.
+            cols = [r["name"] for r in
+                    conn.execute("PRAGMA table_info(cache)")]
+            if "key_id" not in cols:
+                conn.execute("ALTER TABLE cache ADD COLUMN key_id INTEGER")
             yield conn
             conn.commit()
         finally:
@@ -153,24 +170,27 @@ class CacheStore:
             entry["ttl_remaining_s"] = int(remaining)
             return entry
 
-    def put(self, cache_key, payload, ttl_s, job_id, run_id=None):
+    def put(self, cache_key, payload, ttl_s, job_id, *, key_id, run_id=None):
         with self._db() as conn:
             conn.execute(
                 "INSERT INTO cache (cache_key, payload, cached_at, ttl_s,"
-                " job_id, run_id) VALUES (?, ?, ?, ?, ?, ?)"
+                " job_id, run_id, key_id) VALUES (?, ?, ?, ?, ?, ?, ?)"
                 " ON CONFLICT(cache_key) DO UPDATE SET"
                 " payload=excluded.payload, cached_at=excluded.cached_at,"
                 " ttl_s=excluded.ttl_s, job_id=excluded.job_id,"
-                " run_id=excluded.run_id",
+                " run_id=excluded.run_id, key_id=excluded.key_id",
                 (cache_key, json.dumps(payload, ensure_ascii=False),
-                 _now().isoformat(), ttl_s, job_id, run_id))
+                 _now().isoformat(), ttl_s, job_id, run_id, key_id))
 
-    def find_job(self, job_id):
+    def find_job(self, job_id, key_id):
         """Entry whose stored payload came from this job (map-bundle
-        fallback for cache hits after a process restart)."""
+        fallback for cache hits after a process restart), restricted to
+        the calling key (#139): another key's entry never matches, even
+        when the job_id is known."""
         with self._db() as conn:
-            row = conn.execute("SELECT * FROM cache WHERE job_id = ?",
-                               (job_id,)).fetchone()
+            row = conn.execute(
+                "SELECT * FROM cache WHERE job_id = ? AND key_id = ?",
+                (job_id, key_id)).fetchone()
             return dict(row) if row else None
 
     def invalidate(self, cache_key):

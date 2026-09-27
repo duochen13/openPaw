@@ -18,10 +18,10 @@ All errors are `application/problem+json` with a machine-readable `code`:
 | --- | --- | --- | --- |
 | 401 | `missing_api_key` | No `Authorization` header, or wrong scheme | Send `Authorization: Bearer <api_key>` (see [authentication](authentication.md)) |
 | 401 | `invalid_api_key` | Token unknown or revoked | Check for typos; mint a new key |
-| 400 | `invalid_request` | Body is not a JSON object, or `from_analysis` path doesn't exist | Send a JSON object; verify the analysis file path |
+| 400 | `invalid_request` | Body is not a JSON object, `from_analysis` path doesn't exist, **or** `from_analysis` escapes the service's `data/analysis` directory (absolute path outside the data tree, `../` traversal, tree-escaping symlink) | Send a JSON object; point `from_analysis` at a file under `data/analysis` |
 | 400 | `invalid_destination` | `destination` empty/missing (and no `from_analysis`), **or** unknown `collector` name | Supply a destination; use `rednote` or `websearch` |
 | 503 | `source_unavailable` | Collector backend missing at enqueue time (websearch with no search backend; rednote with no `browse` binary / login session) | Fix deployment config; retry later |
-| 429 | `rate_limited` | Unfinished jobs at `TA_SERVICE_MAX_QUEUED` (default 8) | Back off; poll an existing job instead |
+| 429 | `rate_limited` | Unfinished jobs at `TA_SERVICE_MAX_QUEUED` (default 8), **or** the calling key's own unfinished jobs at `TA_SERVICE_MAX_QUEUED_PER_KEY` (default 4) | Back off; poll an existing job instead |
 
 Auth is checked before validation, so `401` precedes `400`.
 
