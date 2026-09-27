@@ -4,6 +4,28 @@ A Claude Code skill that mines rednote (Xiaohongshu) for the places and restaura
 people love in a destination, publishes them to a Notion database, and marks them
 as pins on a Google Map.
 
+## Quickstart
+
+```bash
+cd travel-assistant
+pip install -r requirements.txt   # fastapi/uvicorn/httpx (API service) + mcp (MCP server)
+
+# 1. Research pipeline (CLI) — mines rednote for loved places in a destination
+python3 -m travel_assistant.research --destination "Kyoto" --vibe food --queries "京都美食,京都必去,Kyoto food"
+python3 -m travel_assistant.runs list                 # past runs
+python3 -m travel_assistant.runs show 3 --places      # one run + its places
+
+# 2. Local dashboard — maps of past runs in the browser (stdlib only, no keys)
+python3 -m travel_assistant ui                        # serves http://127.0.0.1:8000
+
+# 3. API service — async HTTP API over the pipeline (Bearer-key auth)
+python3 -m travel_assistant.apikeys create --name dev # mint a key (raw key printed once)
+python3 -m travel_assistant.service --port 8000       # or: uvicorn travel_assistant.service:app --port 8000
+# POST /v1/research  -> 202 {job_id};  GET /v1/research/{job_id} -> poll for done
+
+# 4. MCP server — one config line for Claude Code / Claude Desktop
+# {"mcpServers": {"travel-assistant": {"command": "python3", "args": ["-m", "travel_assistant.mcp_server"], "cwd": "<absolute path to travel-assistant>"}}}
+```
 ## Usage
 ```
 /travel-research <destination> [--vibe food|sights|cafes|nightlife|all] [--no-publish]
@@ -132,6 +154,8 @@ Notes:
 - `python3 -m travel_assistant.tests.test_research` runs the end-to-end test
   (replays the Vancouver fixture; asserts the KML pins match the committed
   `data/maps/vancouver_bc.kml`).
+- `python3 -m travel_assistant.tests.test_mcp_server` drives both MCP tools
+  end-to-end through a real stdio client (fixture replay, offline).
 
 ## Local dashboard (`travel-assistant ui`)
 
@@ -170,6 +194,36 @@ Cost rollup: an estimate aggregated from the per-place `price_hint` values
 recorded in the run store. The v1 analyzer never emits price hints, so v1
 runs show "no price hints recorded" rather than invented totals. If a future
 stage fills `price_hint`, the rollup picks it up with no code changes.
+
+## MCP server (`travel_assistant.mcp_server`)
+
+A thin MCP wrapper around the local package — the zero-friction way for an
+MCP-capable client (Claude Code, Claude Desktop) to use the pipeline with one
+config line. No API keys, no network service, no signup: it runs the local
+package in-process over stdio.
+
+Tools:
+- `research_destination(destination, vibe="all", queries=None,
+  from_analysis=None, from_raw=None, skip_geocode=False, region="",
+  n_per_query=6)` — runs the research pipeline and returns run_id, status,
+  structured places (name, category, lat/lng, why_loved, source_urls,
+  price_hint), and the map bundle paths (KML + map HTML + CSV). A live
+  collect takes several minutes of headless-browser time and runs
+  synchronously; replaying a saved analysis with `from_analysis` +
+  `skip_geocode=true` is the fast offline path.
+- `get_research_result(run_id, include_places=true)` — fetches the run record
+  and places from the SQLite run store (poll/fetch semantics).
+
+Install the SDK (`pip install -r requirements.txt` — only the official `mcp`
+package), then add one line to the client's `mcpServers` config
+(Claude Code: `.mcp.json`; Claude Desktop: `claude_desktop_config.json`):
+
+```json
+{"mcpServers": {"travel-assistant": {"command": "python3", "args": ["-m", "travel_assistant.mcp_server"], "cwd": "<absolute path to travel-assistant>"}}}
+```
+
+Optional `env` entries: `TA_DATA_ROOT` to point the server at a different
+data tree, `TA_RUNS_DB` to point at a different run-store SQLite file.
 
 ## Scripts
 - `scripts/collect_rednote.py` — rednote collector (drives the browse browser).
