@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """Validate the analyzer's places object before Notion publish. Pure + CLI."""
-import json, sys, argparse
+import json, sys, argparse, os
+
+_HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.dirname(_HERE))  # import the travel_assistant package
+from travel_assistant.schema import is_safe_url
 
 TYPES = {"restaurant", "sight", "cafe", "bar", "shop", "other"}
 SENTIMENTS = {"positive", "mixed", "negative"}
@@ -23,6 +27,13 @@ def validate(obj):
             errors.append(f"{tag}.sentiment must be one of {sorted(SENTIMENTS)}")
         if not p.get("source_urls"):
             errors.append(f"{tag}.source_urls must be a non-empty list")
+        # Issue #138: source_urls / map_link become hrefs in generated HTML;
+        # only http(s) URLs are safe there (`javascript:` executes on click).
+        for i, u in enumerate(p.get("source_urls") or []):
+            if not is_safe_url(u):
+                errors.append(f"{tag}.source_urls[{i}] must be an http(s) URL, got {u!r}")
+        if p.get("map_link") and not is_safe_url(p["map_link"]):
+            errors.append(f"{tag}.map_link must be an http(s) URL, got {p['map_link']!r}")
         if not isinstance(p.get("mention_count"), int):
             errors.append(f"{tag}.mention_count must be an int")
     return (len(errors) == 0, errors)
