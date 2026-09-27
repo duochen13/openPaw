@@ -14,7 +14,7 @@ Generated 2026-09-27T01:28:49+00:00 (UTC) by `scripts/backtest_alpha_signals.py 
 ## Data and caching
 
 - Price source: `data/prices.sqlite`, populated by `portfolio-analysis ingest-prices` (Yahoo Finance chart API, adjusted closes). The database is gitignored and NOT committed; this report reproduces from a fresh ingest.
-- The shared DB covered only NOW/META/GOOGL/TSLA (+QQQ). CRM, NVDA, and ORCL were backfilled on 2026-09-26 via `ingest-prices CRM|NVDA|ORCL` (their industry benchmarks rode along). No EDGAR/fundamentals pulls: the backtest is price-only by design, kept that way to hold runtime near two minutes.
+- The shared DB covered only NOW/META/GOOGL/TSLA (+QQQ). CRM, NVDA, and ORCL were backfilled for this run (2026-09-27 UTC) via `ingest-prices CRM|NVDA|ORCL` (their industry benchmarks rode along). No EDGAR/fundamentals pulls: the backtest is price-only by design, kept that way to hold runtime near two minutes.
 - Coverage per ticker:
 
 | ticker | first bar | last bar | bars |
