@@ -1,8 +1,7 @@
 """Robinhood CSV position import + holdings snapshot (issue #55).
 
 Covers the tolerant CSV parser (header aliases, skipped non-equity rows,
-duplicate-lot merging, bad input), the timestamped snapshot round-trip, and
-the factor-dashboard holdings table rendering with staleness.
+duplicate-lot merging, bad input) and the timestamped snapshot round-trip.
 """
 
 from datetime import UTC, datetime, timedelta
@@ -10,14 +9,9 @@ from pathlib import Path
 
 import pytest
 
-from portfolio_analysis.factor_dashboard import (
-    factor_dashboard_data,
-    render_factor_dashboard,
-)
 from portfolio_analysis.positions import (
     ImportResult,
     Position,
-    Snapshot,
     load_snapshot,
     parse_robinhood_csv,
     write_snapshot,
@@ -149,107 +143,3 @@ def test_stale_snapshot_flagged(tmp_path: Path) -> None:
     assert snapshot is not None
     assert snapshot.age_days() >= 45
     assert snapshot.stale
-
-
-def _snapshot() -> Snapshot:
-    return Snapshot(
-        imported_at=datetime.now(UTC),
-        source="robinhood-csv",
-        positions=(
-            Position(symbol="AAA", shares=10.0, avg_cost=100.0),
-            Position(symbol="ZZZ", shares=5.0, avg_cost=50.0),  # not configured
-        ),
-    )
-
-
-def test_factor_data_holdings_valued_at_latest_close(tmp_path: Path) -> None:
-    from tests.test_factor_dashboard import _bars, _gen_bench, _portfolio, _seed
-
-    portfolio = _portfolio()
-    store = _seed(tmp_path)
-    try:
-        # ZZZ has prices but is outside the configured universe.
-        _, zzz, _ = _gen_bench(999, 320)
-        store.upsert_price_bars(_bars("ZZZ", zzz))
-        data = factor_dashboard_data(portfolio, store, snapshot=_snapshot())
-    finally:
-        store.close()
-    holdings = data["holdings"]
-    assert isinstance(holdings, dict)
-    rows = {r["symbol"]: r for r in holdings["rows"]}
-    assert set(rows) == {"AAA", "ZZZ"}
-    aaa = rows["AAA"]
-    assert aaa["shares"] == 10.0
-    assert aaa["price"] is not None  # valued at the latest stored close
-    assert aaa["value"] == pytest.approx(10.0 * aaa["price"], abs=0.05)
-    assert aaa["gain"] == pytest.approx(aaa["value"] - 1000.0, abs=0.05)
-    assert aaa["name"] == "AAA Inc."  # configured name wins
-    assert rows["ZZZ"]["name"] == "ZZZ"  # falls back to the symbol
-    assert holdings["age_days"] == 0
-    assert holdings["stale"] is False
-
-
-def test_factor_data_without_snapshot_has_no_holdings(tmp_path: Path) -> None:
-    from tests.test_factor_dashboard import _portfolio, _seed
-
-    store = _seed(tmp_path)
-    try:
-        data = factor_dashboard_data(_portfolio(), store)
-    finally:
-        store.close()
-    assert data["holdings"] is None
-
-
-def test_render_holdings_table_and_stale_badge(tmp_path: Path) -> None:
-    holdings = {
-        "as_of": "2026-09-23T02:15-07:00",
-        "age_days": 45,
-        "stale": True,
-        "source": "robinhood-csv",
-        "rows": [
-            {
-                "symbol": "AAA",
-                "name": "AAA Inc.",
-                "shares": 10.0,
-                "avg_cost": 100.0,
-                "price": 120.0,
-                "value": 1200.0,
-                "gain": 200.0,
-                "gain_pct": 20.0,
-                "alpha": 0.05,
-            }
-        ],
-    }
-    target = render_factor_dashboard(
-        {
-            "dates": [],
-            "stocks": {},
-            "window": 250,
-            "benchmark": "QQQ",
-            "asof": "",
-            "holdings": holdings,
-        },
-        tmp_path,
-    )
-    page = target.read_text(encoding="utf-8")
-    assert "Holdings" in page
-    assert "STALE" in page
-    assert "2026-09-23T02:15-07:00" in page  # snapshot timestamp visible
-    assert "45 day(s) old" in page
-    assert "$1,200.00" in page
-    assert "+5.0%" in page  # alpha next to the holding
-
-
-def test_render_without_snapshot_has_no_holdings(tmp_path: Path) -> None:
-    target = render_factor_dashboard(
-        {
-            "dates": [],
-            "stocks": {},
-            "window": 250,
-            "benchmark": "QQQ",
-            "asof": "",
-            "holdings": None,
-        },
-        tmp_path,
-    )
-    assert "Holdings" not in target.read_text(encoding="utf-8")

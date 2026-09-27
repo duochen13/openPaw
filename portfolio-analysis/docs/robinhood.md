@@ -32,11 +32,10 @@ positions:
 
 - `--dry-run` parses and prints the table without writing anything.
 
-The factor dashboard (`factors.html`) renders the holdings next to the alpha
-signals: shares, avg cost, latest stored close, position value, gain/loss, and
-the latest trailing alpha — plus the snapshot timestamp and age. A snapshot
-older than 30 days renders with a **STALE** badge so a stale import is visible,
-not silent.
+The import writes the holdings to a timestamped snapshot (shares and avg cost
+per symbol); the snapshot records its own import time and age, so a stale
+import stays visible instead of silent. (The `factors.html` page that used to
+render the holdings table was removed in #102.)
 
 `config/positions.yaml` is gitignored: your holdings never enter the repo.
 

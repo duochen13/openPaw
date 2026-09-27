@@ -27,10 +27,6 @@ from portfolio_analysis.dashboard import render_dashboard
 from portfolio_analysis.event_dashboard import event_dashboard_data, render_event_dashboard
 from portfolio_analysis.events.macro import MacroSource
 from portfolio_analysis.events.reddit import collect_reddit_for_events
-from portfolio_analysis.factor_dashboard import (
-    factor_dashboard_data,
-    render_factor_dashboard,
-)
 from portfolio_analysis.http import (
     CachedHttp,
     ProviderError,
@@ -715,34 +711,6 @@ def _import_robinhood_positions(args: argparse.Namespace, src: Path) -> int:
     return 0
 
 
-def _factor_dashboard(args: argparse.Namespace) -> int:
-    portfolio = load_portfolio()
-    store = Store.open(args.db or portfolio.path("db"))
-    # Holdings are optional: a missing snapshot renders the page exactly as
-    # before; a corrupt one fails loud instead of silently hiding positions.
-    try:
-        snapshot = positions_module.load_snapshot()
-    except ValueError as exc:
-        print(f"factor-dashboard: {exc}", file=sys.stderr)
-        return 1
-    try:
-        data = factor_dashboard_data(portfolio, store, snapshot=snapshot)
-    except ValueError as exc:
-        print(f"factor-dashboard: {exc}", file=sys.stderr)
-        return 1
-    finally:
-        store.close()
-    try:
-        target = render_factor_dashboard(
-            data, Path(args.out_dir) if args.out_dir else portfolio.path("out")
-        )
-    except OSError as exc:
-        print(f"factor-dashboard: {exc}", file=sys.stderr)
-        return 1
-    print(f"factor dashboard written -> {target}")
-    return 0
-
-
 def _insight_dashboard(args: argparse.Namespace) -> int:
     try:
         data = insight_dashboard_data(
@@ -993,13 +961,6 @@ def main(argv: list[str] | None = None) -> int:
         "--offline", action="store_true", help="fetch nothing; build from stored data"
     )
     dashboard.set_defaults(func=_dashboard)
-    factor_dashboard = sub.add_parser(
-        "factor-dashboard",
-        help="build a cross-stock beta/alpha comparison dashboard",
-    )
-    factor_dashboard.add_argument("--db", default=None)
-    factor_dashboard.add_argument("--out-dir", default=None)
-    factor_dashboard.set_defaults(func=_factor_dashboard)
     insight_dashboard = sub.add_parser(
         "insight-dashboard",
         help="build the Insight dashboard: reported vs true AI capex + credit stress",
