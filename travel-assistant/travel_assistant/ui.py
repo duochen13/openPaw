@@ -25,6 +25,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs
 
 from . import paths
+from . import schema as schema_mod
 from . import store as store_mod
 
 # Pin colors / labels, kept identical to scripts/build_gmap_html.py's legend.
@@ -147,7 +148,9 @@ def map_fragment(run, prefix):
             f'onclick="taPop(\'{prefix}\',{idx})">'
             f'<title>{esc(p.get("name"))}</title></circle>')
         urls = p.get("source_urls") or []
-        url = urls[0] if urls else (p.get("map_link") or "")
+        # Issue #138: the popup JS builds hrefs with encodeURI(), which
+        # preserves a `javascript:` scheme — drop non-http(s) URLs here.
+        url = schema_mod.safe_url(urls[0] if urls else (p.get("map_link") or "")) or ""
         js_places.append({
             "x": round(x, 1), "y": round(y, 1),
             "name": p.get("name") or "", "type": cat,
@@ -357,7 +360,9 @@ def _place_card(p):
     color, label = CATS[cat]
     rating = f" \u2b50 {p['rating']}" if isinstance(p.get("rating"), (int, float)) else ""
     urls = p.get("source_urls") or []
-    url = urls[0] if urls else (p.get("map_link") or "")
+    # Issue #138: esc() stops quote-breakout but not a `javascript:` scheme —
+    # only http(s) URLs may become hrefs.
+    url = schema_mod.safe_url(urls[0] if urls else (p.get("map_link") or "")) or ""
     meta_bits = [b for b in (
         p.get("area"),
         f"{p.get('mention_count')} mentions" if p.get("mention_count") else "",
