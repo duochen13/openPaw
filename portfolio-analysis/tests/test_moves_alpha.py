@@ -274,6 +274,7 @@ def test_chart_data_with_short_series_omits_factor_and_regime(tmp_path):
         "beta": [],
         "r_squared": [],
         "alpha_annualized": [],
+        "alpha_t": [],
         "alpha_slope": [],
         "alpha_slope_display": [],
         "signals": [],
@@ -368,9 +369,7 @@ def test_tldr_word_cap_is_hard():
         for _ in range(50)
     ]
     regime = {"windows": {"250": {"alpha_annualized": [-0.1], "alpha_slope": [0.001]}}}
-    text = _tldr_text(
-        factor={"beta": 1.5}, regime=regime, moves=moves, benchmark="QQQ"
-    )
+    text = _tldr_text(factor={"beta": 1.5}, regime=regime, moves=moves, benchmark="QQQ")
     assert len(text.split()) < 100
 
 
@@ -386,9 +385,7 @@ def test_tldr_names_collected_drivers_and_labels_interpretation():
         {"evidence_status": "missing", "facts": []},
     ]
     regime = {"windows": {"250": {"alpha_annualized": [0.05], "alpha_slope": [-0.001]}}}
-    text = _tldr_text(
-        factor={"beta": 0.9}, regime=regime, moves=moves, benchmark="QQQ"
-    )
+    text = _tldr_text(factor={"beta": 0.9}, regime=regime, moves=moves, benchmark="QQQ")
     assert "Earnings reports lined up with 1 of 3 unusual moves" in text
     assert "Interpretation:" in text
     assert len(text.split()) < 100
