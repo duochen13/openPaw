@@ -17,11 +17,16 @@ from fastapi.testclient import TestClient  # noqa: E402
 
 from travel_assistant import paths  # noqa: E402
 from travel_assistant import service  # noqa: E402
+from travel_assistant.apikeys import ApiKeyStore  # noqa: E402
 
 FIXTURE = str(paths.PROJECT_DIR / "data" / "analysis"
               / "vancouver_places_20260709_030913.json")
 
 client = TestClient(service.app)
+
+# #80: every /v1/* route requires a bearer API key.
+_SVC_KEY = ApiKeyStore().create_key("svc-tests")["key"]
+AUTH = {"Authorization": f"Bearer {_SVC_KEY}"}
 
 
 def _replay_body(**kw):
@@ -37,16 +42,20 @@ def _replay_body(**kw):
 
 
 def _post(body):
-    r = client.post("/v1/research", json=body)
+    r = client.post("/v1/research", json=body, headers=AUTH)
     ct = r.headers["content-type"]
     assert ct.startswith("application/json") or ct == "application/problem+json", ct
     return r
 
 
+def _get(path):
+    return client.get(path, headers=AUTH)
+
+
 def _poll_done(job_id, timeout=120):
     t0 = time.time()
     while time.time() - t0 < timeout:
-        r = client.get(f"/v1/research/{job_id}")
+        r = _get(f"/v1/research/{job_id}")
         assert r.status_code == 200, r.text
         data = r.json()
         if data["status"] == "done":
@@ -117,11 +126,11 @@ def test_unknown_collector_is_400():
 
 
 def test_unknown_job_is_404():
-    r = client.get("/v1/research/nope")
+    r = _get("/v1/research/nope")
     assert r.status_code == 404
     assert r.headers["content-type"] == "application/problem+json"
 
-    r = client.get("/v1/maps/nope.html")
+    r = _get("/v1/maps/nope.html")
     assert r.status_code == 404
 
 
@@ -138,7 +147,9 @@ def test_queue_full_is_429():
     old = service.config.max_queued
     service.config.max_queued = 0
     try:
-        r = _post(_replay_body())
+        # idempotency_key bypasses the TTL cache, so this reaches the
+        # queue-full check instead of serving a cache hit.
+        r = _post(_replay_body(idempotency_key="idem-79-429"))
         assert r.status_code == 429, r.text
         assert r.headers["content-type"] == "application/problem+json"
         assert r.json()["code"] == "rate_limited"
@@ -151,7 +162,7 @@ def test_map_bundle_served():
     job_id = r.json()["job_id"]
     done = _poll_done(job_id)
 
-    r = client.get(f"/v1/maps/{job_id}.html")
+    r = _get(f"/v1/maps/{job_id}.html")
     assert r.status_code == 200, r.text
     assert r.headers["content-type"].startswith("text/html")
     html = r.text
@@ -164,7 +175,7 @@ def test_map_not_ready_is_404():
     r = _post(_replay_body(idempotency_key="idem-79-mapwait"))
     job_id = r.json()["job_id"]
     # likely still queued/running; if it raced to done, the bundle exists
-    r = client.get(f"/v1/maps/{job_id}.html")
+    r = _get(f"/v1/maps/{job_id}.html")
     assert r.status_code in (200, 404)
     if r.status_code == 404:
         assert r.headers["content-type"] == "application/problem+json"
