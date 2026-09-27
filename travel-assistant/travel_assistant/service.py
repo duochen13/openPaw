@@ -149,6 +149,238 @@ EST_REDNOTE_LIVE = 300
 
 app = FastAPI(title="travel-assistant API", version="0.1.0")
 
+# --------------------------------------------------------------------------
+# OpenAPI enrichment (issue #126). Request bodies are untyped dicts, so
+# FastAPI cannot infer their schemas; these constants document the real
+# contract inside the spec itself. The docs page is generated from
+# app.openapi(), so this stays the single source of truth.
+# Decorator/metadata only: nothing here changes runtime behaviour.
+
+_PROBLEM_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "type": {"type": "string"},
+        "title": {"type": "string"},
+        "status": {"type": "integer"},
+        "code": {"type": "string"},
+        "detail": {"type": "string"},
+    },
+}
+
+
+def _problem_response(description):
+    """An application/problem+json response entry for the OpenAPI spec."""
+    return {
+        "description": description,
+        "content": {
+            "application/problem+json": {
+                "schema": _PROBLEM_SCHEMA,
+                "example": {
+                    "type": "https://travel-assistant.invalid/problems/"
+                            "invalid_destination",
+                    "title": "Invalid destination",
+                    "status": 400,
+                    "code": "invalid_destination",
+                    "detail": "destination is required (non-empty string), "
+                              "unless from_analysis derives it",
+                },
+            }
+        },
+    }
+
+
+_PLACE_EXAMPLE = {
+    "name": "Gion Karyo",
+    "category": "restaurant",
+    "lat": 35.0037,
+    "lng": 135.7752,
+    "why_loved": "Rednote users praise the seasonal kaiseki lunch queue...",
+    "source_urls": ["https://www.xiaohongshu.com/explore/..."],
+    "price_hint": None,
+    "source": "rednote",
+    "validation": {"geocode_confidence": None},
+}
+
+_RESULT_EXAMPLE = {
+    "job_id": "9f3c1a2b4d5e6f7890abcdef12345678",
+    "status": "done",
+    "destination": "Kyoto",
+    "collector": "rednote",
+    "collector_requested": "rednote",
+    "degraded": False,
+    "run_id": 12,
+    "cached": False,
+    "map_bundle_url": "/v1/maps/9f3c1a2b4d5e6f7890abcdef12345678.html",
+    "n_places": 8,
+    "duration_s": 214.5,
+    "places": [_PLACE_EXAMPLE],
+}
+
+_RESEARCH_REQUEST_BODY = {
+    "required": True,
+    "content": {
+        "application/json": {
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "destination": {
+                        "type": "string",
+                        "description": "Required (non-empty), unless "
+                                       "from_analysis derives it.",
+                    },
+                    "vibe": {
+                        "type": "string", "default": "all",
+                        "description": 'Place vibe filter, e.g. "food", '
+                                       '"sights", "cafes", "nightlife", "all".',
+                    },
+                    "queries": {
+                        "type": "array", "items": {"type": "string"},
+                        "description": "Extra search queries; null lets the "
+                                       "pipeline derive them.",
+                    },
+                    "collector": {
+                        "type": "string", "default": "rednote",
+                        "enum": ["rednote", "websearch"],
+                    },
+                    "idempotency_key": {
+                        "type": "string",
+                        "description": "Client-chosen key; re-POST returns the "
+                                       "ORIGINAL job (first-write-wins). Opts "
+                                       "the request out of the TTL result cache.",
+                    },
+                    "from_analysis": {
+                        "type": "string",
+                        "description": "Path to a saved analysis file to replay "
+                                       "instead of collecting.",
+                    },
+                    "skip_geocode": {"type": "boolean", "default": False},
+                    "region": {"type": "string", "default": ""},
+                    "fresh": {
+                        "type": "boolean", "default": False,
+                        "description": "Bypass the TTL cache and re-run the "
+                                       "pipeline (beats idempotency_key).",
+                    },
+                },
+            },
+            "example": {
+                "destination": "Kyoto",
+                "vibe": "food",
+                "collector": "rednote",
+                "idempotency_key": "trip-kyoto-food-001",
+            },
+        }
+    },
+}
+
+_RESEARCH_RESPONSES = {
+    "202": {
+        "description": "Job enqueued — or an idempotent replay of an "
+                       "existing job for the same idempotency_key.",
+        "content": {
+            "application/json": {
+                "example": {
+                    "job_id": "9f3c1a2b4d5e6f7890abcdef12345678",
+                    "status": "queued",
+                    "estimated_seconds": 300,
+                    "cached": False,
+                }
+            }
+        },
+    },
+    "200": {
+        "description": "TTL cache hit — the stored result is returned without "
+                       "re-running the pipeline.",
+        "content": {
+            "application/json": {
+                "example": {**_RESULT_EXAMPLE, "cached": True,
+                            "cache_hit": True, "ttl_remaining_s": 3540}
+            }
+        },
+    },
+    "400": _problem_response("Bad request"),
+    "401": _problem_response("Missing or invalid API key"),
+    "429": _problem_response("Research queue full"),
+    "503": _problem_response("Collector backend unavailable"),
+}
+
+_JOB_RESPONSES = {
+    "200": {
+        "description": "Job state. Poll until status is done or failed.",
+        "content": {
+            "application/json": {
+                "examples": {
+                    "queued": {
+                        "value": {
+                            "job_id": "9f3c1a2b4d5e6f7890abcdef12345678",
+                            "status": "queued",
+                            "destination": "Kyoto",
+                            "estimated_seconds": 300,
+                        }
+                    },
+                    "done": {"value": _RESULT_EXAMPLE},
+                }
+            }
+        },
+    },
+    "401": _problem_response("Missing or invalid API key"),
+    "404": _problem_response("Unknown job id"),
+    "500": {
+        "description": "The job itself failed. Note the body shape: problem+json "
+                       "with status \"failed\" and the pipeline error code.",
+        "content": {
+            "application/problem+json": {
+                "schema": _PROBLEM_SCHEMA,
+                "example": {
+                    "type": "https://travel-assistant.invalid/problems/"
+                            "pipeline_error",
+                    "title": "Research failed",
+                    "status": "failed",
+                    "http_status": 500,
+                    "code": "pipeline_error",
+                    "detail": "RuntimeError: analyzer returned no places",
+                    "job_id": "9f3c1a2b4d5e6f7890abcdef12345678",
+                },
+            }
+        },
+    },
+}
+
+_USAGE_RESPONSES = {
+    "200": {
+        "description": "Per-key metering summary (non-spec #80 extra).",
+        "content": {
+            "application/json": {
+                "example": {
+                    "key_id": 3,
+                    "total_calls": 41,
+                    "by_endpoint": {
+                        "POST /v1/research": 5,
+                        "GET /v1/research/{job_id}": 30,
+                        "GET /v1/usage": 6,
+                    },
+                    "by_cost_tier": {"fresh": 2, "cached": 39},
+                    "cached_calls": 39,
+                    "fresh_calls": 2,
+                    "key_name": "agent-alpha",
+                    "note": "non-spec #80 extra: cost_tier is 'fresh' iff the "
+                            "call enqueued a new pipeline run, else 'cached'; "
+                            "no price points are recorded",
+                }
+            }
+        },
+    },
+    "401": _problem_response("Missing or invalid API key"),
+}
+
+_MAPS_RESPONSES = {
+    "200": {
+        "description": "Standalone map HTML bundle for a done job.",
+        "content": {"text/html": {"schema": {"type": "string"}}},
+    },
+    "401": _problem_response("Missing or invalid API key"),
+    "404": _problem_response("Unknown job, or map bundle not ready/missing"),
+}
+
 _executor = ThreadPoolExecutor(max_workers=WORKERS,
                                thread_name_prefix="ta-research")
 
@@ -451,7 +683,13 @@ def _estimate_seconds(params):
 # --------------------------------------------------------------------------
 # routes
 
-@app.post("/v1/research", status_code=202)
+@app.post(
+    "/v1/research",
+    status_code=202,
+    summary="Enqueue a research run",
+    responses=_RESEARCH_RESPONSES,
+    openapi_extra={"requestBody": _RESEARCH_REQUEST_BODY},
+)
 def post_research(payload: dict, request: Request, fresh: bool = False):
     """Enqueue a research run — or serve a TTL cache hit.
 
@@ -552,7 +790,14 @@ def post_research(payload: dict, request: Request, fresh: bool = False):
             "estimated_seconds": estimated, "cached": False}
 
 
-@app.get("/v1/research/{job_id}")
+@app.get(
+    "/v1/research/{job_id}",
+    summary="Poll a research job",
+    description="Poll until `status` is `done` (full result) or `failed` "
+                "(HTTP 500 problem+json carrying the pipeline error code). "
+                "Jobs are process-local and do not survive restarts.",
+    responses=_JOB_RESPONSES,
+)
 def get_research(job_id: str, request: Request):
     key = _require_key(request)
     if isinstance(key, JSONResponse):
@@ -582,7 +827,11 @@ def get_research(job_id: str, request: Request):
     return job["result"]
 
 
-@app.get("/v1/usage")
+@app.get(
+    "/v1/usage",
+    summary="Per-key metering summary",
+    responses=_USAGE_RESPONSES,
+)
 def get_usage(request: Request):
     """Per-key metering summary (NON-SPEC extra added in #80 — not part of
     the v1 API spec; it exists so key holders can audit their own usage).
@@ -599,7 +848,13 @@ def get_usage(request: Request):
     return summary
 
 
-@app.get("/v1/maps/{job_id}.html")
+@app.get(
+    "/v1/maps/{job_id}.html",
+    summary="Fetch a job's map bundle",
+    description="Returns the run's stored standalone map HTML bundle. "
+                "Only available once the job is done.",
+    responses=_MAPS_RESPONSES,
+)
 def get_map_bundle(job_id: str, request: Request):
     key = _require_key(request)
     if isinstance(key, JSONResponse):
