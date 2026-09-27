@@ -45,5 +45,15 @@ def runs_db_path():
     return Path(os.environ.get("TA_RUNS_DB", runs_dir() / "runs.db"))
 
 
+def api_db_path():
+    """Service-layer SQLite DB: API keys, usage metering, result cache.
+
+    Kept separate from the runs DB on purpose: the runs store is the
+    pipeline's durable record (issue #75); this DB is the API service's
+    operational state (issue #80). Override with TA_API_DB.
+    """
+    return Path(os.environ.get("TA_API_DB", data_root() / "service" / "api.db"))
+
+
 def scripts_dir():
     return PROJECT_DIR / "scripts"
