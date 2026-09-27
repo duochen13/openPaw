@@ -8,28 +8,63 @@ as pins on a Google Map.
 
 ```bash
 cd travel-assistant
-pip install -r requirements.txt   # fastapi/uvicorn/httpx (API service) + mcp (MCP server)
+make setup   # creates .venv and installs requirements (fastapi/uvicorn/httpx + mcp);
+             # see "Setup" below for the manual path
+source .venv/bin/activate   # then plain `python` resolves to the venv
 
 # 1. Research pipeline (CLI) — mines rednote for loved places in a destination.
 #    The analyze step is the LLM subagent pass (SKILL.md Step 3): the package
 #    ships no default analyzer, so collect from the CLI, analyze via the
 #    travel-research agent skill, then replay the saved analysis file:
-python3 -m travel_assistant.research --destination "Kyoto" --vibe food --queries "京都美食,京都必去,Kyoto food" --no-analyze
-python3 -m travel_assistant.research --from-analysis data/analysis/kyoto_places_<ts>.json
-python3 -m travel_assistant.runs list                 # past runs
-python3 -m travel_assistant.runs show 3 --places      # one run + its places
+python -m travel_assistant.research --destination "Kyoto" --vibe food --queries "京都美食,京都必去,Kyoto food" --no-analyze
+python -m travel_assistant.research --from-analysis data/analysis/kyoto_places_<ts>.json
+python -m travel_assistant.runs list                 # past runs
+python -m travel_assistant.runs show 3 --places      # one run + its places
 
 # 2. Local dashboard — maps of past runs in the browser (stdlib only, no keys)
-python3 -m travel_assistant ui                        # serves http://127.0.0.1:8000
+python -m travel_assistant ui                        # serves http://127.0.0.1:8000
 
 # 3. API service — async HTTP API over the pipeline (Bearer-key auth)
-python3 -m travel_assistant.apikeys create --name dev # mint a key (raw key printed once)
-python3 -m travel_assistant.service --port 8000       # or: uvicorn travel_assistant.service:app --port 8000
+python -m travel_assistant.apikeys create --name dev # mint a key (raw key printed once)
+python -m travel_assistant.service --port 8000       # or: uvicorn travel_assistant.service:app --port 8000
 # POST /v1/research  -> 202 {job_id};  GET /v1/research/{job_id} -> poll for done
 
 # 4. MCP server — one config line for Claude Code / Claude Desktop
-# {"mcpServers": {"travel-assistant": {"command": "python3", "args": ["-m", "travel_assistant.mcp_server"], "cwd": "<absolute path to travel-assistant>"}}}
+# {"mcpServers": {"travel-assistant": {"command": "<absolute path to travel-assistant>/.venv/bin/python", "args": ["-m", "travel_assistant.mcp_server"], "cwd": "<absolute path to travel-assistant>"}}}
 ```
+## Setup
+
+One command (recommended):
+
+```bash
+cd travel-assistant
+make setup   # creates .venv and installs requirements.txt
+```
+
+Manual path (same thing `make setup` does):
+
+```bash
+cd travel-assistant
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+```
+
+Always work inside the venv and invoke pip as `python -m pip` — never bare
+`pip`/`pip3`. Homebrew does not link an unversioned `pip` name, and the
+system `pip3` is the thing that breaks (see "Troubleshooting" below).
+
+Makefile targets (all run inside `.venv`, no activation needed):
+
+| Target      | What it does                                             |
+|-------------|----------------------------------------------------------|
+| `make setup`| create `.venv` + `pip install -r requirements.txt`       |
+| `make test` | install `requirements-dev.txt` + run the test suite       |
+| `make run ARGS="…"` | run the pipeline CLI, e.g. `make run ARGS="runs list"` |
+| `make ui`   | local map dashboard (http://127.0.0.1:8000)              |
+| `make api`  | async API service (http://127.0.0.1:8000)                |
+| `make clean`| remove `.venv`                                           |
+
 ## API documentation
 
 Full HTTP API docs live in [`docs/`](docs/): authentication, 5-minute
@@ -110,6 +145,29 @@ with a `NOTION_TOKEN`.
 relative to themselves, so outputs land under this repo no matter where you
 invoked the skill from.
 Report absolute paths to the user.
+
+**`pip3` crashes with `Symbol not found: _XML_SetAllocTrackerActivationThreshold`.**
+Not a travel-assistant bug — the Homebrew `python@3.14` installation is
+broken: its `pyexpat` extension was built against a newer libexpat API than
+the one loaded at runtime, so *any* `pip3` / `python3 -m pip` invocation dies
+while importing `xmlrpc` → `pyexpat`. Repair the interpreter on the Mac:
+
+```bash
+brew update
+brew reinstall expat
+brew reinstall python@3.14
+python3 -c "import xmlrpc.client"   # must print nothing and exit 0
+```
+
+If the import still fails, rebuild Python against the fixed expat:
+
+```bash
+brew reinstall --build-from-source python@3.14
+python3 -c "import xmlrpc.client"
+```
+
+Only after that import succeeds, create the venv (`make setup`). And keep
+using `python -m pip` inside the venv — never bare `pip`/`pip3`.
 
 ## Driving Google Maps signed in
 
@@ -239,7 +297,7 @@ package), then add one line to the client's `mcpServers` config
 (Claude Code: `.mcp.json`; Claude Desktop: `claude_desktop_config.json`):
 
 ```json
-{"mcpServers": {"travel-assistant": {"command": "python3", "args": ["-m", "travel_assistant.mcp_server"], "cwd": "<absolute path to travel-assistant>"}}}
+{"mcpServers": {"travel-assistant": {"command": "<absolute path to travel-assistant>/.venv/bin/python", "args": ["-m", "travel_assistant.mcp_server"], "cwd": "<absolute path to travel-assistant>"}}}
 ```
 
 Optional `env` entries: `TA_DATA_ROOT` to point the server at a different
