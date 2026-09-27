@@ -247,6 +247,23 @@ def test_render_writes_self_contained_page(tmp_path):
 
 
 @pytest.mark.unit
+def test_render_adaptive_granularity_markers(tmp_path):
+    """Issue #41: the page carries the zoom->granularity machinery."""
+    target = render_factor_dashboard(_fixture_payload(), tmp_path / "out")
+    html = target.read_text()
+    for token in (
+        'id="granLabel"',       # resolution badge next to the time frame
+        'data-n="21"',           # 1M preset reaching daily resolution
+        "GRAN_CAP",              # rendered-point cap
+        "granularity()",         # zoom -> monthly/weekly/daily mapping
+        "visibleIdx()",          # decimation of the embedded daily series
+        "tipDate(",              # tooltips name the actual sampling
+        "tickLabel(",            # axis labels follow the actual sampling
+    ):
+        assert token in html, token
+
+
+@pytest.mark.unit
 def test_dashboard_index_links_factors_page(tmp_path):
     target = render_dashboard(_portfolio(), tmp_path / "out")
     assert 'href="factors.html"' in target.read_text()
@@ -337,7 +354,7 @@ function stubNode(tag) {
   };
 }
 const __byId = {};
-const __presetButtons = ["all", "756", "252", "126"].map(n => {
+const __presetButtons = ["all", "756", "252", "126", "21"].map(n => {
   const b = stubNode("button"); b.dataset.n = n; return b;
 });
 const document = {
@@ -372,26 +389,52 @@ check("chip toggles stock back on",
       visible.has("BBB") && !chipB.classList.contains("off"));
 
 setRange(10, 40);
-check("slider start label", $("d0").textContent === fmtDate(DATA.dates[10]),
+check("slider start label", $("d0").textContent === rangeLabel(DATA.dates[10], granularity()),
       $("d0").textContent);
-check("slider end label", $("d1").textContent === fmtDate(DATA.dates[40]),
+check("slider end label", $("d1").textContent === rangeLabel(DATA.dates[40], granularity()),
       $("d1").textContent);
 check("slider window width", i1 - i0 === 30, (i1 - i0));
-setRange(10, 20);
-check("sub-30d window widened gracefully", i1 - i0 >= 30, (i1 - i0));
+setRange(10, 15);
+check("sub-10-session window widened gracefully", i1 - i0 >= 10, (i1 - i0));
 
 __presetButtons[2].onclick();  // 1Y preset on a 90-day fixture -> full range
 check("preset restores full range",
-      $("d0").textContent === fmtDate(DATA.dates[0]) &&
-      $("d1").textContent === fmtDate(DATA.dates[DATA.dates.length - 1]));
+      $("d0").textContent === rangeLabel(DATA.dates[0], granularity()) &&
+      $("d1").textContent === rangeLabel(DATA.dates[DATA.dates.length - 1], granularity()));
 check("preset marked active", __presetButtons[2].classList.contains("on"));
 
-// hover: clientX=500 on a 1000-wide svg
-const expI = Math.round((500 - 52) / (1000 - 52 - 8) * (DATA.dates.length - 1));
+// zoom -> granularity mapping (issue #41): synthetic long date axis
+const _realDates = DATA.dates;
+DATA.dates = Array.from({length: 800},
+  (_, k) => new Date(Date.UTC(2020, 0, 1) + k * 864e5).toISOString().slice(0, 10));
+i0 = 0; i1 = 799;
+check("800d -> monthly", granularity() === "monthly");
+const mIdx = visibleIdx();
+check("monthly picks one point per calendar month", mIdx.length === 27, mIdx.length);
+check("monthly keeps the latest session", mIdx[mIdx.length - 1] === 799);
+i1 = 400;
+check("400d -> monthly", granularity() === "monthly");
+i1 = 365;
+check("365d -> weekly", granularity() === "weekly");
+i1 = 200;
+check("200d -> weekly", granularity() === "weekly");
+const wIdx = visibleIdx();
+check("weekly strides 5 sessions and keeps the latest",
+      wIdx.length === 41 && wIdx[wIdx.length - 1] === 200, wIdx.length);
+i1 = 31;
+check("31d -> daily", granularity() === "daily");
+check("daily keeps every session", visibleIdx().length === 32, visibleIdx().length);
+DATA.dates = _realDates; i0 = 0; i1 = _realDates.length - 1; render();
+
+// hover: clientX=500 on a 1000-wide svg, snapped to the sampled (weekly) index
+const _idx = visibleIdx();
+const _k = Math.round((500 - 52) / (1000 - 52 - 8) * (_idx.length - 1));
+const expI = _idx[_k];
 $("betaBox")._fire("pointermove", { clientX: 500 });
 const tip = $("betaTip");
 check("tooltip visible on hover", tip.style.display === "block");
-check("tooltip shows hovered date", tip.innerHTML.includes(fmtDate(DATA.dates[expI])),
+check("tooltip shows hovered date and granularity",
+      tip.innerHTML.includes(tipDate(DATA.dates[expI], granularity())),
       tip.innerHTML.slice(0, 80));
 check("tooltip shows stock values",
       tip.innerHTML.includes("AAA") && tip.innerHTML.includes("CCC"));
@@ -401,6 +444,9 @@ check("crosshair guide drawn",
       $("betaSvg").children.some(c => c.tag === "line"));
 $("betaBox")._fire("pointerleave", {});
 check("tooltip hidden on leave", tip.style.display === "none");
+
+check("granularity badge shows sampling and point count",
+      $("granLabel").textContent === "Weekly · 19 points", $("granLabel").textContent);
 
 console.log("all factor-dashboard interaction checks passed (" + nPass + ")");
 """
