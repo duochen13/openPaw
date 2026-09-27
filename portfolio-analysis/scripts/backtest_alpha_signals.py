@@ -30,6 +30,14 @@ The wls-twopoint vs wls pair isolates the estimator change (two-point vs WLS
 regression at the same span); the span10/span30 pair shows the responsiveness
 knob. All slope fits are trailing-only and causal.
 
+Issue #32: the backtest additionally scores the alpha-flip alert trigger
+(signals.detect_alpha_flips - slope neg->pos crossing confirmed by
+acceleration > 0, 3-session persistence, and a rolling-R² noise gate) on the
+fixed and wls modes. Each flip is scored by its forward excess return vs QQQ
+over 20/60/120 trading days: excess > 0 counts as a hit, <= 0 as a false
+alarm. This sizes the false-positive rate before the trigger is wired to real
+notifications.
+
 Forward returns start at t+1, strictly after the signal date: no look-ahead.
 Results are pooled across stocks. Caveats, printed with the table: signal
 occurrences on consecutive days have overlapping forward windows, so counts
@@ -49,10 +57,16 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from portfolio_analysis.moves import aligned_returns
+from portfolio_analysis.moves import (
+    aligned_returns,
+    decay_weights,
+    ols_regression,
+    wls_regression,
+)
 from portfolio_analysis.signals import (
     DEFAULT_WLS_HALF_LIFE,
     SLOPE_SPAN,
+    detect_alpha_flips,
     rolling_alpha_daily,
     rolling_slope,
 )
@@ -171,6 +185,84 @@ def run_mode(
     return pooled, per_stock
 
 
+def rolling_r2(
+    asset_returns: list[float],
+    benchmark_returns: list[float],
+    window: int | None,
+    half_life: float | None,
+) -> list[float | None]:
+    """Rolling R² over the same regression windows as rolling_alpha_daily.
+
+    Issue #32's flip trigger gates on fit quality; the R² must come from the
+    identical windows as the alpha it guards, so this mirrors
+    ``rolling_alpha_daily``'s loop (fixed-window OLS or growing-history WLS)
+    instead of reusing a differently-windowed series.
+    """
+    if (window is None) == (half_life is None):
+        raise ValueError("exactly one of window and half_life must be set")
+    out: list[float | None] = [None] * len(asset_returns)
+    if half_life is None:
+        assert window is not None
+        for i in range(window - 1, len(asset_returns)):
+            try:
+                _, _, r2 = ols_regression(
+                    asset_returns[i - window + 1 : i + 1],
+                    benchmark_returns[i - window + 1 : i + 1],
+                    r_squared=True,
+                )
+            except ValueError:
+                continue
+            out[i] = r2
+        return out
+    warmup = max(2, int(half_life))
+    for i in range(warmup - 1, len(asset_returns)):
+        try:
+            _, _, r2 = wls_regression(
+                asset_returns[: i + 1],
+                benchmark_returns[: i + 1],
+                decay_weights(i + 1, half_life),
+                r_squared=True,
+            )
+        except ValueError:
+            continue
+        out[i] = r2
+    return out
+
+
+def run_flip_mode(
+    prices: dict[str, dict[str, float]],
+    window: int | None,
+    half_life: float | None,
+    slope_method: str,
+    slope_span: int,
+) -> tuple[dict[int, list[float]], dict[str, int]]:
+    """Score the issue-#32 flip trigger: pooled forward excess + flip counts.
+
+    ``detect_alpha_flips`` needs the (alpha, slope, R²) triple aligned; the
+    R² comes from the same regression windows as the alpha (see
+    ``rolling_r2``). Forward excess starts at t+1, strictly after the flip
+    date: no look-ahead.
+    """
+    pooled: dict[int, list[float]] = {h: [] for h in HORIZONS}
+    per_stock: dict[str, int] = {s: 0 for s in STOCKS}
+    for stock in STOCKS:
+        _dates, sret, bret = aligned_returns(prices[stock], prices[BENCHMARK])
+        alpha = rolling_alpha_daily(sret, bret, window, half_life=half_life)
+        slope = (
+            rolling_slope(alpha, slope_span, half_life=half_life)
+            if slope_method == "wls"
+            else rolling_slope(alpha, slope_span)
+        )
+        r2 = rolling_r2(sret, bret, window, half_life)
+        for flip in detect_alpha_flips(alpha, slope, r2):
+            per_stock[stock] += 1
+            for h in HORIZONS:
+                excess = forward_excess(sret, bret, flip.index, h)
+                if excess is not None:
+                    pooled[h].append(excess)
+    return pooled, per_stock
+
+
 def summarize(xs: list[float]) -> tuple[str, str, str]:
     if not xs:
         return "n/a", "n/a", "n/a"
@@ -252,6 +344,42 @@ def main() -> int:
                     1 for x in xs_b if x > 0
                 ) / len(xs_b)
                 print(f"{pair_label:<32}{name:<12}{h:>8}{d_n:>+7}{d_mean:>+9.2%}{d_hit:>+9.1%}")
+    print(
+        "\n## alpha flip trigger (issue #32): hit / false-alarm summary\n"
+        "Trigger = slope neg->pos crossing, acceleration > 0, 3-session "
+        "persistence, rolling-R² >= 0.5 gate. Hit = forward excess > 0; "
+        "false alarm = forward excess <= 0."
+    )
+    print(
+        f"{'mode':<14}{'horizon':>8}{'n':>7}{'hits':>7}{'false':>7}"
+        f"{'hit_rate':>10}{'mean':>10}{'median':>10}"
+    )
+    flip_modes = (
+        ("fixed", "fixed time weight", ALPHA_WINDOW, None, "two-point", SLOPE_SPAN),
+        (
+            "wls",
+            "enable time weight",
+            None,
+            float(DEFAULT_WLS_HALF_LIFE),
+            "wls",
+            SLOPE_SPAN,
+        ),
+    )
+    for _key, label, window, half_life, slope_method, slope_span in flip_modes:
+        pooled, ps = run_flip_mode(prices, window, half_life, slope_method, slope_span)
+        total_flips = sum(ps.values())
+        for h in HORIZONS:
+            xs = pooled[h]
+            hits = sum(1 for x in xs if x > 0)
+            false = len(xs) - hits
+            hit_rate = f"{hits / len(xs):>9.1%}" if xs else f"{'n/a':>10}"
+            mean, median, _ = summarize(xs)
+            print(
+                f"{label:<14}{h:>8}{len(xs):>7}{hits:>7}{false:>7}{hit_rate}{mean:>10}{median:>10}"
+            )
+        print(
+            f"  flips per stock (total {total_flips}): " + ", ".join(f"{s}={ps[s]}" for s in STOCKS)
+        )
     print(
         "\nCaveats: trailing-only, no look-ahead; occurrences on consecutive days "
         "have overlapping forward windows (counts are occurrences, not independent "
