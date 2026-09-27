@@ -65,3 +65,16 @@ kpis:
     - operating_margin
     - rpo
     - capex
+
+# RPO growth deceleration alerts (issue #36): the canary trigger for the
+# per-seat disruption thesis. A ticker's alert fires when its RPO YoY
+# growth falls below yoy_floor_pct OR drops more than qoq_drop_pp
+# percentage points vs the prior quarter's YoY. Daniel's call
+# (2026-09-20): NOW floor 21.0 (any deceleration from the then-current
+# ~21.3% level flags), drop threshold 5.0pp. Tune here, no code change.
+# Per-ticker so CRM or others can join later; a ticker without an entry
+# gets no alert.
+rpo_deceleration:
+  NOW:
+    yoy_floor_pct: 21.0
+    qoq_drop_pp: 5.0

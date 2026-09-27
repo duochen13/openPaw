@@ -15,9 +15,9 @@ carrying ``"source": "manual"`` so the template can label them. A metric
 with no datapoints yet (e.g. GOOGL search share) renders as an "n/a"
 placeholder panel - tracked but empty, never a crash.
 
-Schema and validation follow the pattern established for issue #36
-(PR #37): the RPO deceleration alert itself stays in that PR; this module
-only loads and panels the manual series.
+Schema and validation follow the pattern established for issue #36:
+the RPO deceleration alert itself lives in ``rpo_alerts.py``; this
+module only loads and panels the manual series.
 """
 
 from __future__ import annotations
@@ -134,6 +134,26 @@ KNOWN_MANUAL_METRICS: dict[str, dict[str, str]] = {
         "blurb": (
             "Non-GAAP operating margin from ServiceNow earnings releases "
             "(press-release only, never XBRL-tagged)."
+        ),
+    },
+    "customers_1m_acv": {
+        "label": "Customers with >$1M ACV",
+        "format": "count",
+        "group": "revenue",
+        "blurb": (
+            "ServiceNow customers with more than $1M in annual contract "
+            "value, hand-entered from earnings releases. Raw seat counts "
+            "are not disclosed and not XBRL-tagged; this is the closest "
+            "published seat-scale proxy (issue #36)."
+        ),
+    },
+    "net_revenue_retention": {
+        "label": "Net revenue retention",
+        "format": "percent",
+        "group": "revenue",
+        "blurb": (
+            "Renewal / net revenue retention rate, hand-entered when "
+            "disclosed on earnings materials. Values pending (issue #36)."
         ),
     },
 }
