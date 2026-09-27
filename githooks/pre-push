@@ -1,0 +1,122 @@
+#!/usr/bin/env bash
+#
+# pre-push hook: docs-sync checklist.
+#
+# On every push, diffs the pushed commits against the remote, detects which
+# top-level project folders changed, and prints each changed project's README
+# and docs files as an explicit "did you update these?" checklist.
+#
+# Advisory only: always exits 0, never blocks a push.
+# Skip with: git push --no-verify
+#
+# Install (from the repo root):
+#   git config core.hooksPath githooks && chmod +x githooks/pre-push
+
+set -u
+
+ZERO="0000000000000000000000000000000000000000"
+changed=""
+
+# stdin lines from git: <local ref> <local sha> <remote ref> <remote sha>
+while read -r local_ref local_sha remote_ref remote_sha; do
+  # Deleting a remote ref: nothing to check.
+  [ "$local_sha" = "$ZERO" ] && continue
+  if [ "$remote_sha" = "$ZERO" ]; then
+    # New branch: diff against the fork point off the default branch.
+    sym="$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')"
+    base=""
+    # shellcheck disable=SC2086
+    for b in $sym main master; do
+      [ -n "$b" ] || continue
+      git show-ref --verify --quiet "refs/remotes/origin/$b" 2>/dev/null || continue
+      base="$(git merge-base --fork-point "origin/$b" "$local_sha" 2>/dev/null \
+        || git merge-base "origin/$b" "$local_sha" 2>/dev/null || true)"
+      [ -n "$base" ] && break
+    done
+    [ -z "$base" ] && continue
+    range="$base $local_sha"
+  else
+    range="$remote_sha $local_sha"
+  fi
+  # shellcheck disable=SC2086
+  files="$(git diff --name-only $range 2>/dev/null || true)"
+  changed="$changed
+$files"
+done
+
+changed="$(printf '%s\n' "$changed" | sed '/^[[:space:]]*$/d' | sort -u)"
+[ -z "$changed" ] && exit 0
+
+# Top-level project folders = first path component of each changed file.
+projects=""
+root_changed=0
+while IFS= read -r f; do
+  case "$f" in
+    */*)
+      d="${f%%/*}"
+      case "$d" in
+        .*) continue ;;  # skip dot-directories like .github
+      esac
+      projects="$projects
+$d"
+      ;;
+    *)
+      root_changed=1
+      ;;
+  esac
+done <<EOF
+$changed
+EOF
+projects="$(printf '%s\n' "$projects" | sed '/^[[:space:]]*$/d' | sort -u)"
+
+# Doc files per changed project: project README + markdown under docs/ or doc/.
+docs=""
+while IFS= read -r p; do
+  [ -d "$p" ] || continue
+  for cand in "$p/README.md" "$p/readme.md"; do
+    [ -f "$cand" ] && docs="$docs
+$cand"
+  done
+  while IFS= read -r md; do
+    [ -n "$md" ] && docs="$docs
+$md"
+  done <<EOF
+$(find "$p" \( -path "$p/docs/*" -o -path "$p/doc/*" \) -name '*.md' 2>/dev/null | sort | head -25)
+EOF
+done <<EOF
+$projects
+EOF
+if [ "$root_changed" = "1" ] && [ -f README.md ]; then
+  docs="$docs
+README.md"
+fi
+docs="$(printf '%s\n' "$docs" | sed '/^[[:space:]]*$/d' | sort -u)"
+
+echo "======================================================================"
+echo "Docs-sync checklist (pre-push hook -- advisory only, never blocks)"
+if [ -n "$projects" ]; then
+  # shellcheck disable=SC2086
+  echo "Changed project folders: $projects" | tr '\n' ' '
+  echo ""
+fi
+[ "$root_changed" = "1" ] && echo "Changed files at repo root: yes"
+echo ""
+if [ -z "$docs" ]; then
+  echo "No README/docs files found for the changed folders."
+else
+  echo "Did you update these docs?  ([x] = touched in this push)"
+  while IFS= read -r d; do
+    if printf '%s\n' "$changed" | grep -qxF "$d"; then
+      mark="x"
+    else
+      mark=" "
+    fi
+    echo "  [$mark] $d"
+  done <<EOF
+$docs
+EOF
+fi
+echo ""
+echo "Skip this check with: git push --no-verify"
+echo "======================================================================"
+exit 0

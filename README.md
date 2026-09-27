@@ -55,6 +55,17 @@ uv pip install -e ".[dev]"
 
 Network-dependent tests are excluded by default. Run them with `.venv/bin/pytest -m network`.
 
+## Docs sync on push
+
+Code changes should keep each project's README and docs in sync.
+A pre-push hook prints a docs checklist for every changed project folder on each push:
+
+```bash
+git config core.hooksPath githooks && chmod +x githooks/pre-push
+```
+
+The hook is advisory only — it never blocks a push. Skip it with `git push --no-verify`.
+
 ## Usage
 
 ```bash
