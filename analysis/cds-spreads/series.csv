@@ -1,0 +1,41 @@
+date,company,metric,value_num,value_text,unit,proxy_type,source,note
+2024-06-30,ORCL,cds_5y_bps,40,40,bps,cds_print,thetradable.com (2025-12),"Reported as 'roughly 40bps earlier in 2024'; plotted mid-year - pre-widening baseline"
+2025-09-15,ORCL,cds_5y_bps,60,<60,bps,cds_print,"LSEG via MarketWatch/Morningstar (2025-12-15)","<60bps in Sep-2025; Motley Fool: <50bps just before mid-Sep $300B OpenAI-deal news"
+2025-10-06,CRWV,cds_5y_bps,368.4,368.4,bps,cds_print,parameter.io (2025-12-11),"5Y CDS on Oct 6; jumped 75% within the week"
+2025-10-10,CRWV,cds_5y_bps,643.0,643.0,bps,cds_print,parameter.io (2025-12-11),"Friday close after Oct 6 print; +75% in one week"
+2025-11-16,ORCL,cds_5y_bps,105,>105,bps,cds_print,"S&P data via ZeroHedge (~2025-11-16)","'Over 105bps last week'; ORCL at widest in 2 years per article"
+2025-11-16,GOOGL,cds_5y_bps,38,~38,bps,cds_print,S&P data via ZeroHedge (~2025-11-16),Same S&P snapshot as ORCL >105 print
+2025-11-16,AMZN,cds_5y_bps,38,~38,bps,cds_print,S&P data via ZeroHedge (~2025-11-16),Same S&P snapshot
+2025-11-16,MSFT,cds_5y_bps,34,~34,bps,cds_print,S&P data via ZeroHedge (~2025-11-16),Same S&P snapshot
+2025-11-20,ORCL,cds_5y_bps,108,108,bps,cds_print,realinvestmentadvice.com (2025-11-20),"Implied ~8% 5Y default probability at 35% recovery (RIA math)"
+2025-11-20,CRWV,cds_5y_bps,675,675,bps,cds_print,realinvestmentadvice.com (2025-11-20),"Implied ~42% 5Y default probability at 35% recovery (RIA math)"
+2025-11-30,ORCL,cds_5y_bps,120,>120,bps,cds_print,thetradable.com (2025-12-10),"'Above 120bps by November' - more than tripled since Sep"
+2025-12-11,CRWV,cds_5y_bps,700,>700,bps,cds_print,parameter.io (2025-12-11),"'Climbing from the mid-200s to over 700bps' in recent months"
+2025-12-12,ORCL,cds_5y_bps,140,140,bps,cds_print,thetradable.com (2025-12-10),Highest since 2009
+2025-12-12,ORCL,cds_5y_bps,147,147,bps,cds_print,"LSEG via MarketWatch/Morningstar (2025-12-15)","'Up from under 60bps in September'; highest since 2008-09 per Bloomberg"
+2026-03-03,ORCL,cds_5y_bps,135,120-150,bps,cds_print,Motley Fool (2026-03-03),"Reported as 120-150 range; 135 = midpoint"
+2026-03-03,GOOGL,cds_5y_bps,45,~45,bps,cds_print,Motley Fool (2026-03-03),Same article snapshot as ORCL 120-150
+2026-06-10,ORCL,cds_5y_bps,126,126,bps,cds_print,thetradable.com (~2026-06-10),"Highest in over 16 years; 57% of $523B RPO tied to one customer (OpenAI)"
+2026-07-20,ORCL,cds_5y_bps,203,~203,bps,cds_print,"Bloomberg/ICE via startupfortune.com (2026-08)",2.03 percentage points in July - highest since late 2008
+2026-07-28,ORCL,cds_5y_bps,212,~212,bps,cds_print,cryptobriefing.com (2026-08-11),"Late-July record; $212k/yr to insure $10M"
+2026-07-28,ORCL,cds_5y_bps,215,~215,bps,cds_print,gate.com (2026-08-10),"All-time high; exceeds 2008 GFC peak"
+2026-07-28,ORCL,cds_5y_bps,219,~219,bps,cds_print,thestreet.com (2026-08-13),Late-July print
+2026-07-28,GOOGL,cds_5y_bps,64,64,bps,cds_print,"Barron's (2026-07-28)","'Biggest insurance premium in at least five years'"
+2026-07-28,META,cds_5y_bps,95,95,bps,cds_print,Barron's (2026-07-28),Levels not seen since at least Nov-2025
+2026-07-28,NVDA,cds_5y_bps,80,80,bps,cds_print,Barron's (2026-07-28),Same snapshot; NVDA not in issue scope - included as context
+2026-07-31,CRWV,cds_5y_bps,1000,~1000,bps,cds_print,americanow.com (2026-09),"Approached 1000 in late July; ~50% implied 5Y default probability"
+2026-08-15,CRWV,cds_5y_bps,671.75,671.75,bps,cds_print,"FactSet via MarketWatch (2026-09-03)",Fell to 671.75 after mid-Aug earnings
+2026-09-03,CRWV,cds_5y_bps,800,>800,bps,cds_print,MarketWatch (2026-09-03),"Above 800 again; ~40-45% implied 5Y default prob vs ~15% for B+ rating"
+2026-09-24,ORCL,cds_5y_bps,224,224,bps,cds_print,Bloomberg via Barron's (2026-09-25),Prior-night level before record print
+2026-09-24,ORCL,cds_5y_bps,227.5,227.5,bps,cds_print,Bloomberg via Barron's (2026-09-25),"Record high; $227.50/yr to insure $10,000 of ORCL debt"
+2025-12-31,"AMZN/GOOGL/META/ORCL",bond_spread_bps_2_4yr,30,30,bps over Treasuries,bond_spread,"LSEG via Reuters (2026-07-29)","Median 2-4yr bond spread, full-year 2025 baseline"
+2026-07-29,"AMZN/GOOGL/META/ORCL",bond_spread_bps_2_4yr,40,40,bps over Treasuries,bond_spread,LSEG via Reuters (2026-07-29),Median 2-4yr spread Jul-2026
+2025-12-31,"AMZN/GOOGL/META/ORCL",bond_spread_bps_5_7yr,50,50,bps over Treasuries,bond_spread,"LSEG via Reuters (2026-07-29)",Median 5-7yr bond spread 2025 baseline
+2026-07-29,"AMZN/GOOGL/META/ORCL",bond_spread_bps_5_7yr,60,60,bps over Treasuries,bond_spread,LSEG via Reuters (2026-07-29),Median 5-7yr spread Jul-2026
+2025-12-31,"AMZN/GOOGL/META/ORCL",bond_spread_bps_20yr_plus,108.5,108.5,bps over Treasuries,bond_spread,"LSEG via Reuters (2026-07-29)",Median 20yr+ bond spread 2025 baseline
+2026-07-29,"AMZN/GOOGL/META/ORCL",bond_spread_bps_20yr_plus,118,118,bps over Treasuries,bond_spread,LSEG via Reuters (2026-07-29),Median 20yr+ spread Jul-2026
+2026-09-25,"AMZN/META/MSFT/GOOGL",bond_yield_change_bps,16,+16,bps,bond_yield,Bloomberg via Barron's (2026-09-25),"Avg +0.16pp in 30yr bond yields of the other four hyperscalers; a yield CHANGE not a spread level"
+2026-09-15,ORCL,project_jupiter_loan_price,90,89-91,cents on dollar,loan_quote,FT via Reuters Sep-2026 (per issue #35 anchor),"$18B Project Jupiter loans quoted 89-91c - stressed; 90 = midpoint"
+2026-07-09,ORCL,rating_action,,S&P BBB- (cut from BBB),n/a,rating_action,S&P Global Ratings (reported widely Jul-2026),One notch above junk; S&P said it underestimated AI upfront spend
+2026-07-01,ORCL,rating_action,,Moody's negative outlook,n/a,rating_action,thestreet.com (2026-08-13),"Moody's holds negative outlook; date approx Jul-2026"
+2026-04-09,CRWV,rating_action,,S&P B+ affirmed (positive outlook),n/a,rating_action,S&P via americanow.com (2026-09),"B+ implies ~15% 5Y default likelihood vs ~40-45% priced by CDS market"
