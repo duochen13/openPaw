@@ -711,6 +711,23 @@ def _tldr_text(
     return text
 
 
+def _read_event_catalog(events_dir: Path, symbol: str) -> dict[str, Any] | None:
+    """Validated catalog payload, or None when missing/corrupt/wrong-schema.
+
+    The stock page degrades to "event records not collected" on None, never
+    a crash.
+    """
+    try:
+        payload: dict[str, Any] = json.loads((events_dir / symbol / "event_dates.json").read_text())
+    except (OSError, ValueError):
+        return None
+    if payload.get("schema_version") != 1 or payload.get("ticker") != symbol:
+        return None
+    if not isinstance(payload.get("dates"), dict):
+        return None
+    return payload
+
+
 def _event_catalog(events_dir: Path, symbol: str) -> dict[str, list[dict[str, str]]]:
     """Dated events collected independently of the move filter.
 
@@ -719,16 +736,11 @@ def _event_catalog(events_dir: Path, symbol: str) -> dict[str, list[dict[str, st
     releases - never forum chatter). Missing, corrupt, or wrong-schema files
     degrade to no event markers, never a crash.
     """
-    try:
-        payload = json.loads((events_dir / symbol / "event_dates.json").read_text())
-    except (OSError, ValueError):
-        return {}
-    if payload.get("schema_version") != 1 or payload.get("ticker") != symbol:
-        return {}
-    raw = payload.get("dates")
-    if not isinstance(raw, dict):
+    payload = _read_event_catalog(events_dir, symbol)
+    if payload is None:
         return {}
     out: dict[str, list[dict[str, str]]] = {}
+    raw = payload["dates"]
     for day, entries in raw.items():
         if not isinstance(entries, list):
             continue
@@ -745,6 +757,33 @@ def _event_catalog(events_dir: Path, symbol: str) -> dict[str, list[dict[str, st
         if rows:
             out[str(day)] = sorted(rows, key=lambda row: row["label"])
     return out
+
+
+def _event_catalog_info(events_dir: Path, symbol: str) -> dict[str, Any]:
+    """Coverage metadata for the stock page (issue #44).
+
+    Presence, freshness, and contributing sources — so a missing or
+    earnings-less catalog is honestly visible instead of silently
+    marker-less.
+    """
+    payload = _read_event_catalog(events_dir, symbol)
+    if payload is None:
+        return {
+            "present": False,
+            "generated_at": None,
+            "dated_days": 0,
+            "sources": [],
+            "window": None,
+        }
+    dates = payload["dates"]
+    sources = payload.get("sources") or []
+    return {
+        "present": True,
+        "generated_at": payload.get("generated_at"),
+        "dated_days": len(dates),
+        "sources": [s for s in sources if isinstance(s, str)],
+        "window": payload.get("window"),
+    }
 
 
 def _merge_event_markers(
@@ -932,6 +971,10 @@ def chart_data(
         "name": name,
         "benchmark": artifact.benchmark,
         "generated_at": datetime.now(UTC).isoformat(timespec="seconds"),
+        # Catalog coverage/freshness for the stock page (issue #44): when
+        # the catalog is absent the page says so instead of rendering
+        # marker-less without explanation.
+        "event_catalog": _event_catalog_info(events_dir, symbol),
         "dates": dates,
         "prices": [asset[d] for d in dates],
         "benchmark_prices": [benchmark[d] for d in dates],

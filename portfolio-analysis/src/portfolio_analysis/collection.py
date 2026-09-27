@@ -144,6 +144,10 @@ def write_event_catalog(
             "ticker": ticker,
             "generated_at": datetime.now(UTC).isoformat(timespec="seconds"),
             "window": [start, end],
+            # Honest coverage metadata: which verified-fact sources seeded
+            # this catalog. A missing "earnings" entry documents the
+            # Alpha Vantage gap (issue #44) instead of hiding it.
+            "sources": [source.name for source in catalog_sources],
             "dates": {
                 day: sorted(rows, key=lambda row: row["label"])
                 for day, rows in sorted(dated.items())
@@ -168,6 +172,14 @@ def collect_events(
     report: Callable[[str], None] = print,
 ) -> CollectionResult:
     api_key = "" if keyless else os.environ.get("ALPHAVANTAGE_API_KEY", "")
+    if not api_key:
+        # Honest coverage signal (issue #44): without the key, earnings
+        # dates — the highest-value annotations — are missing from every
+        # catalog and only EDGAR filings + macro remain.
+        report(
+            "earnings dates skipped: ALPHAVANTAGE_API_KEY is not set "
+            "(event catalogs will lack earnings annotations)"
+        )
     store = Store.open(db)
     try:
         sessions = store.adjusted_series(portfolio.benchmark)
