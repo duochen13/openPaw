@@ -6,7 +6,8 @@ Tables:
 
 price_hint and geocode_confidence are reserved for future stages (the v1
 analyzer does not emit them); columns exist now so later stages can fill
-them without a migration.
+them without a migration. `places.source` is the per-place collector label
+("rednote" / "websearch"), stamped by research() (issue #76).
 """
 import json
 import sqlite3
@@ -50,6 +51,7 @@ CREATE TABLE IF NOT EXISTS places (
   lng                REAL,
   why_loved          TEXT,
   source_urls        TEXT,                 -- JSON list
+  source             TEXT,                 -- collector label (issue #76)
   price_hint         TEXT,
   mention_count      INTEGER,
   sentiment          TEXT,
@@ -76,6 +78,14 @@ class RunStore:
         self._conn = sqlite3.connect(str(self.path))
         self._conn.row_factory = sqlite3.Row
         self._conn.executescript(SCHEMA)
+        self._migrate()
+
+    def _migrate(self):
+        """Bring pre-#76 databases up to the current schema."""
+        cols = [r[1] for r in self._conn.execute("PRAGMA table_info(places)")]
+        if "source" not in cols:
+            self._conn.execute("ALTER TABLE places ADD COLUMN source TEXT")
+            self._conn.commit()
 
     def close(self):
         self._conn.close()
@@ -142,6 +152,7 @@ class RunStore:
             p.get("lng"),
             p.get("why_loved"),
             json.dumps(p.get("source_urls") or [], ensure_ascii=False),
+            p.get("source"),
             p.get("price_hint"),
             p.get("mention_count"),
             p.get("sentiment"),
@@ -152,10 +163,10 @@ class RunStore:
         ) for p in places]
         self._conn.executemany(
             """INSERT INTO places (run_id, name, category, area, lat, lng,
-                                   why_loved, source_urls, price_hint,
+                                   why_loved, source_urls, source, price_hint,
                                    mention_count, sentiment, rating, map_link,
                                    geocode_confidence, tags)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""", rows)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""", rows)
         self._conn.commit()
         return len(rows)
 

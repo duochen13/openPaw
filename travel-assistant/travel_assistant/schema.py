@@ -17,3 +17,9 @@ REQUIRED_TOP_LEVEL = ("destination", "generated_at", "source_mode", "places")
 PLACE_KEYS = ("name", "type", "area", "why_loved", "source_urls",
               "mention_count", "sentiment", "tags",
               "map_link", "rating", "lat", "lng")
+
+# Optional per-place keys the pipeline itself may add (not required of the
+# analyzer). "source" is the collector label ("rednote" / "websearch"),
+# stamped by research() via travel_assistant.collectors.label_places and
+# persisted per place in the run store (issue #76).
+OPTIONAL_PLACE_KEYS = ("source",)

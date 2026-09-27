@@ -3,24 +3,25 @@
 Collector protocol: a callable
     collector(destination, queries, n_per_query=6) -> raw_path (str)
 
-`collect_rednote` below wraps scripts/collect_rednote.py (headless browser;
-needs a logged-in xiaohongshu.com session per SKILL.md, otherwise it yields
-0 posts and the workflow falls back to WebSearch). The import is lazy because
-collect_rednote scans the home directory for the browse binary at import time.
-
-Issue #76 (source-pluggable collectors) will add fallback collectors behind
-this same protocol; it is defined here so that work slots in without
-changing the orchestrator.
+See travel_assistant/collectors.py for the Collector interface (issue #76):
+RednoteCollector (xiaohongshu, headless browser) and WebSearchCollector
+(web-search fallback) both implement it. `collect_rednote` below is the
+historical plain-function wrapper and now delegates to RednoteCollector.
 """
 import json
 
+from ..collectors import RednoteCollector
+
 
 def collect_rednote(destination, queries, n_per_query=6):
-    """Run the rednote headless-browser collector. Returns the raw JSON path."""
-    from . import ensure_scripts_on_path
-    ensure_scripts_on_path()
-    import collect_rednote as cr  # lazy: module import probes for browse binary
-    return cr.collect(destination, list(queries), n_per_query)
+    """Run the rednote headless-browser collector. Returns the raw JSON path.
+
+    Needs a logged-in xiaohongshu.com session per SKILL.md, otherwise it
+    yields 0 posts. The scripts/collect_rednote import inside the class is
+    lazy because that module probes the home directory for the browse
+    binary at import time.
+    """
+    return RednoteCollector().collect(destination, queries, n_per_query)
 
 
 def load_raw(path):
