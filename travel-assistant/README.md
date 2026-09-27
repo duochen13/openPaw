@@ -10,8 +10,12 @@ as pins on a Google Map.
 cd travel-assistant
 pip install -r requirements.txt   # fastapi/uvicorn/httpx (API service) + mcp (MCP server)
 
-# 1. Research pipeline (CLI) — mines rednote for loved places in a destination
-python3 -m travel_assistant.research --destination "Kyoto" --vibe food --queries "京都美食,京都必去,Kyoto food"
+# 1. Research pipeline (CLI) — mines rednote for loved places in a destination.
+#    The analyze step is the LLM subagent pass (SKILL.md Step 3): the package
+#    ships no default analyzer, so collect from the CLI, analyze via the
+#    travel-research agent skill, then replay the saved analysis file:
+python3 -m travel_assistant.research --destination "Kyoto" --vibe food --queries "京都美食,京都必去,Kyoto food" --no-analyze
+python3 -m travel_assistant.research --from-analysis data/analysis/kyoto_places_<ts>.json
 python3 -m travel_assistant.runs list                 # past runs
 python3 -m travel_assistant.runs show 3 --places      # one run + its places
 
@@ -143,8 +147,10 @@ paths, timing, status).
 cd travel-assistant
 # replay a saved analysis (no browser / LLM / network with --skip-geocode)
 python3 -m travel_assistant.research --from-analysis data/analysis/vancouver_places_20260709_030913.json --skip-geocode
-# live collect (needs the browse browser + logged-in xiaohongshu session)
-python3 -m travel_assistant.research --destination "Kyoto" --vibe food --queries "京都美食,京都必去,Kyoto food"
+# live collect only (needs the browse browser + logged-in xiaohongshu session);
+# the analyze step is the LLM subagent pass (SKILL.md Step 3) — analyze via the
+# travel-research agent skill, then replay with --from-analysis as above
+python3 -m travel_assistant.research --destination "Kyoto" --vibe food --queries "京都美食,京都必去,Kyoto food" --no-analyze
 # query past runs
 python3 -m travel_assistant.runs list
 python3 -m travel_assistant.runs show 3 --places
