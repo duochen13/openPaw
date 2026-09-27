@@ -26,6 +26,20 @@ python3 -m travel_assistant.service --port 8000       # or: uvicorn travel_assis
 # 4. MCP server — one config line for Claude Code / Claude Desktop
 # {"mcpServers": {"travel-assistant": {"command": "python3", "args": ["-m", "travel_assistant.mcp_server"], "cwd": "<absolute path to travel-assistant>"}}}
 ```
+## API documentation
+
+Full HTTP API docs live in [`docs/`](docs/): authentication, 5-minute
+quickstart, the agent call pattern, idempotency/caching/metering, the error
+catalog, and versioning — plus a generated endpoint reference
+([`docs/api-reference.md`](docs/api-reference.md)) and the machine-readable
+contract ([`docs/openapi.json`](docs/openapi.json)).
+
+After changing any `/v1` route, re-run the generator so the reference can't
+drift from the code:
+
+```bash
+cd travel-assistant && python3 docs/generate_api_docs.py
+```
 ## Usage
 ```
 /travel-research <destination> [--vibe food|sights|cafes|nightlife|all] [--no-publish]
