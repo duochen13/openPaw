@@ -413,6 +413,39 @@ def test_event_context_is_structured_and_source_backed(dashboard_inputs):
 
 
 @pytest.mark.unit
+def test_event_context_short_label_issue_103(dashboard_inputs):
+    """Issue #103: picker-ready compact labels for each event kind."""
+    portfolio, store, calendar, _tmp = dashboard_inputs
+    data = ed.event_dashboard_data(portfolio, store, calendar)
+    by_key = {(e["type"], e["date"]): e for e in data["events"]}
+    assert by_key[("FOMC", "2024-01-31")]["context"]["short_label"] == "hold at 5.25%-5.50%"
+    assert by_key[("CPI", "2024-01-11")]["context"]["short_label"] == "CPI release"
+    assert by_key[("PCE", "2024-01-26")]["context"]["short_label"] == "PCE release"
+    # Long-form summary is preserved alongside the short label.
+    fomc = by_key[("FOMC", "2024-01-31")]["context"]
+    assert "held" in fomc["summary"] and "short_label" in fomc
+
+
+@pytest.mark.unit
+def test_fomc_short_label_variants():
+    label = ed._fomc_short_label
+    assert label("hold", 0, "5.25%-5.50%") == "hold at 5.25%-5.50%"
+    assert label("hike", 75, "1.50%-1.75%") == "hike 75bp \u2192 1.50%-1.75%"
+    assert label("cut", -50, "4.75%-5.00%") == "cut 50bp \u2192 4.75%-5.00%"
+
+
+@pytest.mark.unit
+def test_render_uses_short_label_in_picker_and_header(dashboard_inputs, tmp_path):
+    """Issue #103: picker options and the detail header show the short label."""
+    portfolio, store, calendar, _tmp = dashboard_inputs
+    data = ed.event_dashboard_data(portfolio, store, calendar)
+    target = ed.render_event_dashboard(data, tmp_path)
+    html = target.read_text()
+    assert "e.context.short_label" in html
+    assert "${e.date} — ${esc(e.context.short_label" in html
+
+
+@pytest.mark.unit
 def test_reddit_attach_enforces_cap_after_dedup_and_keeps_status(dashboard_inputs):
     portfolio, store, calendar, tmp_path = dashboard_inputs
     reddit_dir = tmp_path / "reddit"
