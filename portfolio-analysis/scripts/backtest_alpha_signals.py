@@ -38,12 +38,19 @@ over 20/60/120 trading days: excess > 0 counts as a hit, <= 0 as a false
 alarm. This sizes the false-positive rate before the trigger is wired to real
 notifications.
 
+Issue #49: the flip section runs twice per mode - ungated (issue #32 as
+shipped: R² gate only) and gated (adds the t-statistic credibility gate
+``t >= --min-t`` plus the optional ``--min-alpha`` economic-size guard) -
+so the backtest measures what the credibility gate costs in coverage and
+what it buys in hit rate.
+
 Forward returns start at t+1, strictly after the signal date: no look-ahead.
 Results are pooled across stocks. Caveats, printed with the table: signal
 occurrences on consecutive days have overlapping forward windows, so counts
 are occurrences, not independent bets; a small n means the mean is noise.
 
 Usage: python3 scripts/backtest_alpha_signals.py [--db data/prices.sqlite]
+       [--min-t 1.5] [--min-alpha 0.05]
 """
 
 from __future__ import annotations
@@ -235,26 +242,45 @@ def run_flip_mode(
     half_life: float | None,
     slope_method: str,
     slope_span: int,
+    min_t: float | None = None,
+    min_alpha: float | None = None,
 ) -> tuple[dict[int, list[float]], dict[str, int]]:
     """Score the issue-#32 flip trigger: pooled forward excess + flip counts.
 
     ``detect_alpha_flips`` needs the (alpha, slope, R²) triple aligned; the
     R² comes from the same regression windows as the alpha (see
-    ``rolling_r2``). Forward excess starts at t+1, strictly after the flip
-    date: no look-ahead.
+    ``rolling_r2``). Issue #49 adds the credibility gate: pass ``min_t`` to
+    require ``t >= min_t`` at flip time (the t series comes from the same
+    windows via ``rolling_alpha_daily(..., with_t=True)``), and ``min_alpha``
+    for the optional annualized-alpha economic-size guard. ``min_t=None``
+    reproduces the ungated issue-#32 trigger for the comparison. Forward
+    excess starts at t+1, strictly after the flip date: no look-ahead.
     """
     pooled: dict[int, list[float]] = {h: [] for h in HORIZONS}
     per_stock: dict[str, int] = {s: 0 for s in STOCKS}
     for stock in STOCKS:
         _dates, sret, bret = aligned_returns(prices[stock], prices[BENCHMARK])
-        alpha = rolling_alpha_daily(sret, bret, window, half_life=half_life)
+        if min_t is None:
+            alpha = rolling_alpha_daily(sret, bret, window, half_life=half_life)
+            t_stats: list[float | None] | None = None
+        else:
+            alpha, t_stats = rolling_alpha_daily(
+                sret, bret, window, half_life=half_life, with_t=True
+            )
         slope = (
             rolling_slope(alpha, slope_span, half_life=half_life)
             if slope_method == "wls"
             else rolling_slope(alpha, slope_span)
         )
         r2 = rolling_r2(sret, bret, window, half_life)
-        for flip in detect_alpha_flips(alpha, slope, r2):
+        if t_stats is None:
+            # Ungated issue-#32 trigger exactly as shipped (R² noise gate
+            # only) - the baseline for the comparison.
+            flips = detect_alpha_flips(alpha, slope, r2)
+        else:
+            assert min_t is not None
+            flips = detect_alpha_flips(alpha, slope, r2, t_stats, min_t=min_t, min_alpha=min_alpha)
+        for flip in flips:
             per_stock[stock] += 1
             for h in HORIZONS:
                 excess = forward_excess(sret, bret, flip.index, h)
@@ -275,6 +301,18 @@ def summarize(xs: list[float]) -> tuple[str, str, str]:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--db", default="data/prices.sqlite")
+    ap.add_argument(
+        "--min-t",
+        type=float,
+        default=1.5,
+        help="t-statistic credibility gate for the gated flip run (issue #49)",
+    )
+    ap.add_argument(
+        "--min-alpha",
+        type=float,
+        default=None,
+        help="optional annualized-alpha floor for the gated flip run (issue #49)",
+    )
     args = ap.parse_args()
     prices = load_prices(Path(args.db))
     missing = [s for s in (*STOCKS, BENCHMARK) if s not in prices]
@@ -345,13 +383,16 @@ def main() -> int:
                 ) / len(xs_b)
                 print(f"{pair_label:<32}{name:<12}{h:>8}{d_n:>+7}{d_mean:>+9.2%}{d_hit:>+9.1%}")
     print(
-        "\n## alpha flip trigger (issue #32): hit / false-alarm summary\n"
+        "\n## alpha flip trigger (issue #32) vs t-gated flips (issue #49): "
+        "hit / false-alarm summary\n"
         "Trigger = slope neg->pos crossing, acceleration > 0, 3-session "
-        "persistence, rolling-R² >= 0.5 gate. Hit = forward excess > 0; "
-        "false alarm = forward excess <= 0."
+        "persistence, rolling-R² >= 0.5 gate. 'gated' additionally requires "
+        f"t >= {args.min_t}"
+        + (f" and alpha >= {args.min_alpha:.0%}/yr" if args.min_alpha else "")
+        + ". Hit = forward excess > 0; false alarm = forward excess <= 0."
     )
     print(
-        f"{'mode':<14}{'horizon':>8}{'n':>7}{'hits':>7}{'false':>7}"
+        f"{'mode':<14}{'gate':<8}{'horizon':>8}{'n':>7}{'hits':>7}{'false':>7}"
         f"{'hit_rate':>10}{'mean':>10}{'median':>10}"
     )
     flip_modes = (
@@ -366,20 +407,29 @@ def main() -> int:
         ),
     )
     for _key, label, window, half_life, slope_method, slope_span in flip_modes:
-        pooled, ps = run_flip_mode(prices, window, half_life, slope_method, slope_span)
-        total_flips = sum(ps.values())
-        for h in HORIZONS:
-            xs = pooled[h]
-            hits = sum(1 for x in xs if x > 0)
-            false = len(xs) - hits
-            hit_rate = f"{hits / len(xs):>9.1%}" if xs else f"{'n/a':>10}"
-            mean, median, _ = summarize(xs)
-            print(
-                f"{label:<14}{h:>8}{len(xs):>7}{hits:>7}{false:>7}{hit_rate}{mean:>10}{median:>10}"
-            )
-        print(
-            f"  flips per stock (total {total_flips}): " + ", ".join(f"{s}={ps[s]}" for s in STOCKS)
+        gate_runs = (
+            ("ungated", None, None),
+            ("gated", args.min_t, args.min_alpha),
         )
+        for gate_label, min_t, min_alpha in gate_runs:
+            pooled, ps = run_flip_mode(
+                prices, window, half_life, slope_method, slope_span, min_t, min_alpha
+            )
+            total_flips = sum(ps.values())
+            for h in HORIZONS:
+                xs = pooled[h]
+                hits = sum(1 for x in xs if x > 0)
+                false = len(xs) - hits
+                hit_rate = f"{hits / len(xs):>9.1%}" if xs else f"{'n/a':>10}"
+                mean, median, _ = summarize(xs)
+                print(
+                    f"{label:<14}{gate_label:<8}{h:>8}{len(xs):>7}{hits:>7}{false:>7}"
+                    f"{hit_rate}{mean:>10}{median:>10}"
+                )
+            print(
+                f"  {gate_label} flips per stock (total {total_flips}): "
+                + ", ".join(f"{s}={ps[s]}" for s in STOCKS)
+            )
     print(
         "\nCaveats: trailing-only, no look-ahead; occurrences on consecutive days "
         "have overlapping forward windows (counts are occurrences, not independent "
