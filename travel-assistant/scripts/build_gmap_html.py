@@ -14,11 +14,17 @@ visible in client-side HTML -- protect it with an HTTP-referrer restriction in t
 Google Cloud console rather than relying on secrecy.
 """
 import json, os, sys, glob, re
+from html import escape as html_escape
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 BASE = os.path.dirname(HERE)
 ANALYSIS_DIR = os.path.join(BASE, "data", "analysis")
 MAPS_DIR = os.path.join(BASE, "data", "maps")
+
+# Reuse the package's URL allowlist so standalone script runs filter exactly
+# like the dashboard does (issue #138).
+sys.path.insert(0, BASE)
+from travel_assistant.schema import sanitize_place_urls
 
 
 def slugify(text):
@@ -455,6 +461,10 @@ function removePlace(id) {
 def build_html(data, api_key):
     places = data.get("places", [])
     kept, skipped = filter_places(places)
+    # Defense in depth (issue #138): never embed a non-http(s) URL in the
+    # bundle, even if this JSON skipped validation — the popup JS builds
+    # hrefs with encodeURI(), which preserves a `javascript:` scheme.
+    kept = [sanitize_place_urls(p) for p in kept]
     dest = data.get("destination", "Trip")
     footer = "{} places shown".format(len(kept))
     if skipped:
@@ -462,7 +472,7 @@ def build_html(data, api_key):
     if api_key == "YOUR_API_KEY":
         footer += "  ·  ⚠️ add your Google Maps API key to render the map"
     html = HTML_TEMPLATE.format(
-        title="Map — " + dest,
+        title="Map — " + html_escape(dest),
         footer=footer,
         places_json=safe_json(kept),
         api_key=api_key,

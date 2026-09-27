@@ -169,6 +169,21 @@ python3 -c "import xmlrpc.client"
 Only after that import succeeds, create the venv (`make setup`). And keep
 using `python -m pip` inside the venv — never bare `pip`/`pip3`.
 
+## Security notes
+
+Analyzer output is untrusted input, and several outputs land in HTML/CSV a
+browser or spreadsheet will act on:
+
+- `scripts/validate_places.py` rejects place `source_urls` / `map_link`
+  values that are not `http(s)` URLs — a `javascript:` URL fails validation.
+- `scripts/build_gmap_html.py` and the `travel-assistant ui` dashboard
+  additionally drop non-`http(s)` URLs before rendering, so one never reaches
+  an `href` even from unvalidated input.
+- `scripts/build_mymaps_csv.py` prefixes cells starting with `= + - @`
+  (or tab/CR) with a single quote per OWASP, so spreadsheet imports can't
+  execute place names as formulas.
+- The map bundle's `<title>` HTML-escapes the destination name.
+
 ## Driving Google Maps signed in
 
 `browse cookie-import-browser chrome --domain google.com` has two failure modes

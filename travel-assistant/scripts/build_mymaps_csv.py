@@ -24,6 +24,18 @@ def address_for(place, destination):
     return ", ".join(x for x in [name, area, destination] if x)
 
 
+# OWASP CSV formula injection: spreadsheet apps execute cells starting with
+# =, +, -, @ (or tab/CR) as formulas on import. Prefix such cells with a
+# single quote so the value renders as inert text instead (issue #136).
+_FORMULA_LEADERS = ("=", "+", "-", "@", "\t", "\r")
+
+
+def _csv_cell(value):
+    """Stringify `value`, neutralizing spreadsheet-formula injection."""
+    s = "" if value is None else str(value)
+    return "'" + s if s[:1] in _FORMULA_LEADERS else s
+
+
 def write_csv(obj, out_path, region="NT, Canada"):
     dest = obj.get("destination", "")
     suffix = f"{dest}, {region}" if region else dest
@@ -32,11 +44,12 @@ def write_csv(obj, out_path, region="NT, Canada"):
         w.writerow(["Name", "Address", "Latitude", "Longitude", "Type",
                     "Why people love it", "Source", "Google Maps link"])
         for p in obj.get("places", []):
-            w.writerow([p["name"], address_for(p, suffix),
-                        p.get("lat") or "", p.get("lng") or "", p.get("type", ""),
-                        p.get("why_loved", ""),
-                        (p.get("source_urls") or [""])[0],
-                        p.get("map_link") or ""])
+            w.writerow([_csv_cell(p["name"]), _csv_cell(address_for(p, suffix)),
+                        p.get("lat") or "", p.get("lng") or "",
+                        _csv_cell(p.get("type", "")),
+                        _csv_cell(p.get("why_loved", "")),
+                        _csv_cell((p.get("source_urls") or [""])[0]),
+                        _csv_cell(p.get("map_link") or "")])
     return len(obj.get("places", []))
 
 
