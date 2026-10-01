@@ -2,8 +2,8 @@
 
 ## Current Status
 - **Environment**: Sandbox
-- **Client ID**: 6a1e7548b033d9000d7b75fd
-- **Secret**: c6a87f97d2e2c9042eaafe0cef76a7 (sandbox)
+- **Client ID**: _(your sandbox client ID — see the Plaid dashboard)_
+- **Secret**: _(your sandbox secret — never commit it to this repo)_
 
 ## Steps to Enable Production
 
