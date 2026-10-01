@@ -3,9 +3,9 @@
 ## Task 14: Create AWS Secrets ✅ (Script Ready)
 
 ### Your Plaid Credentials (Sandbox)
-- **Client ID**: `6a1e7548b033d9000d7b75fd`
-- **Secret**: `c6a87f97d2e2c9042eaafe0cef76a7`
-- **Access Token**: `access-sandbox-2ae98c21-ddc5-4d8c-9518-89dea04590b5`
+Use your own sandbox credentials from the [Plaid dashboard](https://dashboard.plaid.com/team/keys).
+Never commit real credentials to this repo (it is public) — pass them via environment
+variables (`PLAID_CLIENT_ID`, `PLAID_SECRET`, `PLAID_ACCESS_TOKEN`; see `.env.example`).
 
 ### Option 1: Run the Script (Recommended)
 ```bash
@@ -22,21 +22,21 @@ If the script doesn't work, run these commands individually:
 aws secretsmanager create-secret \
   --name /openpaw/plaid/client-id \
   --description "Plaid Client ID for daily digest" \
-  --secret-string "6a1e7548b033d9000d7b75fd" \
+  --secret-string "$PLAID_CLIENT_ID" \
   --region us-east-1
 
 # Create Secret
 aws secretsmanager create-secret \
   --name /openpaw/plaid/secret \
   --description "Plaid Secret for daily digest" \
-  --secret-string "c6a87f97d2e2c9042eaafe0cef76a7" \
+  --secret-string "$PLAID_SECRET" \
   --region us-east-1
 
 # Create Access Token secret
 aws secretsmanager create-secret \
   --name /openpaw/plaid/access-token \
   --description "Plaid Access Token for daily digest" \
-  --secret-string "access-sandbox-2ae98c21-ddc5-4d8c-9518-89dea04590b5" \
+  --secret-string "$PLAID_ACCESS_TOKEN" \
   --region us-east-1
 ```
 
