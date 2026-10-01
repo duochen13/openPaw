@@ -8,9 +8,16 @@
 const { Configuration, PlaidApi, PlaidEnvironments } = require('plaid');
 const { DateTime } = require('luxon');
 
-const CLIENT_ID = '6a1e7548b033d9000d7b75fd';
-const SECRET = 'c6a87f97d2e2c9042eaafe0cef76a7';
-const ACCESS_TOKEN = 'access-sandbox-ff2be822-81eb-4621-b5f0-d09f915dffd1';
+// Sandbox credentials come from the environment — never hardcode secrets here (this repo is public).
+// See daily-report/.env.example for the variable names.
+const CLIENT_ID = process.env.PLAID_CLIENT_ID;
+const SECRET = process.env.PLAID_SECRET;
+const ACCESS_TOKEN = process.env.PLAID_ACCESS_TOKEN;
+
+if (!CLIENT_ID || !SECRET || !ACCESS_TOKEN) {
+  console.error('Missing Plaid sandbox credentials. Set PLAID_CLIENT_ID, PLAID_SECRET and PLAID_ACCESS_TOKEN env vars (see daily-report/.env.example).');
+  process.exit(1);
+}
 
 async function testMostRecent() {
   try {

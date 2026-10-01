@@ -9,7 +9,7 @@ const { Configuration, PlaidApi, PlaidEnvironments, Products, CountryCode } = re
 const readline = require('readline');
 const fs = require('fs');
 
-const CLIENT_ID = '6a1e7548b033d9000d7b75fd';
+const CLIENT_ID = process.env.PLAID_CLIENT_ID || null; // never hardcode — this repo is public
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -36,8 +36,13 @@ async function setup() {
   console.log(`\n✓ Selected: ${environment}\n`);
 
   // Step 2: Get secret
-  console.log('🔑 Get your secret from Plaid Dashboard:\n');
+  console.log('🔑 Get your credentials from Plaid Dashboard:\n');
   console.log('   1. Go to: https://dashboard.plaid.com/team/keys');
+
+  let clientId = CLIENT_ID;
+  if (!clientId) {
+    clientId = await question('Enter your Plaid client ID: ');
+  }
   console.log(`   2. Copy your ${environment.toUpperCase()} secret`);
   console.log(`   3. It should start with "${environment}-"\n`);
 
@@ -58,7 +63,7 @@ async function setup() {
       basePath: PlaidEnvironments[environment],
       baseOptions: {
         headers: {
-          'PLAID-CLIENT-ID': CLIENT_ID,
+          'PLAID-CLIENT-ID': clientId,
           'PLAID-SECRET': secret,
         },
       },

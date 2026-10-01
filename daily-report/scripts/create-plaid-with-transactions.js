@@ -8,8 +8,15 @@
 const { Configuration, PlaidApi, PlaidEnvironments, Products, CountryCode } = require('plaid');
 const { DateTime } = require('luxon');
 
-const CLIENT_ID = '6a1e7548b033d9000d7b75fd';
-const SECRET = 'c6a87f97d2e2c9042eaafe0cef76a7';
+// Sandbox credentials come from the environment — never hardcode secrets here (this repo is public).
+// See daily-report/.env.example for the variable names.
+const CLIENT_ID = process.env.PLAID_CLIENT_ID;
+const SECRET = process.env.PLAID_SECRET;
+
+if (!CLIENT_ID || !SECRET) {
+  console.error('Missing PLAID_CLIENT_ID / PLAID_SECRET env vars. Copy daily-report/.env.example to .env and fill in your sandbox credentials.');
+  process.exit(1);
+}
 
 async function createWithTransactions() {
   try {
