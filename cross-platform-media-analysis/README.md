@@ -25,3 +25,5 @@ Reports use simple tables and diagrams with source-linked examples. The sailing 
 The current entry point shows the sailing case (YouTube `zxhsbfEgRiU`, Bilibili `BV1zYSvBHE3U`). Its raw normalized data, explicit manual coding, and generated HTML are isolated in `cases/sailing/`. The original Grantham data remain in `data/`.
 
 Run `python3 cross-platform-media-analysis/build_html.py` to rebuild the current sailing report; use `--case grantham` to restore the Grantham report at the workspace entry point. For sailing topic-code edits, first run `python3 cross-platform-media-analysis/cases/sailing/code_sample.py`. The code assignments are case-specific, not an automatic sentiment classifier.
+
+Downloadable CSVs carrying scraped comment text are sanitized at generation time: `csv_sanitize.py` prefixes a single quote on any cell starting with `=`, `+`, `-`, `@`, tab or CR, so spreadsheet apps treat it as text rather than evaluating a formula (see issue #147). Apply `sanitize_csv_row` to any new CSV writer that carries untrusted scraped text.

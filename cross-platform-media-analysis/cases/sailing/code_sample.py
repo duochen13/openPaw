@@ -5,9 +5,12 @@ Top and Newest overlap; the nine newest-only comments are assigned separately.
 """
 import csv
 import json
+import sys
 from collections import Counter
 from pathlib import Path
 ROOT=Path(__file__).resolve().parent
+sys.path.insert(0, str(ROOT.parent.parent))
+from csv_sanitize import sanitize_csv_row
 rows=json.loads((ROOT/'data/youtube-comments.json').read_text())
 TOPICS={
 'appreciation':'Appreciation of filming, people or experience',
@@ -47,7 +50,7 @@ for cid,r in {**newest,**top}.items():
  coded.append({**r,'primary_topic':category,'primary_topic_label':TOPICS[category],'language':language,'in_top':cid in top,'in_newest':cid in newest})
 (ROOT/'data/youtube-coded.json').write_text(json.dumps(coded,ensure_ascii=False,indent=2))
 with (ROOT/'data/youtube-coded.csv').open('w',newline='') as f:
- w=csv.DictWriter(f,fieldnames=list(coded[0]));w.writeheader();w.writerows(coded)
+ w=csv.DictWriter(f,fieldnames=list(coded[0]));w.writeheader();w.writerows(sanitize_csv_row(r) for r in coded)
 counts=Counter(r['primary_topic'] for r in coded)
 stats={'unique_youtube_comments':len(coded),'languages':dict(Counter(r['language'] for r in coded)),'primary_topics':[{'key':k,'label':TOPICS[k],'count':counts[k],'percent':round(counts[k]/len(coded)*100,1)} for k in TOPICS],'top_unique':len(top),'newest_unique':len(newest),'overlap':len(set(top)&set(newest)),'newest_only':len(set(newest)-set(top)),'method':'Single analyst manual primary-topic classification; one category per comment; no independent second coder. Language labels describe text, not nationality. Counts are comment frequencies in the retrieved sample, not population estimates.'}
 (ROOT/'data/sample-statistics.json').write_text(json.dumps(stats,ensure_ascii=False,indent=2))
