@@ -1,0 +1,57 @@
+{
+  "method": "Single analyst manual primary-topic classification; one category per comment; no independent second coder. Counts are comment frequencies in the retrieved sample, not population estimates.",
+  "denominator": 100,
+  "primary_topics": [
+    {
+      "key": "humility",
+      "label": "Gordon’s humility: being a student, taking criticism, lifelong learning",
+      "count": 36,
+      "percent": 36.0
+    },
+    {
+      "key": "chef_persona",
+      "label": "Head chef demeanor, calm authority, appearance",
+      "count": 22,
+      "percent": 22.0
+    },
+    {
+      "key": "score",
+      "label": "The 45/100 vs 5/10 translation discrepancy",
+      "count": 11,
+      "percent": 11.0
+    },
+    {
+      "key": "chef_standards",
+      "label": "Head chef not lowering standards / not intimidated by celebrity",
+      "count": 9,
+      "percent": 9.0
+    },
+    {
+      "key": "professional",
+      "label": "Culinary technique: dim sum craft, balance, training years",
+      "count": 7,
+      "percent": 7.0
+    },
+    {
+      "key": "mutual_respect",
+      "label": "Respect on both sides explicitly",
+      "count": 6,
+      "percent": 6.0
+    },
+    {
+      "key": "language",
+      "label": "Cantonese / translators / language observations and jokes",
+      "count": 5,
+      "percent": 5.0
+    },
+    {
+      "key": "other",
+      "label": "Meta, jokes, or references not fitting above",
+      "count": 4,
+      "percent": 4.0
+    }
+  ],
+  "language": {
+    "English": 100
+  }
+}

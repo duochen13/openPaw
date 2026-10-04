@@ -1,0 +1,28 @@
+{
+  "collected_utc": "2026-10-04T06:56:21+00:00",
+  "youtube": {
+    "video_id": "e2xNUZAjQr4",
+    "records": 100,
+    "unique_comments": 100,
+    "sort": "top",
+    "reply_threads_collected": false,
+    "displayed_comments": "5,867",
+    "complete_corpus_claim": false,
+    "sample_limit": "Top sort only, ~100 top-level comments via browser transcription."
+  },
+  "bilibili": {
+    "bvid": "BV1g6f1BfESd",
+    "records": 409,
+    "top_level": 3,
+    "replies": 406,
+    "uploader_comments": 0,
+    "unique_author_keys": 341,
+    "displayed_comments": 5709,
+    "complete_corpus_claim": false,
+    "access_limit": "Hot endpoint exposed 3 roots. Retrieved all 406 replies reported across those roots.",
+    "danmaku_collected": false
+  },
+  "classification": "Single analyst manual primary-topic classification; one category per comment; no independent second coder. Counts are comment frequencies in the retrieved sample, not population estimates.",
+  "selected_examples": 17,
+  "pair_verification": "Same program (The F Word) and premise: Gordon cooks Chinese food, judged by Chinese chefs; 45/100 score and Henry Chow appear in both discussions. YouTube clip is 4:12, Bilibili re-upload is 10:38; exact edit equivalence unverified."
+}
