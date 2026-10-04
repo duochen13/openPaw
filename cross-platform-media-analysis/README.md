@@ -2,7 +2,8 @@
 
 Compare how public comment communities interpret the same media, starting with Jeremy Grantham's interview on The Diary Of A CEO.
 
-- [Latest visual report: sailing](index.html) — open directly in a browser; works offline
+- [Latest visual report: Gordon dumplings](cases/gordon-dumplings/index.html) — Gordon Ramsay's dumplings refused by Chinese head chefs, Bilibili vs YouTube
+- [Sailing case](cases/sailing/) (previous latest) — open directly in a browser; works offline
 - [Sailing case: report, data and coding](cases/sailing/)
 - [Previous visual report: Grantham](reports/grantham-comparison.html)
 - [First comparison](reports/grantham-comparison.md)
