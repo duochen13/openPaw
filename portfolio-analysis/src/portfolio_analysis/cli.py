@@ -7,9 +7,14 @@ no orders, and produces no forward-looking signal (spec §2).
 from __future__ import annotations
 
 import argparse
+import json
+import shutil
+import subprocess
 import sys
+from collections import Counter
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
+from typing import Any
 
 from portfolio_analysis import freshness, fundamentals, prices
 from portfolio_analysis import kpis as kpis_module
@@ -22,15 +27,15 @@ from portfolio_analysis.dashboard import render_dashboard
 from portfolio_analysis.event_dashboard import event_dashboard_data, render_event_dashboard
 from portfolio_analysis.events.macro import MacroSource
 from portfolio_analysis.events.reddit import collect_reddit_for_events
-from portfolio_analysis.factor_dashboard import (
-    factor_dashboard_data,
-    render_factor_dashboard,
-)
 from portfolio_analysis.http import (
     CachedHttp,
     ProviderError,
     QuotaExhausted,
     RateLimitLedger,
+)
+from portfolio_analysis.insight_dashboard import (
+    insight_dashboard_data,
+    render_insight_dashboard,
 )
 from portfolio_analysis.render import render_chart
 from portfolio_analysis.store import Store
@@ -563,6 +568,118 @@ def _import_robinhood_orders(args: argparse.Namespace, src: Path) -> int:
     return 0
 
 
+def _plaid_pull_investment_transactions(days: int) -> dict[str, Any]:
+    """Pull investment transactions via the ``plaid`` CLI, paginating."""
+    exe = shutil.which("plaid")
+    if exe is None:
+        raise RuntimeError("`plaid` CLI not found; use --plaid-json instead")
+    end = date.today()
+    start = end - timedelta(days=days)
+    txs: list[dict[str, Any]] = []
+    securities: dict[Any, dict[str, Any]] = {}
+    total: int | None = None
+    offset = 0
+    while True:
+        proc = subprocess.run(
+            [
+                exe,
+                "investments-transactions",
+                "--start-date",
+                start.isoformat(),
+                "--end-date",
+                end.isoformat(),
+                "--count",
+                "500",
+                "--offset",
+                str(offset),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        if proc.returncode != 0:
+            raise RuntimeError(f"`plaid` CLI failed: {proc.stderr.strip()[:300]}")
+        try:
+            payload = json.loads(proc.stdout)
+        except json.JSONDecodeError as exc:
+            raise RuntimeError(f"`plaid` CLI returned invalid JSON: {exc}") from exc
+        body = payload.get("body", payload)
+        if not isinstance(body, dict):
+            raise RuntimeError("`plaid` CLI returned an unexpected shape")
+        page = body.get("investment_transactions", []) or []
+        txs.extend(page)
+        for sec in body.get("securities", []) or []:
+            if isinstance(sec, dict) and sec.get("security_id") is not None:
+                securities.setdefault(sec["security_id"], sec)
+        total = body.get("total_investment_transactions")
+        if total is None or len(txs) >= total or not page:
+            break
+        offset += len(page)
+    return {
+        "body": {
+            "investment_transactions": txs,
+            "securities": list(securities.values()),
+            "total_investment_transactions": total if total is not None else len(txs),
+        }
+    }
+
+
+def _refresh_trades(args: argparse.Namespace) -> int:
+    """Refresh config/trades.yaml from Plaid investment transactions.
+
+    Merge-safe: the fresh Plaid pull replaces only trades tagged
+    ``source: plaid``; trades from a CSV import or manual entries are kept.
+    Re-running is idempotent.
+    """
+    if args.plaid_json:
+        src = Path(args.plaid_json)
+        if not src.is_file():
+            print(f"refresh-trades: no such file: {src}", file=sys.stderr)
+            return 2
+        try:
+            payload = json.loads(src.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, ValueError) as exc:
+            print(f"refresh-trades: invalid JSON in {src}: {exc}", file=sys.stderr)
+            return 1
+        origin = f"file {src}"
+    elif args.from_plaid:
+        try:
+            payload = _plaid_pull_investment_transactions(args.days)
+        except RuntimeError as exc:
+            print(f"refresh-trades: {exc}", file=sys.stderr)
+            return 1
+        origin = f"`plaid` CLI (last {args.days} days)"
+    else:
+        print("refresh-trades: need --from-plaid or --plaid-json", file=sys.stderr)
+        return 2
+
+    fresh = positions_module.plaid_transactions_to_trades(payload)
+    target = Path(args.out) if args.out else positions_module.default_trades_path()
+    existing = positions_module.load_trades(target)
+    legacy_source = positions_module.read_trades_meta(target).get("source")
+    merged = positions_module.merge_trades(existing, fresh, legacy_source=legacy_source)
+    before = Counter(positions_module.trade_key(t) for t in (existing or []))
+    new = []
+    for t in merged:
+        key = positions_module.trade_key(t)
+        if before[key] > 0:
+            before[key] -= 1
+        else:
+            new.append(t)
+    print(f"trades from {origin}: {len(fresh)} buy/sell in pull")
+    for trade in new:
+        print(
+            f"  new: {trade.date} {trade.side:4s} {trade.symbol:6s} "
+            f"{trade.qty:>10g} @ ${trade.price:,.2f}"
+        )
+    if args.dry_run:
+        print(f"dry run: {len(merged)} trades not written")
+        return 0
+    positions_module.write_trades(merged, target, source=None)
+    print(f"wrote {len(merged)} trades ({len(new)} new) -> {target}")
+    return 0
+
+
 def _import_robinhood_positions(args: argparse.Namespace, src: Path) -> int:
     """Import a Robinhood positions CSV export into the holdings snapshot (#55).
 
@@ -599,31 +716,23 @@ def _import_robinhood_positions(args: argparse.Namespace, src: Path) -> int:
     return 0
 
 
-def _factor_dashboard(args: argparse.Namespace) -> int:
+def _insight_dashboard(args: argparse.Namespace) -> int:
+    try:
+        data = insight_dashboard_data(
+            Path(args.data_dir) if args.data_dir else None
+        )
+    except ValueError as exc:
+        print(f"insight-dashboard: {exc}", file=sys.stderr)
+        return 1
     portfolio = load_portfolio()
-    store = Store.open(args.db or portfolio.path("db"))
-    # Holdings are optional: a missing snapshot renders the page exactly as
-    # before; a corrupt one fails loud instead of silently hiding positions.
     try:
-        snapshot = positions_module.load_snapshot()
-    except ValueError as exc:
-        print(f"factor-dashboard: {exc}", file=sys.stderr)
-        return 1
-    try:
-        data = factor_dashboard_data(portfolio, store, snapshot=snapshot)
-    except ValueError as exc:
-        print(f"factor-dashboard: {exc}", file=sys.stderr)
-        return 1
-    finally:
-        store.close()
-    try:
-        target = render_factor_dashboard(
+        target = render_insight_dashboard(
             data, Path(args.out_dir) if args.out_dir else portfolio.path("out")
         )
     except OSError as exc:
-        print(f"factor-dashboard: {exc}", file=sys.stderr)
+        print(f"insight-dashboard: {exc}", file=sys.stderr)
         return 1
-    print(f"factor dashboard written -> {target}")
+    print(f"insight dashboard written -> {target}")
     return 0
 
 
@@ -783,6 +892,36 @@ def main(argv: list[str] | None = None) -> int:
     )
     import_csv.set_defaults(func=_import_robinhood_csv)
 
+    refresh_trades = sub.add_parser(
+        "refresh-trades",
+        help="refresh config/trades.yaml from Plaid investment transactions",
+    )
+    refresh_trades.add_argument(
+        "--from-plaid",
+        action="store_true",
+        help="pull via the `plaid` CLI (needs Plaid connected in this environment)",
+    )
+    refresh_trades.add_argument(
+        "--plaid-json",
+        default=None,
+        help="parse a saved `plaid investments-transactions` JSON file instead",
+    )
+    refresh_trades.add_argument(
+        "--days",
+        type=int,
+        default=730,
+        help="lookback window in days for --from-plaid (default 730, the Plaid max)",
+    )
+    refresh_trades.add_argument(
+        "--out",
+        default=None,
+        help="output path (default config/trades.yaml)",
+    )
+    refresh_trades.add_argument(
+        "--dry-run", action="store_true", help="parse and print, write nothing"
+    )
+    refresh_trades.set_defaults(func=_refresh_trades)
+
     detect = sub.add_parser("detect-moves", help="flag days whose abnormal return is large")
     detect.add_argument(
         "ticker",
@@ -827,13 +966,13 @@ def main(argv: list[str] | None = None) -> int:
         "--offline", action="store_true", help="fetch nothing; build from stored data"
     )
     dashboard.set_defaults(func=_dashboard)
-    factor_dashboard = sub.add_parser(
-        "factor-dashboard",
-        help="build a cross-stock beta/alpha comparison dashboard",
+    insight_dashboard = sub.add_parser(
+        "insight-dashboard",
+        help="build the Insight dashboard: reported vs true AI capex + credit stress",
     )
-    factor_dashboard.add_argument("--db", default=None)
-    factor_dashboard.add_argument("--out-dir", default=None)
-    factor_dashboard.set_defaults(func=_factor_dashboard)
+    insight_dashboard.add_argument("--data-dir", default=None)
+    insight_dashboard.add_argument("--out-dir", default=None)
+    insight_dashboard.set_defaults(func=_insight_dashboard)
     event_dashboard = sub.add_parser(
         "event-dashboard", help="compare returns around macro release dates"
     )
