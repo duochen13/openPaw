@@ -50,7 +50,7 @@ One fixed threshold would be wrong. A 3% day is noise for NVDA and a five-alarm 
 On META over the five years ending 2026-09-11 this flags 30 of 1255 days, or 2.39%.
 
 Tickers without an operating-company EDGAR identity — e.g. leveraged
-single-stock ETFs such as METU (2x META) and GOU (2x GOOGL) — are first-class
+single-stock ETFs such as METU (2x META) and GGLL (2x GOOGL) — are first-class
 universe members with `cik` omitted. They get prices, beta/alpha, move flags
 and charts like any stock, but the EDGAR fundamentals fetch and the SEC
 filing event source are skipped for them (their charts render those sections
