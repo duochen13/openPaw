@@ -66,7 +66,7 @@ def test_the_shipped_config_loads_and_is_valid():
         "CRM",
         "ORCL",
         "METU",
-        "GOU",
+        "GGLL",
     )
     assert portfolio.benchmark == "QQQ"
     assert portfolio.price_years == 6
@@ -210,6 +210,6 @@ def test_shipped_metu_entry_has_no_cik():
 
 
 @pytest.mark.unit
-def test_shipped_gou_entry_has_no_cik():
+def test_shipped_ggll_entry_has_no_cik():
     portfolio = load_portfolio()
-    assert portfolio.entry("GOU").cik is None
+    assert portfolio.entry("GGLL").cik is None
