@@ -45,15 +45,19 @@ def event_sources(
     macro: MacroSource,
     api_key: str,
 ) -> list[EventSource]:
-    sources: list[EventSource] = [
-        EdgarSource(http.get_json, cik=entry.cik),
-        macro,
-        HackerNewsSource(
-            http.get_json,
-            query=entry.aliases[0] if entry.aliases else entry.symbol,
-            aliases=entry.aliases[1:],
-        ),
-    ]
+    sources: list[EventSource] = []
+    if entry.cik is not None:
+        sources.append(EdgarSource(http.get_json, cik=entry.cik))
+    sources.extend(
+        [
+            macro,
+            HackerNewsSource(
+                http.get_json,
+                query=entry.aliases[0] if entry.aliases else entry.symbol,
+                aliases=entry.aliases[1:],
+            ),
+        ]
+    )
     if api_key:
         sources.extend(
             [
@@ -109,10 +113,11 @@ def write_event_catalog(
         # Only verified dated-fact sources. Forum/news sources are
         # deliberately not constructed here: their documents are chatter,
         # not dated evidence, and must never seed chart annotations.
-        catalog_sources: list[EventSource] = [
-            EdgarSource(http.get_json, cik=entry.cik),
-            macro,
-        ]
+        # CIK-less tickers (e.g. ETFs) have no EDGAR identity, so the
+        # filing source is omitted for them.
+        catalog_sources: list[EventSource] = [macro]
+        if entry.cik is not None:
+            catalog_sources.insert(0, EdgarSource(http.get_json, cik=entry.cik))
         if api_key:
             catalog_sources.append(EarningsSource(http.get_json, api_key=api_key))
         for source in catalog_sources:

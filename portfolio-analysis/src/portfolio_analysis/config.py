@@ -72,7 +72,9 @@ class MoveParams:
 @dataclass(frozen=True)
 class PortfolioEntry:
     symbol: str
-    cik: int
+    # None for tickers with no operating-company EDGAR identity (e.g. ETFs):
+    # no CIK means no EDGAR fundamentals, same as IndexEntry.
+    cik: int | None
     name: str
     aliases: tuple[str, ...]
 
@@ -206,7 +208,10 @@ def load_portfolio(path: Path | None = None) -> Portfolio:
             # construction rather than by convention. entry() compares against
             # symbol.upper() and silently depends on it.
             symbol=safe_ticker_component(t["symbol"]),
-            cik=int(t["cik"]),
+            # Absent or null cik: ETFs and other non-operating-company
+            # tickers carry no EDGAR identity; downstream stages treat
+            # them like indices (no fundamentals, no EDGAR event source).
+            cik=int(t["cik"]) if t.get("cik") is not None else None,
             name=t["name"],
             aliases=tuple(t.get("aliases", ())),
         )

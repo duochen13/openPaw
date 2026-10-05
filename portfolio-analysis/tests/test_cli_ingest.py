@@ -33,13 +33,16 @@ def test_ingest_fetches_the_universe_and_the_benchmark(tmp_path):
         ("NVDA", 6),
         ("CRM", 6),
         ("ORCL", 6),
+        ("METU", 6),
+        ("GGLL", 6),
         # Index charts (#57) are part of the ingest universe now, and QQQ's
         # dual role (stock benchmark + index) dedupes naturally.
         ("QQQ", 6),
         ("NDX", 6),
         ("SPY", 6),
         # Industry benchmarks ride along after the universe, in
-        # symbol order, deduplicated: META->MAGS, NOW->CLOU, NVDA->SOXX.
+        # symbol order, deduplicated: META->MAGS, NOW->CLOU, NVDA->SOXX,
+        # METU->MAGS (already fetched).
         ("MAGS", 6),
         ("CLOU", 6),
         ("SOXX", 6),
