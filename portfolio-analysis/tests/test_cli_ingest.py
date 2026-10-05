@@ -34,7 +34,7 @@ def test_ingest_fetches_the_universe_and_the_benchmark(tmp_path):
         ("CRM", 6),
         ("ORCL", 6),
         ("METU", 6),
-        ("GOU", 6),
+        ("GGLL", 6),
         # Index charts (#57) are part of the ingest universe now, and QQQ's
         # dual role (stock benchmark + index) dedupes naturally.
         ("QQQ", 6),
