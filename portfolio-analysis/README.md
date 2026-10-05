@@ -49,6 +49,13 @@ One fixed threshold would be wrong. A 3% day is noise for NVDA and a five-alarm 
 
 On META over the five years ending 2026-09-11 this flags 30 of 1255 days, or 2.39%.
 
+Tickers without an operating-company EDGAR identity — e.g. leveraged
+single-stock ETFs such as METU (2x META) and GOU (2x GOOGL) — are first-class
+universe members with `cik` omitted. They get prices, beta/alpha, move flags
+and charts like any stock, but the EDGAR fundamentals fetch and the SEC
+filing event source are skipped for them (their charts render those sections
+as n/a, the same treatment indices already received).
+
 ## Limitations
 
 Coverage of the *events* behind these moves is uneven, and later plans surface that per move rather than hiding it.
@@ -187,5 +194,4 @@ P/E and supported business KPIs, fetch quarterly fundamentals before rendering:
 ./portfolio-analysis/run render
 ```
 
-Factor trajectories (beta/alpha over time) remain available per stock in the
-"Beta, R² & alpha over time" section of each chart page.
+The cross-stock alpha/beta comparison is `portfolio-analysis/out/factors.html`.
