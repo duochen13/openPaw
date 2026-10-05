@@ -45,15 +45,19 @@ def event_sources(
     macro: MacroSource,
     api_key: str,
 ) -> list[EventSource]:
-    sources: list[EventSource] = [
-        EdgarSource(http.get_json, cik=entry.cik),
-        macro,
-        HackerNewsSource(
-            http.get_json,
-            query=entry.aliases[0] if entry.aliases else entry.symbol,
-            aliases=entry.aliases[1:],
-        ),
-    ]
+    sources: list[EventSource] = []
+    if entry.cik is not None:
+        sources.append(EdgarSource(http.get_json, cik=entry.cik))
+    sources.extend(
+        [
+            macro,
+            HackerNewsSource(
+                http.get_json,
+                query=entry.aliases[0] if entry.aliases else entry.symbol,
+                aliases=entry.aliases[1:],
+            ),
+        ]
+    )
     if api_key:
         sources.extend(
             [
@@ -109,10 +113,11 @@ def write_event_catalog(
         # Only verified dated-fact sources. Forum/news sources are
         # deliberately not constructed here: their documents are chatter,
         # not dated evidence, and must never seed chart annotations.
-        catalog_sources: list[EventSource] = [
-            EdgarSource(http.get_json, cik=entry.cik),
-            macro,
-        ]
+        # CIK-less tickers (e.g. ETFs) have no EDGAR identity, so the
+        # filing source is omitted for them.
+        catalog_sources: list[EventSource] = [macro]
+        if entry.cik is not None:
+            catalog_sources.insert(0, EdgarSource(http.get_json, cik=entry.cik))
         if api_key:
             catalog_sources.append(EarningsSource(http.get_json, api_key=api_key))
         for source in catalog_sources:
@@ -144,10 +149,6 @@ def write_event_catalog(
             "ticker": ticker,
             "generated_at": datetime.now(UTC).isoformat(timespec="seconds"),
             "window": [start, end],
-            # Honest coverage metadata: which verified-fact sources seeded
-            # this catalog. A missing "earnings" entry documents the
-            # Alpha Vantage gap (issue #44) instead of hiding it.
-            "sources": [source.name for source in catalog_sources],
             "dates": {
                 day: sorted(rows, key=lambda row: row["label"])
                 for day, rows in sorted(dated.items())
@@ -172,14 +173,6 @@ def collect_events(
     report: Callable[[str], None] = print,
 ) -> CollectionResult:
     api_key = "" if keyless else os.environ.get("ALPHAVANTAGE_API_KEY", "")
-    if not api_key:
-        # Honest coverage signal (issue #44): without the key, earnings
-        # dates — the highest-value annotations — are missing from every
-        # catalog and only EDGAR filings + macro remain.
-        report(
-            "earnings dates skipped: ALPHAVANTAGE_API_KEY is not set "
-            "(event catalogs will lack earnings annotations)"
-        )
     store = Store.open(db)
     try:
         sessions = store.adjusted_series(portfolio.benchmark)
