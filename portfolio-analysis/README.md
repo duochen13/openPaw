@@ -194,4 +194,5 @@ P/E and supported business KPIs, fetch quarterly fundamentals before rendering:
 ./portfolio-analysis/run render
 ```
 
-The cross-stock alpha/beta comparison is `portfolio-analysis/out/factors.html`.
+Factor trajectories (beta/alpha over time) remain available per stock in the
+"Beta, R² & alpha over time" section of each chart page.
