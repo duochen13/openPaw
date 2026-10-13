@@ -57,7 +57,17 @@ def _write_portfolio(tmp_path, **overrides):
 @pytest.mark.unit
 def test_the_shipped_config_loads_and_is_valid():
     portfolio = load_portfolio()
-    assert portfolio.symbols == ("META", "NOW", "GOOGL", "TSLA", "NVDA", "CRM", "ORCL")
+    assert portfolio.symbols == (
+        "META",
+        "NOW",
+        "GOOGL",
+        "TSLA",
+        "NVDA",
+        "CRM",
+        "ORCL",
+        "METU",
+        "GGLL",
+    )
     assert portfolio.benchmark == "QQQ"
     assert portfolio.price_years == 6
     assert portfolio.move_params.beta_window == 250
@@ -172,3 +182,34 @@ def test_a_nan_z_threshold_raises():
     rather than raising - indistinguishable from a quiet market."""
     with pytest.raises(ValueError):
         MoveParams(beta_window=250, sigma_window=60, z_threshold=float("nan"))
+
+
+@pytest.mark.unit
+def test_ticker_without_cik_loads_as_none(tmp_path):
+    """Leveraged ETFs have no operating-company EDGAR identity: a missing
+    cik key must load as None rather than raising, so downstream stages can
+    skip EDGAR fundamentals and filing sources for them."""
+    config = dict(_BASE_CONFIG)
+    config["tickers"] = [
+        {
+            "symbol": "METU",
+            "name": "Direxion Daily META Bull 2X ETF",
+            "aliases": ["METU"],
+        },
+    ]
+    path = tmp_path / "portfolio.yaml"
+    path.write_text(yaml.safe_dump(config))
+    portfolio = load_portfolio(path)
+    assert portfolio.entry("METU").cik is None
+
+
+@pytest.mark.unit
+def test_shipped_metu_entry_has_no_cik():
+    portfolio = load_portfolio()
+    assert portfolio.entry("METU").cik is None
+
+
+@pytest.mark.unit
+def test_shipped_ggll_entry_has_no_cik():
+    portfolio = load_portfolio()
+    assert portfolio.entry("GGLL").cik is None

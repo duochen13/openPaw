@@ -29,6 +29,15 @@ tickers:
     cik: 1341439
     name: Oracle Corporation
     aliases: ["Oracle", "Oracle Corporation"]
+  # No cik: a leveraged single-stock ETF has no operating-company EDGAR
+  # identity, so EDGAR fundamentals and filing event sources are skipped
+  # for it (same n/a treatment as indices).
+  - symbol: METU
+    name: Direxion Daily META Bull 2X ETF
+    aliases: ["METU", "Direxion META Bull 2X", "2x Meta", "leveraged Meta"]
+  - symbol: GGLL
+    name: Direxion Daily GOOGL Bull 2X ETF
+    aliases: ["GGLL", "Direxion GOOGL Bull 2X", "2x Google", "leveraged Google"]
 
 # Beta is measured against this. QQQ matches the sibling repo's watchlist.
 benchmark: QQQ
@@ -59,6 +68,8 @@ industry_benchmarks:
   MSFT: CLOU
   GOOGL: MAGS # Mag7: Roundhill Magnificent Seven ETF
   META: MAGS
+  METU: MAGS # 2x META tracks the same Mag7 cohort as its underlying
+  GGLL: MAGS # 2x GOOGL tracks the same Mag7 cohort as its underlying
   NVDA: SOXX # AI chips: iShares Semiconductor ETF
 
 # Six years, not five. A 250-day beta window consumes the first trading year,

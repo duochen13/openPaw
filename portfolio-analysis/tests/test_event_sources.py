@@ -222,3 +222,32 @@ def test_conflicting_news_duplicate_is_not_order_dependent():
         NewsSource(lambda *a, **kw: payload, api_key="x").collect(
             "META", "2024-04-23", "2024-04-26"
         )
+
+
+class _NoNetworkHttp:
+    def get_json(self, url, params=None):
+        raise AssertionError("unit test must not touch the network")
+
+
+@pytest.mark.unit
+def test_event_sources_omits_edgar_for_cik_less_entry():
+    """A CIK-less ticker (e.g. a leveraged ETF) must not get an EDGAR
+    filing source: there is no operating-company filing stream to query."""
+    from portfolio_analysis.collection import event_sources
+    from portfolio_analysis.config import PortfolioEntry
+    from portfolio_analysis.events.edgar import EdgarSource
+
+    etf = PortfolioEntry(
+        symbol="METU",
+        cik=None,
+        name="Direxion Daily META Bull 2X ETF",
+        aliases=("METU",),
+    )
+    sources = event_sources(_NoNetworkHttp(), etf, macro=object(), api_key=None)
+    assert not any(isinstance(s, EdgarSource) for s in sources)
+
+    stock = PortfolioEntry(
+        symbol="META", cik=1326801, name="Meta Platforms, Inc.", aliases=("Meta",)
+    )
+    sources = event_sources(_NoNetworkHttp(), stock, macro=object(), api_key=None)
+    assert any(isinstance(s, EdgarSource) for s in sources)

@@ -273,6 +273,11 @@ def _fetch_fundamentals(args: argparse.Namespace) -> int:
                 # charts render those sections as n/a (#57).
                 print(f"{symbol}: index has no fundamentals; skipping")
                 continue
+            if portfolio.entry(symbol).cik is None:
+                # Same treatment for CIK-less tickers (e.g. ETFs): no
+                # operating-company EDGAR identity, so no fundamentals.
+                print(f"{symbol}: no CIK, no fundamentals; skipping")
+                continue
             metric_keys = kpi_config.get(symbol, [])
             if (
                 not args.force
