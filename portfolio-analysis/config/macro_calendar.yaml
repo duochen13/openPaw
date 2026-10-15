@@ -1,7 +1,7 @@
 # JSON syntax is valid YAML; each release retains its authoritative source.
 {
   "schema_version": 1,
-  "as_of": "2026-09-13",
+  "as_of": "2026-10-14",
   "notes": [
     "Release dates, not reference periods. FOMC dates are statement days, not minutes.",
     "Historical schedules can be revised. Coverage ends at the checked as-of date.",
@@ -12,7 +12,7 @@
       "coverage": [
         [
           "2021-01-01",
-          "2026-09-13"
+          "2026-10-14"
         ]
       ],
       "events": [
@@ -286,6 +286,10 @@
         },
         {
           "date": "2026-09-11",
+          "url": "https://www.bls.gov/schedule/2026/home.htm"
+        },
+        {
+          "date": "2026-10-14",
           "url": "https://www.bls.gov/schedule/2026/home.htm"
         }
       ]

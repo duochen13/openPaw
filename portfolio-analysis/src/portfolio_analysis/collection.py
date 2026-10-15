@@ -76,6 +76,7 @@ _CATALOG_KINDS = {
     "filing": "filing",
     "earnings_reported": "earnings",
     "macro_release": "macro",
+    "macro_print": "macro",
 }
 
 

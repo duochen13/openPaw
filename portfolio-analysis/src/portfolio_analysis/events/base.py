@@ -145,6 +145,12 @@ def dated_fact_label(key: str, value: Any) -> tuple[str, str] | None:
             return "Quarterly earnings reported", str(value["reportedDate"])
         if key == "macro_release":
             return f"{value['release']} release", str(value["date"])
+        if key == "macro_print":
+            headline = value["metrics"]["headline_yoy"]
+            label = f"CPI print: headline {headline['actual']:g}% y/y"
+            if headline["consensus"] is not None:
+                label += f" vs {headline['consensus']:g}% consensus"
+            return label, str(value["date"])
     except (KeyError, TypeError):
         return None
     return None

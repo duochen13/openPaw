@@ -10,7 +10,8 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
-from portfolio_analysis.events.base import Document, EventSource, VerifiedFact
+from portfolio_analysis.events.base import Document, EventSource, VerifiedFact, dated_fact_label
+from portfolio_analysis.events.macro_prints import CpiMetric, CpiPrint, classify_print
 from portfolio_analysis.http import atomic_json
 from portfolio_analysis.moves import Move
 from portfolio_analysis.naming import safe_ticker_component
@@ -44,6 +45,52 @@ def bundle_hash(bundle: Mapping[str, Any]) -> str:
     payload["documents"] = sorted(payload["documents"], key=lambda doc: doc["doc_id"])
     payload["verified"] = sorted(payload["verified"], key=canonical)
     return hashlib.sha256(canonical(payload).encode()).hexdigest()
+
+
+def _macro_classification(
+    facts: Mapping[str, VerifiedFact], move_date: str
+) -> dict[str, Any] | None:
+    """Issue #153: tag a flagged move that landed on a CPI release day.
+
+    A ``macro_print`` fact dated the move day with a material surprise
+    classifies the move ``macro-driven`` — or ``mixed`` when a
+    ticker-specific dated fact (earnings report, SEC filing) shares the
+    day. The tag complements the beta decomposition in the move payload;
+    it never replaces it.
+    """
+    print_fact: VerifiedFact | None = None
+    has_ticker_events = False
+    for fact in facts.values():
+        if fact.key == "macro_print" and str(fact.value.get("date")) == move_date:
+            print_fact = fact
+            continue
+        # Only ticker-specific dated facts make a move "mixed"; another
+        # macro fact on the same day (the CPI calendar fact itself, or a
+        # coincident PCE print) is still macro, not ticker news.
+        if fact.key not in {"filing", "earnings_reported"}:
+            continue
+        labeled = dated_fact_label(fact.key, fact.value)
+        if labeled is not None and labeled[1] == move_date:
+            has_ticker_events = True
+    if print_fact is None:
+        return None
+    value = print_fact.value
+    print_ = CpiPrint(
+        release_date=str(value["date"]),
+        reference_period=str(value["reference_period"]),
+        release_time_et=str(value.get("release_time_et") or "08:30"),
+        url=str(value["url"]),
+        metrics={
+            key: CpiMetric(
+                actual=metric.get("actual"),
+                consensus=metric.get("consensus"),
+                prior=metric.get("prior"),
+                revision=metric.get("revision"),
+            )
+            for key, metric in value["metrics"].items()
+        },
+    )
+    return classify_print(print_, has_ticker_events=has_ticker_events)
 
 
 def build_bundle(
@@ -95,6 +142,9 @@ def build_bundle(
             "complete": all(status == "ok" for status in statuses.values()),
         },
     }
+    classification = _macro_classification(facts, move.date)
+    if classification is not None:
+        payload["macro_classification"] = classification
     payload["bundle_sha256"] = bundle_hash(payload)
     return payload
 

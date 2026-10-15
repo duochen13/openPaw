@@ -54,11 +54,14 @@ def _fomc_short_label(action: Any, change_bp: Any, target_range: Any) -> str:
 def _event_context(kind: str, row: dict[str, Any], as_of: str) -> dict[str, Any]:
     """Structured, source-backed context for one macro event (issue #7).
 
-    Everything here derives from the checked-in calendar and the FOMC
-    decisions file. Market surprise is not tracked in those sources, so it
-    is reported as unknown rather than inferred.
+    Everything here derives from checked-in sources: the calendar, the FOMC
+    decisions file, and (issue #153) the CPI prints file. For CPI releases
+    with a sourced consensus the surprise vs expectations is computed from
+    the print; where no consensus is checked in it is reported as unknown
+    rather than inferred.
     """
     decision: dict[str, Any] | None = None
+    surprise: dict[str, Any] | None = None
     action = row.get("action")
     if kind == "FOMC" and action:
         verb = _ACTION_VERBS.get(str(action), str(action))
@@ -84,8 +87,37 @@ def _event_context(kind: str, row: dict[str, Any], as_of: str) -> dict[str, Any]
         )
         short_label = "statement day (no record)"
     elif kind == "CPI":
-        summary = f"CPI release on {row.get('date')}; source: BLS release schedule."
-        short_label = "CPI release"
+        print_ = row.get("print")
+        if print_:
+            metrics = print_["metrics"]
+            headline_yoy = metrics["headline_yoy"]
+            core_mom = metrics["core_mom"]
+            surprises = {
+                key: metric["surprise"]
+                for key, metric in metrics.items()
+                if metric.get("surprise") is not None
+            }
+            surprise = surprises or None
+            summary = (
+                f"CPI release on {row.get('date')} (reference "
+                f"{print_['reference_period']}): headline "
+                f"{headline_yoy['actual']:g}% y/y"
+            )
+            if headline_yoy.get("consensus") is not None:
+                summary += f" vs {headline_yoy['consensus']:g}% consensus"
+            if headline_yoy.get("prior") is not None:
+                summary += f", prior {headline_yoy['prior']:g}%"
+            if core_mom.get("actual") is not None:
+                summary += f"; core {core_mom['actual']:g}% m/m"
+                if core_mom.get("consensus") is not None:
+                    summary += f" vs {core_mom['consensus']:g}% consensus"
+            else:
+                summary += "; core m/m not published for this release"
+            summary += f"; source: BLS release {print_['url']}."
+            short_label = f"CPI: headline {headline_yoy['actual']:g}% y/y"
+        else:
+            summary = f"CPI release on {row.get('date')}; source: BLS release schedule."
+            short_label = "CPI release"
     elif kind == "PCE":
         summary = f"PCE release on {row.get('date')}; source: BEA release schedule."
         short_label = "PCE release"
@@ -95,7 +127,7 @@ def _event_context(kind: str, row: dict[str, Any], as_of: str) -> dict[str, Any]
     return {
         "subtype": kind,
         "decision": decision,
-        "surprise": None,  # expectations are not in the checked-in sources
+        "surprise": surprise,
         "affected_variable": _EVENT_VARIABLES.get(kind, "n/a"),
         "source_timestamp": as_of,
         "summary": summary,
@@ -200,7 +232,7 @@ def render_event_dashboard(data: dict[str, Any], out_dir: Path) -> Path:
     target = out_dir / "event-impact.html"
     out_dir.mkdir(parents=True, exist_ok=True)
     target.write_text(f'''<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>OpenPaw · Event impact</title>
-<style>body{{font:14px system-ui;margin:0;background:#f5f4ef;color:#21231f}}main{{max-width:1100px;margin:auto;padding:28px}}h1{{font:40px Georgia;font-weight:500}}.controls{{display:flex;gap:12px;flex-wrap:wrap;margin:20px 0}}select{{padding:10px;border:1px solid #ccc;border-radius:6px;background:#fffefa}}table{{border-collapse:collapse;width:100%;background:#fffefa;margin:12px 0 24px}}td,th{{padding:11px;text-align:right;border-bottom:1px solid #ddd}}td:first-child,th:first-child{{text-align:left}}.up{{color:#176b3a}}.down{{color:#ae3d35}}a{{color:#955424}}.note{{color:#65685f;font-size:12px}}.comment{{border-top:1px solid #ddd;padding:10px 0}}.comment p{{margin:6px 0}}.comment .meta{{font-size:12px;color:#65685f}}code{{background:#efece4;padding:1px 5px;border-radius:4px}}</style><main><p>OPENPAW / EVENT STUDY</p><h1>Price response around macro events</h1><p>Choose a release type and date to see the magnitude across every available instrument. Returns use the last trading close before the release and the next 1, 5, or 20 sessions. Timing is association, not causation.</p><div class="controls"><label>Event <select id="type"></select></label><label>Date <select id="date"></select></label><label>Focus <select id="symbol">{options}</select></label></div><p id="source"></p><h2>All instruments</h2><p class="note">Positive values are gains; negative values are losses. The largest absolute move is highlighted by the data, without claiming the event caused it.</p><table><thead><tr><th>Instrument</th><th>Release session</th><th>+1 session</th><th>+5 sessions</th><th>+20 sessions</th></tr></thead><tbody id="matrix"></tbody></table><h2>Focused instrument</h2><table><thead><tr><th>Window</th><th>Return</th></tr></thead><tbody id="body"></tbody></table><h2>Event context</h2><div id="context"></div><h2>Community commentary (Reddit)</h2><p class="note">Reddit comments are community commentary, not verified facts or causal explanations.</p><div id="reddit"></div></main><script type="application/json" id="data">{payload}</script><script>const d=JSON.parse(document.getElementById('data').textContent),$=x=>document.getElementById(x),types=[...new Set(d.events.map(e=>e.type))];function esc(s){{return String(s).replace(/[&<>"']/g,function(c){{return {{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}}[c];}});}}function contextHtml(e){{const c=e.context;const dec=c.decision?`${{esc(c.decision.action)}} (${{esc(String(c.decision.change_bp))}} bp) → ${{esc(String(c.decision.target_range))}}`:'n/a';return `<p><strong>${{esc(c.subtype)}}</strong> · ${{esc(c.summary)}}</p><p class="note">Affected variable: ${{esc(c.affected_variable)}} · Decision: ${{dec}} · Surprise vs expectations: not tracked · Calendar as of ${{esc(c.source_timestamp)}}</p>`;}}function redditHtml(e){{const r=e.reddit||{{status:'not_collected',comments:[]}};if(r.status==='not_collected')return '<p class="note">No Reddit data collected for this event yet. Run <code>portfolio-analysis collect-reddit</code> to gather it.</p>';if(r.status==='no_results')return '<p class="note">No Reddit comments found in this event window.</p>';if(r.status!=='ok')return `<p class="note">Reddit collection status: ${{esc(r.status)}}. Prior evidence is unchanged; rerun <code>portfolio-analysis collect-reddit</code> to retry.</p>`;if(!r.comments.length)return '<p class="note">No usable Reddit comments in this window.</p>';return r.comments.map(function(cm){{const sub=esc(cm.subreddit),who=esc(cm.author);const link=cm.url&&cm.url.indexOf('https://www.reddit.com/')===0?`<a href="${{esc(cm.url)}}" target="_blank" rel="noopener">r/${{sub}}</a>`:`r/${{sub}}`;const when=new Date(cm.created_utc*1000).toISOString().slice(0,16).replace('T',' ')+' UTC';return `<div class="comment"><p class="meta">${{link}} · u/${{who}} · score ${{cm.score}} · ${{when}}</p><p>${{esc(cm.excerpt)}}</p></div>`;}}).join('');}}$('type').innerHTML=types.map(x=>`<option>${{x}}</option>`).join('');function dates(){{const t=$('type').value;$('date').innerHTML=d.events.filter(e=>e.type===t).map(e=>`<option value="${{e.date}}">${{e.date}} \u2014 ${{esc(e.context.short_label||\u0027\u0027)}}</option>`).join('');}}function cell(v){{return v==null?'n/a':(v*100).toFixed(2)+'%';}}function draw(){{const e=d.events.find(e=>e.type===$('type').value&&e.date===$('date').value),s=$('symbol').value,i=e.impact[s];$('source').innerHTML=`<a href="${{e.url}}" target="_blank">Source calendar</a> · ${{e.type}} · ${{e.date}} \u2014 ${{esc(e.context.short_label||\u0027\u0027)}}`;$('matrix').innerHTML=d.symbols.map(x=>{{const m=e.impact[x];return `<tr><td><strong>${{x}}</strong></td>${{[m.before_1d,m.after_1d,m.after_5d,m.after_20d].map(v=>`<td class="${{v>=0?'up':'down'}}">${{cell(v)}}</td>`).join('')}}</tr>`;}}).join('');const rows=[['Release session vs prior close',i.before_1d],['1 session after',i.after_1d],['5 sessions after',i.after_5d],['20 sessions after',i.after_20d]];$('body').innerHTML=rows.map(([n,v])=>`<tr><td>${{n}}</td><td class="${{v>=0?'up':'down'}}">${{cell(v)}}</td>`).join('');$('context').innerHTML=contextHtml(e);$('reddit').innerHTML=redditHtml(e);}}$('type').onchange=()=>{{dates();draw();}};$('date').onchange=draw;$('symbol').onchange=draw;dates();draw();</script>''')
+<style>body{{font:14px system-ui;margin:0;background:#f5f4ef;color:#21231f}}main{{max-width:1100px;margin:auto;padding:28px}}h1{{font:40px Georgia;font-weight:500}}.controls{{display:flex;gap:12px;flex-wrap:wrap;margin:20px 0}}select{{padding:10px;border:1px solid #ccc;border-radius:6px;background:#fffefa}}table{{border-collapse:collapse;width:100%;background:#fffefa;margin:12px 0 24px}}td,th{{padding:11px;text-align:right;border-bottom:1px solid #ddd}}td:first-child,th:first-child{{text-align:left}}.up{{color:#176b3a}}.down{{color:#ae3d35}}a{{color:#955424}}.note{{color:#65685f;font-size:12px}}.comment{{border-top:1px solid #ddd;padding:10px 0}}.comment p{{margin:6px 0}}.comment .meta{{font-size:12px;color:#65685f}}code{{background:#efece4;padding:1px 5px;border-radius:4px}}</style><main><p>OPENPAW / EVENT STUDY</p><h1>Price response around macro events</h1><p>Choose a release type and date to see the magnitude across every available instrument. Returns use the last trading close before the release and the next 1, 5, or 20 sessions. Timing is association, not causation.</p><div class="controls"><label>Event <select id="type"></select></label><label>Date <select id="date"></select></label><label>Focus <select id="symbol">{options}</select></label></div><p id="source"></p><h2>All instruments</h2><p class="note">Positive values are gains; negative values are losses. The largest absolute move is highlighted by the data, without claiming the event caused it.</p><table><thead><tr><th>Instrument</th><th>Release session</th><th>+1 session</th><th>+5 sessions</th><th>+20 sessions</th></tr></thead><tbody id="matrix"></tbody></table><h2>Focused instrument</h2><table><thead><tr><th>Window</th><th>Return</th></tr></thead><tbody id="body"></tbody></table><h2>Event context</h2><div id="context"></div><h2>Community commentary (Reddit)</h2><p class="note">Reddit comments are community commentary, not verified facts or causal explanations.</p><div id="reddit"></div></main><script type="application/json" id="data">{payload}</script><script>const d=JSON.parse(document.getElementById('data').textContent),$=x=>document.getElementById(x),types=[...new Set(d.events.map(e=>e.type))];function esc(s){{return String(s).replace(/[&<>"']/g,function(c){{return {{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}}[c];}});}}function contextHtml(e){{const c=e.context;const dec=c.decision?`${{esc(c.decision.action)}} (${{esc(String(c.decision.change_bp))}} bp) → ${{esc(String(c.decision.target_range))}}`:'n/a';return `<p><strong>${{esc(c.subtype)}}</strong> · ${{esc(c.summary)}}</p><p class="note">Affected variable: ${{esc(c.affected_variable)}} · Decision: ${{dec}} · Surprise vs expectations: ${{c.surprise?Object.entries(c.surprise).map(([k,v])=>esc(k)+' '+(v>=0?'+':'')+v+'pp').join(', '):'not tracked'}} · Calendar as of ${{esc(c.source_timestamp)}}</p>`;}}function redditHtml(e){{const r=e.reddit||{{status:'not_collected',comments:[]}};if(r.status==='not_collected')return '<p class="note">No Reddit data collected for this event yet. Run <code>portfolio-analysis collect-reddit</code> to gather it.</p>';if(r.status==='no_results')return '<p class="note">No Reddit comments found in this event window.</p>';if(r.status!=='ok')return `<p class="note">Reddit collection status: ${{esc(r.status)}}. Prior evidence is unchanged; rerun <code>portfolio-analysis collect-reddit</code> to retry.</p>`;if(!r.comments.length)return '<p class="note">No usable Reddit comments in this window.</p>';return r.comments.map(function(cm){{const sub=esc(cm.subreddit),who=esc(cm.author);const link=cm.url&&cm.url.indexOf('https://www.reddit.com/')===0?`<a href="${{esc(cm.url)}}" target="_blank" rel="noopener">r/${{sub}}</a>`:`r/${{sub}}`;const when=new Date(cm.created_utc*1000).toISOString().slice(0,16).replace('T',' ')+' UTC';return `<div class="comment"><p class="meta">${{link}} · u/${{who}} · score ${{cm.score}} · ${{when}}</p><p>${{esc(cm.excerpt)}}</p></div>`;}}).join('');}}$('type').innerHTML=types.map(x=>`<option>${{x}}</option>`).join('');function dates(){{const t=$('type').value;$('date').innerHTML=d.events.filter(e=>e.type===t).map(e=>`<option value="${{e.date}}">${{e.date}} \u2014 ${{esc(e.context.short_label||\u0027\u0027)}}</option>`).join('');}}function cell(v){{return v==null?'n/a':(v*100).toFixed(2)+'%';}}function draw(){{const e=d.events.find(e=>e.type===$('type').value&&e.date===$('date').value),s=$('symbol').value,i=e.impact[s];$('source').innerHTML=`<a href="${{e.url}}" target="_blank">Source calendar</a> · ${{e.type}} · ${{e.date}} \u2014 ${{esc(e.context.short_label||\u0027\u0027)}}`;$('matrix').innerHTML=d.symbols.map(x=>{{const m=e.impact[x];return `<tr><td><strong>${{x}}</strong></td>${{[m.before_1d,m.after_1d,m.after_5d,m.after_20d].map(v=>`<td class="${{v>=0?'up':'down'}}">${{cell(v)}}</td>`).join('')}}</tr>`;}}).join('');const rows=[['Release session vs prior close',i.before_1d],['1 session after',i.after_1d],['5 sessions after',i.after_5d],['20 sessions after',i.after_20d]];$('body').innerHTML=rows.map(([n,v])=>`<tr><td>${{n}}</td><td class="${{v>=0?'up':'down'}}">${{cell(v)}}</td>`).join('');$('context').innerHTML=contextHtml(e);$('reddit').innerHTML=redditHtml(e);}}$('type').onchange=()=>{{dates();draw();}};$('date').onchange=draw;$('symbol').onchange=draw;dates();draw();</script>''')
     rendered = target.read_text()
     rendered = rendered.replace(
         '<p id="source"></p>',
