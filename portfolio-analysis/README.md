@@ -114,6 +114,48 @@ source URLs per release. It includes actual shutdown-related rescheduling in
 outside coverage is unknown, not “no macro event.” The calendar is offline at
 runtime and needs no FRED key.
 
+### CPI release prints (issue #153)
+
+The calendar says *when* a release lands; `config/cpi_prints.yaml` says *what
+it printed*. It is a checked-in sibling of the calendar (auto-loaded by
+`MacroSource` when present, like `fomc_decisions.yaml`) holding, per CPI
+release: `release_date`, `reference_period`, `release_time_et` (08:30), the
+BLS release URL, and four metrics — `headline_mom`, `headline_yoy`,
+`core_mom`, `core_yoy` — each with `actual`, `consensus`, `prior`, and
+`revision` in percent (m/m seasonally adjusted, y/y unadjusted). The backfill
+covers the 23 releases from 2024-11-13 through 2026-10-14; October 2025 was
+never published (federal shutdown), so the 2025-12-18 release chains its
+`prior` to September 2025 and its 1-month changes are null (BLS published
+only a 2-month change).
+
+Data discipline: `actual` values are the as-printed Table A percent changes
+from each release in the BLS news-release archive, cross-checked against
+index levels from the BLS public API (`CUUR0000SA0` / `CUSR0000SA0`).
+`consensus` is stored only where a survey median was verified by hand for
+that release — currently only 2026-10-14 — and is null elsewhere; it is never
+estimated. `revision` is null throughout (the NSA series is never revised;
+SA values change only at the annual seasonal-factor recalculation, which this
+file does not restate). Regenerate or extend the file with
+`scripts/collect_cpi.py` (see its docstring for provenance rules).
+
+Consumers of the prints layer:
+
+- **Verified facts.** `MacroSource.collect` emits a `macro_print` fact per
+  CPI release alongside the calendar's `macro_release` date fact, and the
+  event-date catalog turns it into a chart annotation such as
+  “CPI print: headline 3.7% y/y vs 3.6% consensus” on every ticker's chart.
+- **Move classification.** When a flagged move's bundle contains a
+  `macro_print` fact dated the move day, `build_bundle` adds a
+  `macro_classification`: `macro-driven` when the largest absolute surprise
+  (|actual − consensus| across the four metrics) is at least 0.1pp and no
+  ticker-specific dated event (earnings, SEC filing) shares the day;
+  `mixed` when both are present; absent when the release carried no
+  material surprise or no sourced consensus. The tag complements the beta
+  decomposition — it never replaces it.
+- **Event dashboard.** CPI rows carry the print into the event-impact
+  dashboard: the context block quotes actual vs consensus vs prior and the
+  per-metric surprise replaces the former “not tracked” placeholder.
+
 `--db`, `--moves-dir`, `--events-dir`, `--cache-dir`, and `--macro-calendar` support
 isolated runs. The response cache is local to this machine and uses POSIX locks.
 
