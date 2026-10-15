@@ -1,0 +1,750 @@
+{
+  "schema_version": 1,
+  "series": "CPI",
+  "as_of": "2026-10-14",
+  "source": "U.S. Bureau of Labor Statistics (BLS)",
+  "notes": [
+    "Actuals are the as-printed Table A percent changes from each BLS release (m/m seasonally adjusted, y/y unadjusted) - the vintage the market saw on the release morning. Headline values are cross-checked against index levels from the BLS public API (CUUR0000SA0 / CUSR0000SA0).",
+    "Consensus is stored only where a survey median was verified by hand for that release (see CONSENSUS in scripts/collect_cpi.py); it is null elsewhere and is never estimated.",
+    "Prior is the previous published release's actual. October 2025 was never published (federal shutdown), so the 2025-12-18 release chains to September 2025 and its 1-month changes are null - BLS published only a 2-month change for November 2025.",
+    "Revision is null throughout: the not-seasonally-adjusted series is never revised, and seasonally adjusted values change only via the annual February seasonal-factor recalculation, which this file does not restate."
+  ],
+  "releases": [
+    {
+      "release_date": "2024-11-13",
+      "reference_period": "2024-10",
+      "release_time_et": "08:30",
+      "url": "https://www.bls.gov/news.release/archives/cpi_11132024.htm",
+      "metrics": {
+        "headline_mom": {
+          "actual": 0.2,
+          "consensus": null,
+          "prior": null,
+          "revision": null
+        },
+        "headline_yoy": {
+          "actual": 2.6,
+          "consensus": null,
+          "prior": null,
+          "revision": null
+        },
+        "core_mom": {
+          "actual": 0.3,
+          "consensus": null,
+          "prior": null,
+          "revision": null
+        },
+        "core_yoy": {
+          "actual": 3.3,
+          "consensus": null,
+          "prior": null,
+          "revision": null
+        }
+      }
+    },
+    {
+      "release_date": "2024-12-11",
+      "reference_period": "2024-11",
+      "release_time_et": "08:30",
+      "url": "https://www.bls.gov/news.release/archives/cpi_12112024.htm",
+      "metrics": {
+        "headline_mom": {
+          "actual": 0.3,
+          "consensus": null,
+          "prior": 0.2,
+          "revision": null
+        },
+        "headline_yoy": {
+          "actual": 2.7,
+          "consensus": null,
+          "prior": 2.6,
+          "revision": null
+        },
+        "core_mom": {
+          "actual": 0.3,
+          "consensus": null,
+          "prior": 0.3,
+          "revision": null
+        },
+        "core_yoy": {
+          "actual": 3.3,
+          "consensus": null,
+          "prior": 3.3,
+          "revision": null
+        }
+      }
+    },
+    {
+      "release_date": "2025-01-15",
+      "reference_period": "2024-12",
+      "release_time_et": "08:30",
+      "url": "https://www.bls.gov/news.release/archives/cpi_01152025.htm",
+      "metrics": {
+        "headline_mom": {
+          "actual": 0.4,
+          "consensus": null,
+          "prior": 0.3,
+          "revision": null
+        },
+        "headline_yoy": {
+          "actual": 2.9,
+          "consensus": null,
+          "prior": 2.7,
+          "revision": null
+        },
+        "core_mom": {
+          "actual": 0.2,
+          "consensus": null,
+          "prior": 0.3,
+          "revision": null
+        },
+        "core_yoy": {
+          "actual": 3.2,
+          "consensus": null,
+          "prior": 3.3,
+          "revision": null
+        }
+      }
+    },
+    {
+      "release_date": "2025-02-12",
+      "reference_period": "2025-01",
+      "release_time_et": "08:30",
+      "url": "https://www.bls.gov/news.release/archives/cpi_02122025.htm",
+      "metrics": {
+        "headline_mom": {
+          "actual": 0.5,
+          "consensus": null,
+          "prior": 0.4,
+          "revision": null
+        },
+        "headline_yoy": {
+          "actual": 3.0,
+          "consensus": null,
+          "prior": 2.9,
+          "revision": null
+        },
+        "core_mom": {
+          "actual": 0.4,
+          "consensus": null,
+          "prior": 0.2,
+          "revision": null
+        },
+        "core_yoy": {
+          "actual": 3.3,
+          "consensus": null,
+          "prior": 3.2,
+          "revision": null
+        }
+      }
+    },
+    {
+      "release_date": "2025-03-12",
+      "reference_period": "2025-02",
+      "release_time_et": "08:30",
+      "url": "https://www.bls.gov/news.release/archives/cpi_03122025.htm",
+      "metrics": {
+        "headline_mom": {
+          "actual": 0.2,
+          "consensus": null,
+          "prior": 0.5,
+          "revision": null
+        },
+        "headline_yoy": {
+          "actual": 2.8,
+          "consensus": null,
+          "prior": 3.0,
+          "revision": null
+        },
+        "core_mom": {
+          "actual": 0.2,
+          "consensus": null,
+          "prior": 0.4,
+          "revision": null
+        },
+        "core_yoy": {
+          "actual": 3.1,
+          "consensus": null,
+          "prior": 3.3,
+          "revision": null
+        }
+      }
+    },
+    {
+      "release_date": "2025-04-10",
+      "reference_period": "2025-03",
+      "release_time_et": "08:30",
+      "url": "https://www.bls.gov/news.release/archives/cpi_04102025.htm",
+      "metrics": {
+        "headline_mom": {
+          "actual": -0.1,
+          "consensus": null,
+          "prior": 0.2,
+          "revision": null
+        },
+        "headline_yoy": {
+          "actual": 2.4,
+          "consensus": null,
+          "prior": 2.8,
+          "revision": null
+        },
+        "core_mom": {
+          "actual": 0.1,
+          "consensus": null,
+          "prior": 0.2,
+          "revision": null
+        },
+        "core_yoy": {
+          "actual": 2.8,
+          "consensus": null,
+          "prior": 3.1,
+          "revision": null
+        }
+      }
+    },
+    {
+      "release_date": "2025-05-13",
+      "reference_period": "2025-04",
+      "release_time_et": "08:30",
+      "url": "https://www.bls.gov/news.release/archives/cpi_05132025.htm",
+      "metrics": {
+        "headline_mom": {
+          "actual": 0.2,
+          "consensus": null,
+          "prior": -0.1,
+          "revision": null
+        },
+        "headline_yoy": {
+          "actual": 2.3,
+          "consensus": null,
+          "prior": 2.4,
+          "revision": null
+        },
+        "core_mom": {
+          "actual": 0.2,
+          "consensus": null,
+          "prior": 0.1,
+          "revision": null
+        },
+        "core_yoy": {
+          "actual": 2.8,
+          "consensus": null,
+          "prior": 2.8,
+          "revision": null
+        }
+      }
+    },
+    {
+      "release_date": "2025-06-11",
+      "reference_period": "2025-05",
+      "release_time_et": "08:30",
+      "url": "https://www.bls.gov/news.release/archives/cpi_06112025.htm",
+      "metrics": {
+        "headline_mom": {
+          "actual": 0.1,
+          "consensus": null,
+          "prior": 0.2,
+          "revision": null
+        },
+        "headline_yoy": {
+          "actual": 2.4,
+          "consensus": null,
+          "prior": 2.3,
+          "revision": null
+        },
+        "core_mom": {
+          "actual": 0.1,
+          "consensus": null,
+          "prior": 0.2,
+          "revision": null
+        },
+        "core_yoy": {
+          "actual": 2.8,
+          "consensus": null,
+          "prior": 2.8,
+          "revision": null
+        }
+      }
+    },
+    {
+      "release_date": "2025-07-15",
+      "reference_period": "2025-06",
+      "release_time_et": "08:30",
+      "url": "https://www.bls.gov/news.release/archives/cpi_07152025.htm",
+      "metrics": {
+        "headline_mom": {
+          "actual": 0.3,
+          "consensus": null,
+          "prior": 0.1,
+          "revision": null
+        },
+        "headline_yoy": {
+          "actual": 2.7,
+          "consensus": null,
+          "prior": 2.4,
+          "revision": null
+        },
+        "core_mom": {
+          "actual": 0.2,
+          "consensus": null,
+          "prior": 0.1,
+          "revision": null
+        },
+        "core_yoy": {
+          "actual": 2.9,
+          "consensus": null,
+          "prior": 2.8,
+          "revision": null
+        }
+      }
+    },
+    {
+      "release_date": "2025-08-12",
+      "reference_period": "2025-07",
+      "release_time_et": "08:30",
+      "url": "https://www.bls.gov/news.release/archives/cpi_08122025.htm",
+      "metrics": {
+        "headline_mom": {
+          "actual": 0.2,
+          "consensus": null,
+          "prior": 0.3,
+          "revision": null
+        },
+        "headline_yoy": {
+          "actual": 2.7,
+          "consensus": null,
+          "prior": 2.7,
+          "revision": null
+        },
+        "core_mom": {
+          "actual": 0.3,
+          "consensus": null,
+          "prior": 0.2,
+          "revision": null
+        },
+        "core_yoy": {
+          "actual": 3.1,
+          "consensus": null,
+          "prior": 2.9,
+          "revision": null
+        }
+      }
+    },
+    {
+      "release_date": "2025-09-11",
+      "reference_period": "2025-08",
+      "release_time_et": "08:30",
+      "url": "https://www.bls.gov/news.release/archives/cpi_09112025.htm",
+      "metrics": {
+        "headline_mom": {
+          "actual": 0.4,
+          "consensus": null,
+          "prior": 0.2,
+          "revision": null
+        },
+        "headline_yoy": {
+          "actual": 2.9,
+          "consensus": null,
+          "prior": 2.7,
+          "revision": null
+        },
+        "core_mom": {
+          "actual": 0.3,
+          "consensus": null,
+          "prior": 0.3,
+          "revision": null
+        },
+        "core_yoy": {
+          "actual": 3.1,
+          "consensus": null,
+          "prior": 3.1,
+          "revision": null
+        }
+      }
+    },
+    {
+      "release_date": "2025-10-24",
+      "reference_period": "2025-09",
+      "release_time_et": "08:30",
+      "url": "https://www.bls.gov/news.release/archives/cpi_10242025.htm",
+      "metrics": {
+        "headline_mom": {
+          "actual": 0.3,
+          "consensus": null,
+          "prior": 0.4,
+          "revision": null
+        },
+        "headline_yoy": {
+          "actual": 3.0,
+          "consensus": null,
+          "prior": 2.9,
+          "revision": null
+        },
+        "core_mom": {
+          "actual": 0.2,
+          "consensus": null,
+          "prior": 0.3,
+          "revision": null
+        },
+        "core_yoy": {
+          "actual": 3.0,
+          "consensus": null,
+          "prior": 3.1,
+          "revision": null
+        }
+      }
+    },
+    {
+      "release_date": "2025-12-18",
+      "reference_period": "2025-11",
+      "release_time_et": "08:30",
+      "url": "https://www.bls.gov/news.release/archives/cpi_12182025.htm",
+      "metrics": {
+        "headline_mom": {
+          "actual": null,
+          "consensus": null,
+          "prior": 0.3,
+          "revision": null
+        },
+        "headline_yoy": {
+          "actual": 2.7,
+          "consensus": null,
+          "prior": 3.0,
+          "revision": null
+        },
+        "core_mom": {
+          "actual": null,
+          "consensus": null,
+          "prior": 0.2,
+          "revision": null
+        },
+        "core_yoy": {
+          "actual": 2.6,
+          "consensus": null,
+          "prior": 3.0,
+          "revision": null
+        }
+      }
+    },
+    {
+      "release_date": "2026-01-13",
+      "reference_period": "2025-12",
+      "release_time_et": "08:30",
+      "url": "https://www.bls.gov/news.release/archives/cpi_01132026.htm",
+      "metrics": {
+        "headline_mom": {
+          "actual": 0.3,
+          "consensus": null,
+          "prior": null,
+          "revision": null
+        },
+        "headline_yoy": {
+          "actual": 2.7,
+          "consensus": null,
+          "prior": 2.7,
+          "revision": null
+        },
+        "core_mom": {
+          "actual": 0.2,
+          "consensus": null,
+          "prior": null,
+          "revision": null
+        },
+        "core_yoy": {
+          "actual": 2.6,
+          "consensus": null,
+          "prior": 2.6,
+          "revision": null
+        }
+      }
+    },
+    {
+      "release_date": "2026-02-13",
+      "reference_period": "2026-01",
+      "release_time_et": "08:30",
+      "url": "https://www.bls.gov/news.release/archives/cpi_02132026.htm",
+      "metrics": {
+        "headline_mom": {
+          "actual": 0.2,
+          "consensus": null,
+          "prior": 0.3,
+          "revision": null
+        },
+        "headline_yoy": {
+          "actual": 2.4,
+          "consensus": null,
+          "prior": 2.7,
+          "revision": null
+        },
+        "core_mom": {
+          "actual": 0.3,
+          "consensus": null,
+          "prior": 0.2,
+          "revision": null
+        },
+        "core_yoy": {
+          "actual": 2.5,
+          "consensus": null,
+          "prior": 2.6,
+          "revision": null
+        }
+      }
+    },
+    {
+      "release_date": "2026-03-11",
+      "reference_period": "2026-02",
+      "release_time_et": "08:30",
+      "url": "https://www.bls.gov/news.release/archives/cpi_03112026.htm",
+      "metrics": {
+        "headline_mom": {
+          "actual": 0.3,
+          "consensus": null,
+          "prior": 0.2,
+          "revision": null
+        },
+        "headline_yoy": {
+          "actual": 2.4,
+          "consensus": null,
+          "prior": 2.4,
+          "revision": null
+        },
+        "core_mom": {
+          "actual": 0.2,
+          "consensus": null,
+          "prior": 0.3,
+          "revision": null
+        },
+        "core_yoy": {
+          "actual": 2.5,
+          "consensus": null,
+          "prior": 2.5,
+          "revision": null
+        }
+      }
+    },
+    {
+      "release_date": "2026-04-10",
+      "reference_period": "2026-03",
+      "release_time_et": "08:30",
+      "url": "https://www.bls.gov/news.release/archives/cpi_04102026.htm",
+      "metrics": {
+        "headline_mom": {
+          "actual": 0.9,
+          "consensus": null,
+          "prior": 0.3,
+          "revision": null
+        },
+        "headline_yoy": {
+          "actual": 3.3,
+          "consensus": null,
+          "prior": 2.4,
+          "revision": null
+        },
+        "core_mom": {
+          "actual": 0.2,
+          "consensus": null,
+          "prior": 0.2,
+          "revision": null
+        },
+        "core_yoy": {
+          "actual": 2.6,
+          "consensus": null,
+          "prior": 2.5,
+          "revision": null
+        }
+      }
+    },
+    {
+      "release_date": "2026-05-12",
+      "reference_period": "2026-04",
+      "release_time_et": "08:30",
+      "url": "https://www.bls.gov/news.release/archives/cpi_05122026.htm",
+      "metrics": {
+        "headline_mom": {
+          "actual": 0.6,
+          "consensus": null,
+          "prior": 0.9,
+          "revision": null
+        },
+        "headline_yoy": {
+          "actual": 3.8,
+          "consensus": null,
+          "prior": 3.3,
+          "revision": null
+        },
+        "core_mom": {
+          "actual": 0.4,
+          "consensus": null,
+          "prior": 0.2,
+          "revision": null
+        },
+        "core_yoy": {
+          "actual": 2.8,
+          "consensus": null,
+          "prior": 2.6,
+          "revision": null
+        }
+      }
+    },
+    {
+      "release_date": "2026-06-10",
+      "reference_period": "2026-05",
+      "release_time_et": "08:30",
+      "url": "https://www.bls.gov/news.release/archives/cpi_06102026.htm",
+      "metrics": {
+        "headline_mom": {
+          "actual": 0.5,
+          "consensus": null,
+          "prior": 0.6,
+          "revision": null
+        },
+        "headline_yoy": {
+          "actual": 4.2,
+          "consensus": null,
+          "prior": 3.8,
+          "revision": null
+        },
+        "core_mom": {
+          "actual": 0.2,
+          "consensus": null,
+          "prior": 0.4,
+          "revision": null
+        },
+        "core_yoy": {
+          "actual": 2.9,
+          "consensus": null,
+          "prior": 2.8,
+          "revision": null
+        }
+      }
+    },
+    {
+      "release_date": "2026-07-14",
+      "reference_period": "2026-06",
+      "release_time_et": "08:30",
+      "url": "https://www.bls.gov/news.release/archives/cpi_07142026.htm",
+      "metrics": {
+        "headline_mom": {
+          "actual": -0.4,
+          "consensus": null,
+          "prior": 0.5,
+          "revision": null
+        },
+        "headline_yoy": {
+          "actual": 3.5,
+          "consensus": null,
+          "prior": 4.2,
+          "revision": null
+        },
+        "core_mom": {
+          "actual": 0.0,
+          "consensus": null,
+          "prior": 0.2,
+          "revision": null
+        },
+        "core_yoy": {
+          "actual": 2.6,
+          "consensus": null,
+          "prior": 2.9,
+          "revision": null
+        }
+      }
+    },
+    {
+      "release_date": "2026-08-12",
+      "reference_period": "2026-07",
+      "release_time_et": "08:30",
+      "url": "https://www.bls.gov/news.release/archives/cpi_08122026.htm",
+      "metrics": {
+        "headline_mom": {
+          "actual": 0.1,
+          "consensus": null,
+          "prior": -0.4,
+          "revision": null
+        },
+        "headline_yoy": {
+          "actual": 3.4,
+          "consensus": null,
+          "prior": 3.5,
+          "revision": null
+        },
+        "core_mom": {
+          "actual": 0.2,
+          "consensus": null,
+          "prior": 0.0,
+          "revision": null
+        },
+        "core_yoy": {
+          "actual": 2.5,
+          "consensus": null,
+          "prior": 2.6,
+          "revision": null
+        }
+      }
+    },
+    {
+      "release_date": "2026-09-11",
+      "reference_period": "2026-08",
+      "release_time_et": "08:30",
+      "url": "https://www.bls.gov/news.release/archives/cpi_09112026.htm",
+      "metrics": {
+        "headline_mom": {
+          "actual": 0.4,
+          "consensus": null,
+          "prior": 0.1,
+          "revision": null
+        },
+        "headline_yoy": {
+          "actual": 3.4,
+          "consensus": null,
+          "prior": 3.4,
+          "revision": null
+        },
+        "core_mom": {
+          "actual": 0.3,
+          "consensus": null,
+          "prior": 0.2,
+          "revision": null
+        },
+        "core_yoy": {
+          "actual": 2.4,
+          "consensus": null,
+          "prior": 2.5,
+          "revision": null
+        }
+      }
+    },
+    {
+      "release_date": "2026-10-14",
+      "reference_period": "2026-09",
+      "release_time_et": "08:30",
+      "url": "https://www.bls.gov/news.release/archives/cpi_10142026.htm",
+      "metrics": {
+        "headline_mom": {
+          "actual": 0.6,
+          "consensus": null,
+          "prior": 0.4,
+          "revision": null
+        },
+        "headline_yoy": {
+          "actual": 3.7,
+          "consensus": 3.6,
+          "prior": 3.4,
+          "revision": null
+        },
+        "core_mom": {
+          "actual": 0.3,
+          "consensus": 0.2,
+          "prior": 0.3,
+          "revision": null
+        },
+        "core_yoy": {
+          "actual": 2.6,
+          "consensus": 2.5,
+          "prior": 2.4,
+          "revision": null
+        }
+      }
+    }
+  ]
+}
