@@ -56,6 +56,16 @@ and charts like any stock, but the EDGAR fundamentals fetch and the SEC
 filing event source are skipped for them (their charts render those sections
 as n/a, the same treatment indices already received).
 
+SPCX (SpaceX, listed June 2026) is the opposite case (issue #152): it has an
+EDGAR identity (CIK 1181412), so fundamentals and filing events work as for
+any operating company, but its price history is far shorter than the
+250-session beta window. Move detection evaluates such a series on all
+available history once it clears 40 sessions — beta from every return since
+listing, sigma from whatever part of the 60-session window exists — and the
+dashboard card carries a `history < 250d` badge until the window fills.
+Below 40 sessions a series still reports coverage with zero evaluated days
+rather than a fabricated z-score. No history is backfilled or synthesized.
+
 ## Limitations
 
 Coverage of the *events* behind these moves is uneven, and later plans surface that per move rather than hiding it.

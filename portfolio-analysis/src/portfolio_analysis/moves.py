@@ -40,6 +40,13 @@ from portfolio_analysis.naming import safe_ticker_component
 #: disagreement is not, because every return spanning a gap is fabricated.
 _MAX_DROPPED_DATES = 5
 
+#: Floor for the short-history path in compute_moves (issue #152): a series
+#: shorter than the beta window is evaluated on all available history once
+#: it has at least this many return sessions, so the sigma estimate rests
+#: on at least this many abnormal returns. Below the floor there is no
+#: honest z to compute and the series reports zero evaluated days.
+_SHORT_HISTORY_MIN_SESSIONS = 40
+
 
 def aligned_returns(
     asset: Mapping[str, float], benchmark: Mapping[str, float]
@@ -521,8 +528,13 @@ def compute_moves(
 ) -> tuple[list[Move], Coverage]:
     """Flagged days and the coverage of the evaluation.
 
-    A series too short to fill the beta window yields no moves and a coverage
-    report saying so. A newly listed ticker is a coverage fact, not an error.
+    A series at least as long as the beta window uses the trailing window
+    exactly as configured. A shorter series (issue #152: a newly listed
+    ticker) is evaluated on all available history once it clears
+    ``_SHORT_HISTORY_MIN_SESSIONS``: beta comes from every return since
+    listing and sigma from whatever part of its window exists. Below that
+    floor the series yields no moves and a coverage report saying so. A
+    newly listed ticker is a coverage fact, not an error.
     """
     symbol = safe_ticker_component(ticker)
     common = sorted(set(asset) & set(benchmark))
@@ -533,19 +545,23 @@ def compute_moves(
 
     dates, asset_returns, benchmark_returns = aligned_returns(asset, benchmark)
 
-    first = params.beta_window
+    first = (
+        params.beta_window
+        if len(dates) > params.beta_window
+        else _SHORT_HISTORY_MIN_SESSIONS
+    )
     if first >= len(dates):
         return [], Coverage(price_series, None, 0, 0)
 
     moves: list[Move] = []
     for index in range(first, len(dates)):
-        window = slice(index - params.beta_window, index)
+        window = slice(max(0, index - params.beta_window), index)
         beta, alpha = ols_regression(asset_returns[window], benchmark_returns[window])
 
         # Constant beta across the sigma window, per the module docstring.
         abnormal = [
             asset_returns[j] - beta * benchmark_returns[j]
-            for j in range(index - params.sigma_window, index + 1)
+            for j in range(max(0, index - params.sigma_window), index + 1)
         ]
         sigma = st.stdev(abnormal[:-1])
         if sigma == 0:

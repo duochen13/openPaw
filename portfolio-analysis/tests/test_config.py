@@ -65,6 +65,7 @@ def test_the_shipped_config_loads_and_is_valid():
         "NVDA",
         "CRM",
         "ORCL",
+        "SPCX",
         "METU",
         "GGLL",
     )
@@ -213,3 +214,13 @@ def test_shipped_metu_entry_has_no_cik():
 def test_shipped_ggll_entry_has_no_cik():
     portfolio = load_portfolio()
     assert portfolio.entry("GGLL").cik is None
+
+
+@pytest.mark.unit
+def test_shipped_spcx_entry_has_its_edgar_cik():
+    """SPCX is an operating company (Space Exploration Technologies Corp,
+    CIK 1181412 in the SEC company-tickers file), unlike the leveraged
+    ETFs: EDGAR fundamentals and filing events apply to it."""
+    portfolio = load_portfolio()
+    assert portfolio.entry("SPCX").cik == 1181412
+    assert portfolio.resolve("SpaceX") == "SPCX"

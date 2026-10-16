@@ -483,6 +483,31 @@ def _render(args: argparse.Namespace) -> int:
     return 0
 
 
+def _history_badges(portfolio: Portfolio, args: argparse.Namespace) -> dict[str, str]:
+    """Card badges for tickers whose stored price history cannot yet fill
+    the beta window (issue #152). Their trailing beta is computed on all
+    available history, and the dashboard card should say the window is
+    unfilled rather than letting the card look like every other ticker's.
+
+    Reads only the local price store; a missing store means no badges,
+    never a failed dashboard build.
+    """
+    db = Path(args.db) if getattr(args, "db", None) else portfolio.path("db")
+    if not db.exists():
+        return {}
+    window = portfolio.move_params.beta_window
+    store = Store.open(db)
+    try:
+        badges: dict[str, str] = {}
+        for entry in portfolio.entries:
+            bars = store.price_bar_count(entry.symbol)
+            if 0 < bars <= window:
+                badges[entry.symbol] = f"history < {window}d"
+        return badges
+    finally:
+        store.close()
+
+
 def _dashboard(args: argparse.Namespace) -> int:
     """Multi-stock builds go stale the same way single charts do, so
     `dashboard` gets the identical freshness treatment as `chart` (#56)."""
@@ -493,7 +518,9 @@ def _dashboard(args: argparse.Namespace) -> int:
     _warn_if_price_stale(args, portfolio, symbols)
     try:
         target = render_dashboard(
-            portfolio, Path(args.out_dir) if args.out_dir else portfolio.path("out")
+            portfolio,
+            Path(args.out_dir) if args.out_dir else portfolio.path("out"),
+            history_badges=_history_badges(portfolio, args),
         )
     except OSError as exc:
         print(f"dashboard: {exc}", file=sys.stderr)

@@ -33,6 +33,7 @@ def test_ingest_fetches_the_universe_and_the_benchmark(tmp_path):
         ("NVDA", 6),
         ("CRM", 6),
         ("ORCL", 6),
+        ("SPCX", 6),
         ("METU", 6),
         ("GGLL", 6),
         # Index charts (#57) are part of the ingest universe now, and QQQ's

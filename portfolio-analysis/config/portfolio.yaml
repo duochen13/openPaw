@@ -29,6 +29,10 @@ tickers:
     cik: 1341439
     name: Oracle Corporation
     aliases: ["Oracle", "Oracle Corporation"]
+  - symbol: SPCX
+    cik: 1181412
+    name: Space Exploration Technologies Corp.
+    aliases: ["SpaceX", "Space Exploration Technologies", "Space Exploration Technologies Corp"]
   # No cik: a leveraged single-stock ETF has no operating-company EDGAR
   # identity, so EDGAR fundamentals and filing event sources are skipped
   # for it (same n/a treatment as indices).
