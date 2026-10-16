@@ -33,6 +33,14 @@ tickers:
     cik: 1181412
     name: Space Exploration Technologies Corp.
     aliases: ["SpaceX", "Space Exploration Technologies", "Space Exploration Technologies Corp"]
+  - symbol: GFS
+    cik: 1709048
+    name: GlobalFoundries Inc.
+    aliases: ["GlobalFoundries", "GlobalFoundries Inc"]
+  - symbol: IONQ
+    cik: 1824920
+    name: IonQ, Inc.
+    aliases: ["IonQ", "IonQ Inc"]
   # No cik: a leveraged single-stock ETF has no operating-company EDGAR
   # identity, so EDGAR fundamentals and filing event sources are skipped
   # for it (same n/a treatment as indices).
@@ -75,6 +83,8 @@ industry_benchmarks:
   METU: MAGS # 2x META tracks the same Mag7 cohort as its underlying
   GGLL: MAGS # 2x GOOGL tracks the same Mag7 cohort as its underlying
   NVDA: SOXX # AI chips: iShares Semiconductor ETF
+  GFS: SOXX # Semiconductors: iShares Semiconductor ETF (same mapping as NVDA)
+  IONQ: QTUM # Quantum computing: Defiance Quantum ETF
 
 # Six years, not five. A 250-day beta window consumes the first trading year,
 # so five years of fetched prices would yield only four years of evaluable
