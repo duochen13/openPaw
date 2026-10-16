@@ -156,6 +156,58 @@ Consumers of the prints layer:
   dashboard: the context block quotes actual vs consensus vs prior and the
   per-metric surprise replaces the former “not tracked” placeholder.
 
+### PPI release prints (issue #155)
+
+Issue #155 generalizes the prints layer from CPI-only to series-keyed:
+one loader/classifier (`events/macro_prints.py`), one data file per
+series. `config/ppi_prints.yaml` is the PPI sibling — same schema with
+`series: "PPI"` and the PPI metric keys `final_demand_mom`,
+`final_demand_yoy`, `core_mom`, `core_yoy` (final demand; core = final
+demand less foods and energy), each `{actual, consensus, prior,
+revision}` in percent (m/m seasonally adjusted, y/y unadjusted). The
+backfill covers the 22 releases from 2024-11-14 through 2026-09-10.
+PPI is not a `macro_calendar.yaml` series (that contract stays
+FOMC/CPI/PCE); PPI release dates live in the prints file itself, and
+`MacroSource` surfaces them as a `PPI` catalog key, so the event
+dashboard lists PPI alongside CPI.
+
+Provenance differs from CPI in three ways worth knowing:
+
+- **Where the numbers sit in the release.** Final demand is Table A's
+  headline; core (less foods & energy) is read from its Table 1 row —
+  the 12-month unadjusted change plus the last of the five seasonally
+  adjusted 1-month changes.
+- **Revisions are real.** PPI indexes are revised for four months after
+  publication, so the BLS API's current-vintage levels legitimately
+  disagree with older as-printed values (the collector's API
+  cross-check — `WPUFD4` / `WPSFD4`, `WPUFD49104` / `WPSFD49104` —
+  warns past 0.15pp and the archive prints stand). The file keeps the
+  as-printed vintage throughout and `revision` stays null.
+- **Four pages were unreachable.** The 2026-01-14, 2026-03-18,
+  2026-04-14, and 2026-06-11 archive pages returned HTTP 403 to the
+  collector's fetcher; those releases were transcribed from the
+  following release's tables (first revised vintage) with core y/y
+  computed from the API index levels, and each carries a `notes` entry
+  in the file saying so. The October 2025 shutdown gap applies to PPI
+  too: that release was never published, there is no row for it, the
+  September 2025 release was delayed to 2025-11-25, and priors chain
+  across the gap.
+
+`consensus` is null for every PPI release: no PPI survey median has
+been hand-verified yet, and the discipline from #153 is unchanged —
+never estimated. Until one is sourced, PPI prints attach as facts,
+chart markers (“PPI print: final demand 5.4% y/y”), and dashboard
+context, but they produce no surprises and no `macro_classification`.
+Regenerate or extend the file with `scripts/collect_ppi.py`.
+
+**Reading CPI and PPI jointly.** PPI is the upstream half of the
+inflation pair — pipeline pressure that typically prints a day after
+CPI and leads it. A CPI-day `macro-driven` tag reads differently when
+the prior day's PPI also surprised hot (broad pipeline pressure behind
+the consumer print) than when PPI was quiet (a consumer-side or
+idiosyncratic print). If CPI and PPI ever land on the same day and
+both classify, the bundle keeps the larger surprise.
+
 `--db`, `--moves-dir`, `--events-dir`, `--cache-dir`, and `--macro-calendar` support
 isolated runs. The response cache is local to this machine and uses POSIX locks.
 

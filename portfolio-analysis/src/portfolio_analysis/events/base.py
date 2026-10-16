@@ -146,6 +146,12 @@ def dated_fact_label(key: str, value: Any) -> tuple[str, str] | None:
         if key == "macro_release":
             return f"{value['release']} release", str(value["date"])
         if key == "macro_print":
+            if value.get("release") == "PPI":
+                final_demand = value["metrics"]["final_demand_yoy"]
+                label = f"PPI print: final demand {final_demand['actual']:g}% y/y"
+                if final_demand["consensus"] is not None:
+                    label += f" vs {final_demand['consensus']:g}% consensus"
+                return label, str(value["date"])
             headline = value["metrics"]["headline_yoy"]
             label = f"CPI print: headline {headline['actual']:g}% y/y"
             if headline["consensus"] is not None:
