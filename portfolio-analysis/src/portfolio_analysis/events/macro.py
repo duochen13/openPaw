@@ -10,7 +10,7 @@ from typing import Any
 import yaml
 
 from portfolio_analysis.events.base import Document, VerifiedFact
-from portfolio_analysis.events.macro_prints import CpiPrints
+from portfolio_analysis.events.macro_prints import CpiPrints, PpiPrints
 
 
 class MacroSource:
@@ -36,6 +36,14 @@ class MacroSource:
         prints_path = path.with_name("cpi_prints.yaml")
         self.cpi_prints: CpiPrints | None = (
             CpiPrints(prints_path) if prints_path.exists() else None
+        )
+        #: Issue #155: PPI prints, same pattern. PPI is deliberately NOT a
+        #: calendar series: the calendar's coverage contract (and its
+        #: FOMC/CPI/PCE validation below) predates the prints layer, and
+        #: PPI release dates live in ppi_prints.yaml itself.
+        ppi_prints_path = path.with_name("ppi_prints.yaml")
+        self.ppi_prints: PpiPrints | None = (
+            PpiPrints(ppi_prints_path) if ppi_prints_path.exists() else None
         )
         if set(self._series) != {"FOMC", "CPI", "PCE"}:
             raise ValueError("macro calendar needs FOMC, CPI, and PCE")
@@ -75,6 +83,17 @@ class MacroSource:
                         row["print"] = print_.as_dict()
                 rows.append(row)
             catalog[name] = rows
+        if self.ppi_prints is not None:
+            # Issue #155: PPI rows are keyed by the prints file itself —
+            # there is no PPI calendar series to attach them to.
+            catalog["PPI"] = [
+                {
+                    "date": print_.release_date,
+                    "url": print_.url,
+                    "print": print_.as_dict(),
+                }
+                for print_ in self.ppi_prints.between("0000-01-01", "9999-12-31")
+            ]
         return catalog
 
     def collect(
@@ -95,13 +114,14 @@ class MacroSource:
             if start <= str(event["date"]) <= end
         ]
         facts.sort(key=lambda fact: (fact.value["date"], fact.value["release"]))
+        print_facts: list[VerifiedFact] = []
         if self.cpi_prints is not None:
             # Issue #153: the print itself is a verified fact, sourced from
             # the BLS release — distinct from the calendar's macro_release
             # date fact, and the input to bundle macro classification.
             for print_ in self.cpi_prints.between(start, end):
                 headline = print_.metrics["headline_yoy"]
-                facts.append(
+                print_facts.append(
                     VerifiedFact(
                         key="macro_print",
                         value=print_.fact_value(),
@@ -112,5 +132,22 @@ class MacroSource:
                         ),
                     )
                 )
+        if self.ppi_prints is not None:
+            # Issue #155: same fact shape for PPI (value["release"]="PPI").
+            for print_ in self.ppi_prints.between(start, end):
+                final_demand = print_.metrics["final_demand_yoy"]
+                print_facts.append(
+                    VerifiedFact(
+                        key="macro_print",
+                        value=print_.fact_value(),
+                        source=print_.url,
+                        detail=(
+                            f"PPI print {print_.reference_period}: final demand "
+                            f"{final_demand.actual}% y/y on {print_.release_date}"
+                        ),
+                    )
+                )
+        if print_facts:
+            facts.extend(print_facts)
             facts.sort(key=lambda fact: (fact.value["date"], fact.key))
         return [], facts
