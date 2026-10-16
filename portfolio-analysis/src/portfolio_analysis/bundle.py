@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from portfolio_analysis.events.base import Document, EventSource, VerifiedFact, dated_fact_label
-from portfolio_analysis.events.macro_prints import CpiMetric, CpiPrint, classify_print
+from portfolio_analysis.events.macro_prints import ReleaseMetric, ReleasePrint, classify_print
 from portfolio_analysis.http import atomic_json
 from portfolio_analysis.moves import Move
 from portfolio_analysis.naming import safe_ticker_component
@@ -50,19 +50,21 @@ def bundle_hash(bundle: Mapping[str, Any]) -> str:
 def _macro_classification(
     facts: Mapping[str, VerifiedFact], move_date: str
 ) -> dict[str, Any] | None:
-    """Issue #153: tag a flagged move that landed on a CPI release day.
+    """Issues #153/#155: tag a flagged move that landed on a print day.
 
     A ``macro_print`` fact dated the move day with a material surprise
     classifies the move ``macro-driven`` — or ``mixed`` when a
     ticker-specific dated fact (earnings report, SEC filing) shares the
     day. The tag complements the beta decomposition in the move payload;
-    it never replaces it.
+    it never replaces it. CPI and PPI prints can land on the same day;
+    when more than one classifies, the largest surprise wins — it is the
+    release the market most plausibly reacted to.
     """
-    print_fact: VerifiedFact | None = None
+    print_facts: list[VerifiedFact] = []
     has_ticker_events = False
     for fact in facts.values():
         if fact.key == "macro_print" and str(fact.value.get("date")) == move_date:
-            print_fact = fact
+            print_facts.append(fact)
             continue
         # Only ticker-specific dated facts make a move "mixed"; another
         # macro fact on the same day (the CPI calendar fact itself, or a
@@ -72,25 +74,32 @@ def _macro_classification(
         labeled = dated_fact_label(fact.key, fact.value)
         if labeled is not None and labeled[1] == move_date:
             has_ticker_events = True
-    if print_fact is None:
-        return None
-    value = print_fact.value
-    print_ = CpiPrint(
-        release_date=str(value["date"]),
-        reference_period=str(value["reference_period"]),
-        release_time_et=str(value.get("release_time_et") or "08:30"),
-        url=str(value["url"]),
-        metrics={
-            key: CpiMetric(
-                actual=metric.get("actual"),
-                consensus=metric.get("consensus"),
-                prior=metric.get("prior"),
-                revision=metric.get("revision"),
-            )
-            for key, metric in value["metrics"].items()
-        },
-    )
-    return classify_print(print_, has_ticker_events=has_ticker_events)
+    best: dict[str, Any] | None = None
+    for print_fact in print_facts:
+        value = print_fact.value
+        print_ = ReleasePrint(
+            release_date=str(value["date"]),
+            reference_period=str(value["reference_period"]),
+            release_time_et=str(value.get("release_time_et") or "08:30"),
+            url=str(value["url"]),
+            metrics={
+                key: ReleaseMetric(
+                    actual=metric.get("actual"),
+                    consensus=metric.get("consensus"),
+                    prior=metric.get("prior"),
+                    revision=metric.get("revision"),
+                )
+                for key, metric in value["metrics"].items()
+            },
+            # Facts written before issue #155 carry no other series.
+            series=str(value.get("release") or "CPI"),
+        )
+        classification = classify_print(print_, has_ticker_events=has_ticker_events)
+        if classification is None:
+            continue
+        if best is None or classification["max_abs_surprise_pp"] > best["max_abs_surprise_pp"]:
+            best = classification
+    return best
 
 
 def build_bundle(
