@@ -66,6 +66,16 @@ dashboard card carries a `history < 250d` badge until the window fills.
 Below 40 sessions a series still reports coverage with zero evaluated days
 rather than a fabricated z-score. No history is backfilled or synthesized.
 
+GFS (GlobalFoundries) and IONQ (IonQ) are ordinary CIK-bearing members
+(added in #157). One asymmetry: GFS is a foreign private issuer whose EDGAR
+companyfacts exist only under the `ifrs-full` taxonomy
+(`DilutedEarningsLossPerShare`), while the fundamentals fetch reads
+`us-gaap` concepts — so `fetch-fundamentals GFS` reports no
+`EarningsPerShareDiluted` in USD/shares and GFS renders its P/E and KPI
+sections as n/a until IFRS taxonomy support is added. Prices, move
+detection, and SEC filing event collection do not depend on the `us-gaap`
+taxonomy and work for GFS normally.
+
 ## Limitations
 
 Coverage of the *events* behind these moves is uneven, and later plans surface that per move rather than hiding it.
