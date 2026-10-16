@@ -130,11 +130,48 @@ def test_a_ticker_shorter_than_the_benchmark_reports_coverage_not_an_error():
 
     The benchmark is always fetched at full depth, so counting the whole
     symmetric difference made every short ticker raise 'the two series
-    disagree about the trading calendar'.
+    disagree about the trading calendar'. Since issue #152 the short
+    series is evaluated on its available history (119 returns here, so
+    evaluation starts after the 40-session floor) instead of not at all.
     """
     _, bench, dates = _series(n=400)
     asset_full, _, _ = _series(n=400)
     asset = {d: asset_full[d] for d in dates[-120:]}
+    moves, coverage = compute_moves("TEST", "BENCH", asset, bench, PARAMS)
+    assert moves == []
+    assert coverage.evaluated_days == 119 - 40
+    assert coverage.evaluated is not None
+
+
+@pytest.mark.unit
+def test_short_history_evaluates_from_the_floor_on_all_available_history():
+    """Issue #152: with 100 returns (< the 250 beta window) evaluation
+    starts at the 40-session floor, not at the beta window."""
+    asset, bench, dates = _series(n=100)
+    _, coverage = compute_moves("TEST", "BENCH", asset, bench, PARAMS)
+    assert coverage.evaluated_days == 100 - 40
+    # Internal return dates are the fixture's dates[1:]; the first
+    # evaluable day is 40 returns in.
+    assert coverage.evaluated == (dates[41], dates[100])
+
+
+@pytest.mark.unit
+def test_short_history_spike_is_flagged_with_all_history_beta():
+    """A spike late in a short series is flagged, and its beta comes from
+    all returns since listing (the fixture's true beta is 2.0)."""
+    asset, bench, dates = _series(n=86, spike_at=85, spike=0.20)
+    moves, coverage = compute_moves("TEST", "BENCH", asset, bench, PARAMS)
+    assert coverage.flagged_days == 1
+    assert moves[0].date == dates[85]
+    assert moves[0].z > 2.5
+    assert 1.9 < moves[0].beta < 2.1
+
+
+@pytest.mark.unit
+def test_series_at_the_floor_still_yields_no_moves():
+    """Exactly 40 returns leaves no day with 40 prior abnormal returns:
+    the floor is a minimum for evaluation, not a day that evaluates."""
+    asset, bench, _ = _series(n=40)
     moves, coverage = compute_moves("TEST", "BENCH", asset, bench, PARAMS)
     assert moves == []
     assert coverage.evaluated_days == 0
