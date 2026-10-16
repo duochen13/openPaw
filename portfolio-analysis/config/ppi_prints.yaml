@@ -1,0 +1,731 @@
+{
+  "schema_version": 1,
+  "series": "PPI",
+  "as_of": "2026-09-10",
+  "source": "U.S. Bureau of Labor Statistics (BLS)",
+  "notes": [
+    "Actuals are the as-printed percent changes from each BLS PPI release (final demand: m/m seasonally adjusted, y/y unadjusted; core = final demand less foods and energy) - the vintage the market saw on the release morning. Values are cross-checked against index levels from the BLS public API (WPUFD4 / WPSFD4, WPUFD49104 / WPSFD49104). PPI indexes are revised for four months after publication, so the API's current vintage legitimately differs from older as-printed values; the archive prints stand.",
+    "Consensus is null for every backfilled release: no PPI survey median has been hand-verified yet (see CONSENSUS in scripts/collect_ppi.py). It is never estimated, and null consensus means no surprise and no macro classification for PPI days until one is sourced.",
+    "Prior is the previous published release's actual. October 2025 was never published (federal shutdown) and the September 2025 release was delayed to 2025-11-25, so the 2026-01-14 release chains to September 2025. There is no October 2025 row - the gap is explicit, never interpolated.",
+    "Revision is null throughout: the file keeps as-printed values; BLS's four-month revisions and the annual seasonal-factor recalculation are not restated.",
+    "Four releases carry a per-release note: their archive pages returned HTTP 403 to the collector's fetcher, so their values were transcribed from the following release's tables (first revised vintage) with core y/y computed from the BLS API index levels."
+  ],
+  "releases": [
+    {
+      "release_date": "2024-11-14",
+      "reference_period": "2024-10",
+      "release_time_et": "08:30",
+      "url": "https://www.bls.gov/news.release/archives/ppi_11142024.htm",
+      "metrics": {
+        "final_demand_mom": {
+          "actual": 0.2,
+          "consensus": null,
+          "prior": null,
+          "revision": null
+        },
+        "final_demand_yoy": {
+          "actual": 2.4,
+          "consensus": null,
+          "prior": null,
+          "revision": null
+        },
+        "core_mom": {
+          "actual": 0.3,
+          "consensus": null,
+          "prior": null,
+          "revision": null
+        },
+        "core_yoy": {
+          "actual": 3.1,
+          "consensus": null,
+          "prior": null,
+          "revision": null
+        }
+      }
+    },
+    {
+      "release_date": "2024-12-12",
+      "reference_period": "2024-11",
+      "release_time_et": "08:30",
+      "url": "https://www.bls.gov/news.release/archives/ppi_12122024.htm",
+      "metrics": {
+        "final_demand_mom": {
+          "actual": 0.4,
+          "consensus": null,
+          "prior": 0.2,
+          "revision": null
+        },
+        "final_demand_yoy": {
+          "actual": 3.0,
+          "consensus": null,
+          "prior": 2.4,
+          "revision": null
+        },
+        "core_mom": {
+          "actual": 0.2,
+          "consensus": null,
+          "prior": 0.3,
+          "revision": null
+        },
+        "core_yoy": {
+          "actual": 3.4,
+          "consensus": null,
+          "prior": 3.1,
+          "revision": null
+        }
+      }
+    },
+    {
+      "release_date": "2025-01-14",
+      "reference_period": "2024-12",
+      "release_time_et": "08:30",
+      "url": "https://www.bls.gov/news.release/archives/ppi_01142025.htm",
+      "metrics": {
+        "final_demand_mom": {
+          "actual": 0.2,
+          "consensus": null,
+          "prior": 0.4,
+          "revision": null
+        },
+        "final_demand_yoy": {
+          "actual": 3.3,
+          "consensus": null,
+          "prior": 3.0,
+          "revision": null
+        },
+        "core_mom": {
+          "actual": 0.0,
+          "consensus": null,
+          "prior": 0.2,
+          "revision": null
+        },
+        "core_yoy": {
+          "actual": 3.5,
+          "consensus": null,
+          "prior": 3.4,
+          "revision": null
+        }
+      }
+    },
+    {
+      "release_date": "2025-02-13",
+      "reference_period": "2025-01",
+      "release_time_et": "08:30",
+      "url": "https://www.bls.gov/news.release/archives/ppi_02132025.htm",
+      "metrics": {
+        "final_demand_mom": {
+          "actual": 0.4,
+          "consensus": null,
+          "prior": 0.2,
+          "revision": null
+        },
+        "final_demand_yoy": {
+          "actual": 3.5,
+          "consensus": null,
+          "prior": 3.3,
+          "revision": null
+        },
+        "core_mom": {
+          "actual": 0.3,
+          "consensus": null,
+          "prior": 0.0,
+          "revision": null
+        },
+        "core_yoy": {
+          "actual": 3.6,
+          "consensus": null,
+          "prior": 3.5,
+          "revision": null
+        }
+      }
+    },
+    {
+      "release_date": "2025-03-13",
+      "reference_period": "2025-02",
+      "release_time_et": "08:30",
+      "url": "https://www.bls.gov/news.release/archives/ppi_03132025.htm",
+      "metrics": {
+        "final_demand_mom": {
+          "actual": 0.0,
+          "consensus": null,
+          "prior": 0.4,
+          "revision": null
+        },
+        "final_demand_yoy": {
+          "actual": 3.2,
+          "consensus": null,
+          "prior": 3.5,
+          "revision": null
+        },
+        "core_mom": {
+          "actual": -0.1,
+          "consensus": null,
+          "prior": 0.3,
+          "revision": null
+        },
+        "core_yoy": {
+          "actual": 3.4,
+          "consensus": null,
+          "prior": 3.6,
+          "revision": null
+        }
+      }
+    },
+    {
+      "release_date": "2025-04-11",
+      "reference_period": "2025-03",
+      "release_time_et": "08:30",
+      "url": "https://www.bls.gov/news.release/archives/ppi_04112025.htm",
+      "metrics": {
+        "final_demand_mom": {
+          "actual": -0.4,
+          "consensus": null,
+          "prior": 0.0,
+          "revision": null
+        },
+        "final_demand_yoy": {
+          "actual": 2.7,
+          "consensus": null,
+          "prior": 3.2,
+          "revision": null
+        },
+        "core_mom": {
+          "actual": -0.1,
+          "consensus": null,
+          "prior": -0.1,
+          "revision": null
+        },
+        "core_yoy": {
+          "actual": 3.3,
+          "consensus": null,
+          "prior": 3.4,
+          "revision": null
+        }
+      }
+    },
+    {
+      "release_date": "2025-05-15",
+      "reference_period": "2025-04",
+      "release_time_et": "08:30",
+      "url": "https://www.bls.gov/news.release/archives/ppi_05152025.htm",
+      "metrics": {
+        "final_demand_mom": {
+          "actual": -0.5,
+          "consensus": null,
+          "prior": -0.4,
+          "revision": null
+        },
+        "final_demand_yoy": {
+          "actual": 2.4,
+          "consensus": null,
+          "prior": 2.7,
+          "revision": null
+        },
+        "core_mom": {
+          "actual": -0.4,
+          "consensus": null,
+          "prior": -0.1,
+          "revision": null
+        },
+        "core_yoy": {
+          "actual": 3.1,
+          "consensus": null,
+          "prior": 3.3,
+          "revision": null
+        }
+      }
+    },
+    {
+      "release_date": "2025-06-12",
+      "reference_period": "2025-05",
+      "release_time_et": "08:30",
+      "url": "https://www.bls.gov/news.release/archives/ppi_06122025.htm",
+      "metrics": {
+        "final_demand_mom": {
+          "actual": 0.1,
+          "consensus": null,
+          "prior": -0.5,
+          "revision": null
+        },
+        "final_demand_yoy": {
+          "actual": 2.6,
+          "consensus": null,
+          "prior": 2.4,
+          "revision": null
+        },
+        "core_mom": {
+          "actual": 0.1,
+          "consensus": null,
+          "prior": -0.4,
+          "revision": null
+        },
+        "core_yoy": {
+          "actual": 3.0,
+          "consensus": null,
+          "prior": 3.1,
+          "revision": null
+        }
+      }
+    },
+    {
+      "release_date": "2025-07-16",
+      "reference_period": "2025-06",
+      "release_time_et": "08:30",
+      "url": "https://www.bls.gov/news.release/archives/ppi_07162025.htm",
+      "metrics": {
+        "final_demand_mom": {
+          "actual": 0.0,
+          "consensus": null,
+          "prior": 0.1,
+          "revision": null
+        },
+        "final_demand_yoy": {
+          "actual": 2.3,
+          "consensus": null,
+          "prior": 2.6,
+          "revision": null
+        },
+        "core_mom": {
+          "actual": 0.0,
+          "consensus": null,
+          "prior": 0.1,
+          "revision": null
+        },
+        "core_yoy": {
+          "actual": 2.6,
+          "consensus": null,
+          "prior": 3.0,
+          "revision": null
+        }
+      }
+    },
+    {
+      "release_date": "2025-08-14",
+      "reference_period": "2025-07",
+      "release_time_et": "08:30",
+      "url": "https://www.bls.gov/news.release/archives/ppi_08142025.htm",
+      "metrics": {
+        "final_demand_mom": {
+          "actual": 0.9,
+          "consensus": null,
+          "prior": 0.0,
+          "revision": null
+        },
+        "final_demand_yoy": {
+          "actual": 3.3,
+          "consensus": null,
+          "prior": 2.3,
+          "revision": null
+        },
+        "core_mom": {
+          "actual": 0.9,
+          "consensus": null,
+          "prior": 0.0,
+          "revision": null
+        },
+        "core_yoy": {
+          "actual": 3.7,
+          "consensus": null,
+          "prior": 2.6,
+          "revision": null
+        }
+      }
+    },
+    {
+      "release_date": "2025-09-10",
+      "reference_period": "2025-08",
+      "release_time_et": "08:30",
+      "url": "https://www.bls.gov/news.release/archives/ppi_09102025.htm",
+      "metrics": {
+        "final_demand_mom": {
+          "actual": -0.1,
+          "consensus": null,
+          "prior": 0.9,
+          "revision": null
+        },
+        "final_demand_yoy": {
+          "actual": 2.6,
+          "consensus": null,
+          "prior": 3.3,
+          "revision": null
+        },
+        "core_mom": {
+          "actual": -0.1,
+          "consensus": null,
+          "prior": 0.9,
+          "revision": null
+        },
+        "core_yoy": {
+          "actual": 2.8,
+          "consensus": null,
+          "prior": 3.7,
+          "revision": null
+        }
+      }
+    },
+    {
+      "release_date": "2025-11-25",
+      "reference_period": "2025-09",
+      "release_time_et": "08:30",
+      "url": "https://www.bls.gov/news.release/archives/ppi_11252025.htm",
+      "metrics": {
+        "final_demand_mom": {
+          "actual": 0.3,
+          "consensus": null,
+          "prior": -0.1,
+          "revision": null
+        },
+        "final_demand_yoy": {
+          "actual": 2.7,
+          "consensus": null,
+          "prior": 2.6,
+          "revision": null
+        },
+        "core_mom": {
+          "actual": 0.1,
+          "consensus": null,
+          "prior": -0.1,
+          "revision": null
+        },
+        "core_yoy": {
+          "actual": 2.6,
+          "consensus": null,
+          "prior": 2.8,
+          "revision": null
+        }
+      }
+    },
+    {
+      "release_date": "2026-01-14",
+      "reference_period": "2025-11",
+      "release_time_et": "08:30",
+      "url": "https://www.bls.gov/news.release/archives/ppi_01142026.htm",
+      "metrics": {
+        "final_demand_mom": {
+          "actual": 0.2,
+          "consensus": null,
+          "prior": 0.3,
+          "revision": null
+        },
+        "final_demand_yoy": {
+          "actual": 3.0,
+          "consensus": null,
+          "prior": 2.7,
+          "revision": null
+        },
+        "core_mom": {
+          "actual": 0.0,
+          "consensus": null,
+          "prior": 0.1,
+          "revision": null
+        },
+        "core_yoy": {
+          "actual": 3.2,
+          "consensus": null,
+          "prior": 2.6,
+          "revision": null
+        }
+      },
+      "notes": [
+        "Archive page returned HTTP 403 to the collector's fetcher; final demand and core m/m are from the following release's (2026-01-30) tables - the first revised vintage - and core y/y is computed from BLS API index WPUFD49104 (current vintage)."
+      ]
+    },
+    {
+      "release_date": "2026-01-30",
+      "reference_period": "2025-12",
+      "release_time_et": "08:30",
+      "url": "https://www.bls.gov/news.release/archives/ppi_01302026.htm",
+      "metrics": {
+        "final_demand_mom": {
+          "actual": 0.5,
+          "consensus": null,
+          "prior": 0.2,
+          "revision": null
+        },
+        "final_demand_yoy": {
+          "actual": 3.0,
+          "consensus": null,
+          "prior": 3.0,
+          "revision": null
+        },
+        "core_mom": {
+          "actual": 0.7,
+          "consensus": null,
+          "prior": 0.0,
+          "revision": null
+        },
+        "core_yoy": {
+          "actual": 3.3,
+          "consensus": null,
+          "prior": 3.2,
+          "revision": null
+        }
+      }
+    },
+    {
+      "release_date": "2026-02-27",
+      "reference_period": "2026-01",
+      "release_time_et": "08:30",
+      "url": "https://www.bls.gov/news.release/archives/ppi_02272026.htm",
+      "metrics": {
+        "final_demand_mom": {
+          "actual": 0.5,
+          "consensus": null,
+          "prior": 0.5,
+          "revision": null
+        },
+        "final_demand_yoy": {
+          "actual": 2.9,
+          "consensus": null,
+          "prior": 3.0,
+          "revision": null
+        },
+        "core_mom": {
+          "actual": 0.8,
+          "consensus": null,
+          "prior": 0.7,
+          "revision": null
+        },
+        "core_yoy": {
+          "actual": 3.6,
+          "consensus": null,
+          "prior": 3.3,
+          "revision": null
+        }
+      }
+    },
+    {
+      "release_date": "2026-03-18",
+      "reference_period": "2026-02",
+      "release_time_et": "08:30",
+      "url": "https://www.bls.gov/news.release/archives/ppi_03182026.htm",
+      "metrics": {
+        "final_demand_mom": {
+          "actual": 0.6,
+          "consensus": null,
+          "prior": 0.5,
+          "revision": null
+        },
+        "final_demand_yoy": {
+          "actual": 3.3,
+          "consensus": null,
+          "prior": 2.9,
+          "revision": null
+        },
+        "core_mom": {
+          "actual": 0.4,
+          "consensus": null,
+          "prior": 0.8,
+          "revision": null
+        },
+        "core_yoy": {
+          "actual": 3.8,
+          "consensus": null,
+          "prior": 3.6,
+          "revision": null
+        }
+      },
+      "notes": [
+        "Archive page returned HTTP 403 to the collector's fetcher; final demand is from the following release's (2026-04-14) Table A, core m/m from the 2026-05-13 release's Table 1, and core y/y is computed from BLS API index WPUFD49104 (current vintage)."
+      ]
+    },
+    {
+      "release_date": "2026-04-14",
+      "reference_period": "2026-03",
+      "release_time_et": "08:30",
+      "url": "https://www.bls.gov/news.release/archives/ppi_04142026.htm",
+      "metrics": {
+        "final_demand_mom": {
+          "actual": 0.7,
+          "consensus": null,
+          "prior": 0.6,
+          "revision": null
+        },
+        "final_demand_yoy": {
+          "actual": 4.3,
+          "consensus": null,
+          "prior": 3.3,
+          "revision": null
+        },
+        "core_mom": {
+          "actual": 0.2,
+          "consensus": null,
+          "prior": 0.4,
+          "revision": null
+        },
+        "core_yoy": {
+          "actual": 3.9,
+          "consensus": null,
+          "prior": 3.8,
+          "revision": null
+        }
+      },
+      "notes": [
+        "Archive page returned HTTP 403 to the collector's fetcher; final demand and core m/m are from the following release's (2026-05-13) tables - the first revised vintage - and core y/y is computed from BLS API index WPUFD49104 (current vintage)."
+      ]
+    },
+    {
+      "release_date": "2026-05-13",
+      "reference_period": "2026-04",
+      "release_time_et": "08:30",
+      "url": "https://www.bls.gov/news.release/archives/ppi_05132026.htm",
+      "metrics": {
+        "final_demand_mom": {
+          "actual": 1.4,
+          "consensus": null,
+          "prior": 0.7,
+          "revision": null
+        },
+        "final_demand_yoy": {
+          "actual": 6.0,
+          "consensus": null,
+          "prior": 4.3,
+          "revision": null
+        },
+        "core_mom": {
+          "actual": 1.0,
+          "consensus": null,
+          "prior": 0.2,
+          "revision": null
+        },
+        "core_yoy": {
+          "actual": 5.2,
+          "consensus": null,
+          "prior": 3.9,
+          "revision": null
+        }
+      }
+    },
+    {
+      "release_date": "2026-06-11",
+      "reference_period": "2026-05",
+      "release_time_et": "08:30",
+      "url": "https://www.bls.gov/news.release/archives/ppi_06112026.htm",
+      "metrics": {
+        "final_demand_mom": {
+          "actual": 0.6,
+          "consensus": null,
+          "prior": 1.4,
+          "revision": null
+        },
+        "final_demand_yoy": {
+          "actual": 6.0,
+          "consensus": null,
+          "prior": 6.0,
+          "revision": null
+        },
+        "core_mom": {
+          "actual": 0.1,
+          "consensus": null,
+          "prior": 1.0,
+          "revision": null
+        },
+        "core_yoy": {
+          "actual": 4.5,
+          "consensus": null,
+          "prior": 5.2,
+          "revision": null
+        }
+      },
+      "notes": [
+        "Archive page returned HTTP 403 to the collector's fetcher; final demand and core m/m are from the following release's (2026-07-15) tables - the first revised vintage - and core y/y is computed from BLS API index WPUFD49104 (current vintage)."
+      ]
+    },
+    {
+      "release_date": "2026-07-15",
+      "reference_period": "2026-06",
+      "release_time_et": "08:30",
+      "url": "https://www.bls.gov/news.release/archives/ppi_07152026.htm",
+      "metrics": {
+        "final_demand_mom": {
+          "actual": -0.3,
+          "consensus": null,
+          "prior": 0.6,
+          "revision": null
+        },
+        "final_demand_yoy": {
+          "actual": 5.5,
+          "consensus": null,
+          "prior": 6.0,
+          "revision": null
+        },
+        "core_mom": {
+          "actual": 0.2,
+          "consensus": null,
+          "prior": 0.1,
+          "revision": null
+        },
+        "core_yoy": {
+          "actual": 4.7,
+          "consensus": null,
+          "prior": 4.5,
+          "revision": null
+        }
+      }
+    },
+    {
+      "release_date": "2026-08-13",
+      "reference_period": "2026-07",
+      "release_time_et": "08:30",
+      "url": "https://www.bls.gov/news.release/archives/ppi_08132026.htm",
+      "metrics": {
+        "final_demand_mom": {
+          "actual": 0.0,
+          "consensus": null,
+          "prior": -0.3,
+          "revision": null
+        },
+        "final_demand_yoy": {
+          "actual": 4.7,
+          "consensus": null,
+          "prior": 5.5,
+          "revision": null
+        },
+        "core_mom": {
+          "actual": 0.2,
+          "consensus": null,
+          "prior": 0.2,
+          "revision": null
+        },
+        "core_yoy": {
+          "actual": 4.2,
+          "consensus": null,
+          "prior": 4.7,
+          "revision": null
+        }
+      }
+    },
+    {
+      "release_date": "2026-09-10",
+      "reference_period": "2026-08",
+      "release_time_et": "08:30",
+      "url": "https://www.bls.gov/news.release/archives/ppi_09102026.htm",
+      "metrics": {
+        "final_demand_mom": {
+          "actual": 0.4,
+          "consensus": null,
+          "prior": 0.0,
+          "revision": null
+        },
+        "final_demand_yoy": {
+          "actual": 5.4,
+          "consensus": null,
+          "prior": 4.7,
+          "revision": null
+        },
+        "core_mom": {
+          "actual": 0.2,
+          "consensus": null,
+          "prior": 0.2,
+          "revision": null
+        },
+        "core_yoy": {
+          "actual": 4.6,
+          "consensus": null,
+          "prior": 4.2,
+          "revision": null
+        }
+      }
+    }
+  ]
+}
