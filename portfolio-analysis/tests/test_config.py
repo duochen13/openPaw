@@ -66,6 +66,8 @@ def test_the_shipped_config_loads_and_is_valid():
         "CRM",
         "ORCL",
         "SPCX",
+        "GFS",
+        "IONQ",
         "METU",
         "GGLL",
     )
@@ -224,3 +226,19 @@ def test_shipped_spcx_entry_has_its_edgar_cik():
     portfolio = load_portfolio()
     assert portfolio.entry("SPCX").cik == 1181412
     assert portfolio.resolve("SpaceX") == "SPCX"
+
+
+@pytest.mark.unit
+def test_shipped_gfs_entry_has_sec_cik():
+    portfolio = load_portfolio()
+    entry = portfolio.entry("GFS")
+    assert entry.cik == 1709048
+    assert entry.name == "GlobalFoundries Inc."
+
+
+@pytest.mark.unit
+def test_shipped_ionq_entry_has_sec_cik():
+    portfolio = load_portfolio()
+    entry = portfolio.entry("IONQ")
+    assert entry.cik == 1824920
+    assert entry.name == "IonQ, Inc."
