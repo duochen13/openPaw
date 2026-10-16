@@ -21,6 +21,7 @@ from portfolio_analysis.store import Store
 _EVENT_VARIABLES = {
     "FOMC": "federal funds target range",
     "CPI": "Consumer Price Index (headline inflation)",
+    "PPI": "Producer Price Index (final demand — upstream pipeline prices)",
     "PCE": "PCE price index (the Fed's preferred inflation gauge)",
 }
 
@@ -118,6 +119,38 @@ def _event_context(kind: str, row: dict[str, Any], as_of: str) -> dict[str, Any]
         else:
             summary = f"CPI release on {row.get('date')}; source: BLS release schedule."
             short_label = "CPI release"
+    elif kind == "PPI":
+        print_ = row.get("print")
+        if print_:
+            metrics = print_["metrics"]
+            final_demand_yoy = metrics["final_demand_yoy"]
+            core_mom = metrics["core_mom"]
+            surprises = {
+                key: metric["surprise"]
+                for key, metric in metrics.items()
+                if metric.get("surprise") is not None
+            }
+            surprise = surprises or None
+            summary = (
+                f"PPI release on {row.get('date')} (reference "
+                f"{print_['reference_period']}): final demand "
+                f"{final_demand_yoy['actual']:g}% y/y"
+            )
+            if final_demand_yoy.get("consensus") is not None:
+                summary += f" vs {final_demand_yoy['consensus']:g}% consensus"
+            if final_demand_yoy.get("prior") is not None:
+                summary += f", prior {final_demand_yoy['prior']:g}%"
+            if core_mom.get("actual") is not None:
+                summary += f"; core {core_mom['actual']:g}% m/m"
+                if core_mom.get("consensus") is not None:
+                    summary += f" vs {core_mom['consensus']:g}% consensus"
+            else:
+                summary += "; core m/m not published for this release"
+            summary += f"; source: BLS release {print_['url']}."
+            short_label = f"PPI: final demand {final_demand_yoy['actual']:g}% y/y"
+        else:
+            summary = f"PPI release on {row.get('date')}; source: BLS release schedule."
+            short_label = "PPI release"
     elif kind == "PCE":
         summary = f"PCE release on {row.get('date')}; source: BEA release schedule."
         short_label = "PCE release"
