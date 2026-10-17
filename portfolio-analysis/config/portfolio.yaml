@@ -41,6 +41,10 @@ tickers:
     cik: 1824920
     name: IonQ, Inc.
     aliases: ["IonQ", "IonQ Inc"]
+  - symbol: MRNA
+    cik: 1682852
+    name: Moderna, Inc.
+    aliases: ["Moderna", "Moderna Inc"]
   # No cik: a leveraged single-stock ETF has no operating-company EDGAR
   # identity, so EDGAR fundamentals and filing event sources are skipped
   # for it (same n/a treatment as indices).
@@ -85,6 +89,7 @@ industry_benchmarks:
   NVDA: SOXX # AI chips: iShares Semiconductor ETF
   GFS: SOXX # Semiconductors: iShares Semiconductor ETF (same mapping as NVDA)
   IONQ: QTUM # Quantum computing: Defiance Quantum ETF
+  MRNA: XBI # Biotech: SPDR S&P Biotech ETF
 
 # Six years, not five. A 250-day beta window consumes the first trading year,
 # so five years of fetched prices would yield only four years of evaluable
