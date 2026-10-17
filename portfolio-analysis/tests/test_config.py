@@ -68,6 +68,7 @@ def test_the_shipped_config_loads_and_is_valid():
         "SPCX",
         "GFS",
         "IONQ",
+        "MRNA",
         "METU",
         "GGLL",
     )
@@ -242,3 +243,11 @@ def test_shipped_ionq_entry_has_sec_cik():
     entry = portfolio.entry("IONQ")
     assert entry.cik == 1824920
     assert entry.name == "IonQ, Inc."
+
+
+@pytest.mark.unit
+def test_shipped_mrna_entry_has_sec_cik():
+    portfolio = load_portfolio()
+    entry = portfolio.entry("MRNA")
+    assert entry.cik == 1682852
+    assert entry.name == "Moderna, Inc."

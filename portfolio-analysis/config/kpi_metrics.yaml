@@ -65,6 +65,15 @@ kpis:
     - operating_margin
     - rpo
     - capex
+  MRNA:
+    # Standard peer set minus rpo (Moderna does not tag a remaining
+    # performance obligation) and minus gross_margin (Moderna does not
+    # tag us-gaap:GrossProfit, the same gap META/GOOGL have). US
+    # domestic us-gaap filer; the three metrics below have live EDGAR
+    # sources (added with the universe in #161).
+    - revenue
+    - operating_margin
+    - capex
 
 # RPO growth deceleration alerts (issue #36): the canary trigger for the
 # per-seat disruption thesis. A ticker's alert fires when its RPO YoY
