@@ -76,6 +76,11 @@ sections as n/a until IFRS taxonomy support is added. Prices, move
 detection, and SEC filing event collection do not depend on the `us-gaap`
 taxonomy and work for GFS normally.
 
+MRNA (Moderna, added in #161) is an ordinary CIK-bearing member
+(CIK 1682852) mapped to the XBI biotech industry benchmark. Unlike GFS it
+is a US domestic filer reporting in `us-gaap`, so EDGAR fundamentals and
+filing event collection work for it as for any other operating company.
+
 ## Limitations
 
 Coverage of the *events* behind these moves is uneven, and later plans surface that per move rather than hiding it.
