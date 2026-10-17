@@ -1,0 +1,30 @@
+panel,series,date,value,unit,kind,source,note
+4,distressed_le80,2022-12-31,130.0,$B,derived,JPMorgan via AI slowdown watch distressed-loan snapshots,"Dec-2022 point derived in the source chart; the plotted series is snapshots, not continuous data"
+4,distressed_le80,2025-10-31,73.6,$B,derived,JPMorgan Oct-2026 report (via AI slowdown watch),Derived: the Oct-2026 print (139.8) was reported as nearly 90% higher year over year
+4,distressed_le80,2026-07-31,143.7,$B,reported,"JPMorgan Credit Strategy Weekly, Jul 10 2026","Loans trading at or below 80 cents, par amount"
+4,distressed_le80,2026-10-31,139.8,$B,reported,"JPMorgan report, Oct 6 2026",Plotted at Oct month-end; value from the Oct 6 2026 report
+4,distressed_lt60,2025-10-31,40.0,$B,reported,JPMorgan Oct-2026 report (via AI slowdown watch),Reported as the year-ago figure in the Oct-2026 report
+4,distressed_lt60,2026-07-31,49.1,$B,reported,"JPMorgan Credit Strategy Weekly, Jul 10 2026","Loans trading below 60 cents, par amount"
+4,distressed_lt60,2026-10-31,65.0,$B,reported,"JPMorgan report, Oct 6 2026",Plotted at Oct month-end; value from the Oct 6 2026 report
+5,crwv_debt_cost,2026-04-30,9.75,%,reported,"CoreWeave senior unsecured notes, Apr-2026 (press; spread-tracker)","9.75% new-issue coupon ($2.75B notes, Apr 2026); the same coupon was tapped again Oct-2026 ($1B 2031s)"
+5,crwv_debt_cost,2026-10-31,15.0,%,reported,"Press reports, Oct-2026 (AI slowdown watch credit checks)","Approximately 15% 2032 secondary yield, Oct-2026 (reported range ~14-16%); plotted at month-end"
+6,h100_spot,2023-12-31,7.7,$/GPU-hr,reported,Silicon Data via spread-tracker,Hyperscaler-only era; no neocloud tier yet
+6,h100_spot,2024-06-30,7.92,$/GPU-hr,reported,Silicon Data via spread-tracker,Monthly average; range reached low $8s
+6,h100_spot,2024-12-31,2.8,$/GPU-hr,reported,Silicon Data via spread-tracker,Neocloud/marketplace median
+6,h100_spot,2025-06-30,2.9,$/GPU-hr,reported,Silicon Data via spread-tracker,Neocloud/marketplace median
+6,h100_spot,2025-12-31,2.6,$/GPU-hr,reported,Silicon Data via spread-tracker,Neocloud/marketplace median
+6,h100_spot,2026-07-31,3.2,$/GPU-hr,reported,AIMultiple / gpusmith via spread-tracker,Mid-2026 on-demand median ~$2.95-3.46
+6,h100_spot,2026-09-30,2.65,$/GPU-hr,reported,Ornn OCPI-H100 via spread-tracker,Settled index printed $2.65 through Sep-2026 (Sep-20 and Oct-11 settlements)
+6,h100_spot,2026-10-31,2.65,$/GPU-hr,reported,Ornn OCPI-H100 via spread-tracker,Latest settled print $2.65 (Oct-11-2026); carried at Oct month-end as in the source chart
+6,anthropic_arr,2024-12-31,1,$B,reported,AI slowdown watch anthropic-arr.log series,Series start: ~$1B reported run-rate at YE2024
+6,anthropic_arr,2025-12-31,9,$B,reported,"anthropic-arr.log: reported (retrospective, via NYT/Bloomberg Sep-2026 coverage)",Gross basis: Anthropic counts cloud-partner sales gross
+6,anthropic_arr,2026-02-28,14,$B,reported,anthropic-arr.log: reported run-rate series (ainvest compilation of company/investor disclosures),
+6,anthropic_arr,2026-03-31,19,$B,reported,anthropic-arr.log: reported run-rate series (ainvest compilation),
+6,anthropic_arr,2026-04-30,30,$B,reported,anthropic-arr.log: reported run-rate series (ainvest compilation),
+6,anthropic_arr,2026-05-31,47,$B,reported,anthropic-arr.log: Anthropic public statement / Bloomberg,
+6,anthropic_arr,2026-07-31,65,$B,reported,anthropic-arr.log: investor update via Bloomberg/CNBC,Last company-side figure in the log before the YE2026 expectation
+6,anthropic_arr,2026-09-30,100,$B,reported,anthropic-arr.log: NYT reported mid-Sep-2026 run rate topped $100B (via Bloomberg),"Reported as >$100B on 2026-09-18; plotted at the 100 floor at Sep month-end, as in the source chart"
+6,anthropic_arr,2026-12-31,110,$B,expectation,Investor expectation reported by WSJ (via anthropic-arr.log),Stated expectation: $100-120B annualized by YE2026; midpoint plotted. NOT reported data - renders dashed only
+6,openai_runrate,2026-01-31,20,$B,reported,FT Oct-2026 reporting (via source chart),"Annualized run-rate ~$20B at the start of 2026, net basis"
+6,openai_runrate,2026-09-30,50,$B,reported,FT Oct-2026 reporting (via source chart),Approaching $50B annualized end-Sep-2026
+6,openai_runrate,2026-12-31,70,$B,expectation,Company-stated expectation (via source chart),Company-expected at least $70B annualized by YE2026. NOT reported data - renders dashed only

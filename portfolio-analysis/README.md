@@ -315,3 +315,32 @@ P/E and supported business KPIs, fetch quarterly fundamentals before rendering:
 
 Factor trajectories (beta/alpha over time) remain available per stock in the
 "Beta, R² & alpha over time" section of each chart page.
+
+## AI trade dashboard (issue #163)
+
+The dashboard index links a second tab next to Insight: `ai-trade.html`, the
+AI slowdown watch's 7-panel chart (inflation, rates, Big-3 capex, credit
+stress, CoreWeave equity vs debt cost, compute economics, and 5Y CDS)
+rendered natively as line charts — no embedded image, no fetching at build
+or view time.
+
+```bash
+./portfolio-analysis/run ai-trade-dashboard
+open portfolio-analysis/out/ai-trade.html
+```
+
+The data is a dated snapshot vendored into `data/ai_trade/` (the
+`data/insight/` convention from PR #38): `monthly.csv` (monthly aggregates
+extracted from the watcher's combined-monthly.csv), `snapshots.csv`
+(sparse reported points for Panels 4R/5R/6 — each point carries its own
+source; stated expectations are `kind=expectation` rows, fenced to Panel 6
+and rendered dashed only), `cds_snapshots.csv` (Panel 7: dated,
+press-reported 5Y CDS prints only — the format has no room for an estimate
+or a projection, and Panel 7 never draws one), and `series_notes.csv`
+(per-series source + as-of date; every plotted series must have one).
+
+Refresh: re-run the watcher's `make_combined_chart.py`, re-extract
+`combined-monthly.csv` into `monthly.csv`, update `snapshots.csv` /
+`cds_snapshots.csv` from the watch logs (`anthropic-arr.log`,
+`spread-tracker/`) and the script's dated CDS block, and bump the `as_of`
+dates in `series_notes.csv`.
