@@ -20,6 +20,10 @@ from portfolio_analysis import freshness, fundamentals, prices
 from portfolio_analysis import kpis as kpis_module
 from portfolio_analysis import moves as moves_module
 from portfolio_analysis import positions as positions_module
+from portfolio_analysis.ai_trade_dashboard import (
+    ai_trade_data,
+    render_ai_trade_dashboard,
+)
 from portfolio_analysis.artifacts import MovesArtifact, write_moves
 from portfolio_analysis.collection import collect_events
 from portfolio_analysis.config import PROJECT_ROOT, Portfolio, load_portfolio
@@ -763,6 +767,26 @@ def _insight_dashboard(args: argparse.Namespace) -> int:
     return 0
 
 
+def _ai_trade_dashboard(args: argparse.Namespace) -> int:
+    try:
+        data = ai_trade_data(
+            Path(args.data_dir) if args.data_dir else None
+        )
+    except ValueError as exc:
+        print(f"ai-trade-dashboard: {exc}", file=sys.stderr)
+        return 1
+    portfolio = load_portfolio()
+    try:
+        target = render_ai_trade_dashboard(
+            data, Path(args.out_dir) if args.out_dir else portfolio.path("out")
+        )
+    except OSError as exc:
+        print(f"ai-trade-dashboard: {exc}", file=sys.stderr)
+        return 1
+    print(f"ai trade dashboard written -> {target}")
+    return 0
+
+
 def _event_dashboard(args: argparse.Namespace) -> int:
     portfolio = load_portfolio()
     reddit_dir = (
@@ -1000,6 +1024,13 @@ def main(argv: list[str] | None = None) -> int:
     insight_dashboard.add_argument("--data-dir", default=None)
     insight_dashboard.add_argument("--out-dir", default=None)
     insight_dashboard.set_defaults(func=_insight_dashboard)
+    ai_trade_dashboard = sub.add_parser(
+        "ai-trade-dashboard",
+        help="build the AI trade dashboard: the 7-panel AI slowdown watch",
+    )
+    ai_trade_dashboard.add_argument("--data-dir", default=None)
+    ai_trade_dashboard.add_argument("--out-dir", default=None)
+    ai_trade_dashboard.set_defaults(func=_ai_trade_dashboard)
     event_dashboard = sub.add_parser(
         "event-dashboard", help="compare returns around macro release dates"
     )
