@@ -1,0 +1,15 @@
+series,panel,source,as_of,note
+cpi_yoy,1,BLS CPI as printed (portfolio-analysis CPI prints) merged over BLS API CUUR0000SA0 y/y history,2026-10-16,y/y % by reference month; Oct-2026 not yet printed at snapshot time
+ppi_yoy,1,BLS PPI final demand as printed (portfolio-analysis PPI prints) merged over BLS API WPUFD4 y/y history,2026-10-16,y/y % by reference month; Oct-2026 not yet printed at snapshot time
+dgs2,2,"FRED DGS2 daily, monthly mean",2026-10-16,Oct-2026 is a partial-month mean (through Oct 16)
+dgs10,2,"FRED DGS10 daily, monthly mean",2026-10-16,Oct-2026 is a partial-month mean (through Oct 16)
+capex_q,3,"SEC EDGAR companyconcept PaymentsToAcquirePropertyPlantAndEquipment, YTD-differenced to quarters (MSFT+GOOGL+META)",2026-10-16,Quarterly values sit on quarter-end months; AMZN excluded - its EDGAR capex tag series ends in 2017
+hy_oas,4,"FRED BAMLH0A0HYM2 daily, monthly mean",2026-10-16,"US high-yield option-adjusted spread, %; the watcher extract carries values from Oct-2023"
+distressed_le80,4,JPMorgan reported snapshots (see snapshots.csv per-point sources),2026-10-16,"Leveraged loans trading at or below 80 cents, $B par; snapshots only - no continuous series exists"
+distressed_lt60,4,JPMorgan reported snapshots (see snapshots.csv per-point sources),2026-10-16,"Leveraged loans trading below 60 cents, $B par; snapshots only"
+crwv,5,"Yahoo chart API daily closes, monthly last",2026-10-16,CRWV listed Mar-2025; earlier months are empty. Oct-2026 is the last close at snapshot time
+nvda,5,"Yahoo chart API daily closes, monthly last (split-adjusted)",2026-10-16,Plotted on Panel 5 as a scale reference for CRWV
+crwv_debt_cost,5,Press / issuer reports (see snapshots.csv per-point sources),2026-10-16,Marginal cost-of-debt markers only; no line is drawn between financing events
+h100_spot,6,Silicon Data / Ornn OCPI via spread-tracker (see snapshots.csv per-point sources),2026-10-16,"H100 spot rent, $/GPU-hr; sparse reported points"
+anthropic_arr,6,anthropic-arr.log reported run-rate points (see snapshots.csv per-point sources),2026-10-16,"Annualized run-rate, $B, gross basis; the Oct-14-2026 derived estimate in the log is NOT plotted - reported points only"
+openai_runrate,6,FT Oct-2026 reporting (see snapshots.csv per-point sources),2026-10-16,"Annualized revenue run-rate, $B, net basis"
