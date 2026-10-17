@@ -59,6 +59,7 @@ def test_shipped_config_industry_mapping():
     assert portfolio.industry_benchmark("NVDA") == "SOXX"
     assert portfolio.industry_benchmark("GFS") == "SOXX"
     assert portfolio.industry_benchmark("IONQ") == "QTUM"
+    assert portfolio.industry_benchmark("MRNA") == "XBI"
     assert portfolio.industry_benchmark("now") == "CLOU"
     assert portfolio.industry_benchmark("TSLA") is None
     assert portfolio.industry_benchmark("AMZN") is None
