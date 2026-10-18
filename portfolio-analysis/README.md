@@ -81,6 +81,19 @@ MRNA (Moderna, added in #161) is an ordinary CIK-bearing member
 is a US domestic filer reporting in `us-gaap`, so EDGAR fundamentals and
 filing event collection work for it as for any other operating company.
 
+CRWV (CoreWeave, added in #165) is an ordinary CIK-bearing member
+(CIK 1769628), priced from its 2025-03-28 IPO. No sector ETF has usable
+history for the neoclouds, so its industry benchmark is SPY (the S&P 500
+itself). Its KPI set includes `rpo` — CoreWeave tags
+`RevenueRemainingPerformanceObligation`, so the filings carry a quarterly
+backlog series — but not `gross_margin` (no `us-gaap:GrossProfit` tag,
+the MRNA gap). CRWV also carries the dashboard's first **credit
+snapshot** block: dated, sourced credit-stress prints (2032-note yield,
+5Y CDS, margins, interest burden, backlog, total debt) hand-vendored in
+`config/credit_snapshots.yaml`, the per-ticker application of the
+AI-trade tab's dated-snapshot philosophy — no live feeds, no projections.
+Tickers without snapshot entries render no block.
+
 ## Limitations
 
 Coverage of the *events* behind these moves is uneven, and later plans surface that per move rather than hiding it.
