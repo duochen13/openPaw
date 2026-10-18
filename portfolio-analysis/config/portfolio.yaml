@@ -45,6 +45,10 @@ tickers:
     cik: 1682852
     name: Moderna, Inc.
     aliases: ["Moderna", "Moderna Inc"]
+  - symbol: CRWV
+    cik: 1769628
+    name: CoreWeave, Inc.
+    aliases: ["CoreWeave", "CoreWeave Inc"]
   # No cik: a leveraged single-stock ETF has no operating-company EDGAR
   # identity, so EDGAR fundamentals and filing event sources are skipped
   # for it (same n/a treatment as indices).
@@ -89,7 +93,13 @@ industry_benchmarks:
   NVDA: SOXX # AI chips: iShares Semiconductor ETF
   GFS: SOXX # Semiconductors: iShares Semiconductor ETF (same mapping as NVDA)
   IONQ: QTUM # Quantum computing: Defiance Quantum ETF
-  MRNA: XBI # Biotech: SPDR S&P Biotech ETF
+  MRNA: XBI
+  # CoreWeave (issue #165): no sector ETF has usable history for the
+  # neoclouds (the Roundhill Neocloud ETF only launched Aug 2026), and
+  # CRWV's live question is credit stress vs the broad market - so the
+  # industry line is the S&P 500 itself (SPY is also the index fetch,
+  # so ingest de-duplicates it).
+  CRWV: SPY # Biotech: SPDR S&P Biotech ETF
 
 # Six years, not five. A 250-day beta window consumes the first trading year,
 # so five years of fetched prices would yield only four years of evaluable

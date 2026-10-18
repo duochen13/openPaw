@@ -74,6 +74,17 @@ kpis:
     - revenue
     - operating_margin
     - capex
+  CRWV:
+    # CoreWeave (issue #165): rpo IS tagged for this filer
+    # (RevenueRemainingPerformanceObligation) - the quarterly backlog
+    # series. gross_margin is not listable: us-gaap:GrossProfit is not
+    # tagged (the MRNA gap), and the registry cannot derive
+    # revenue - COGS; gross margin ships in the dated credit snapshot
+    # instead (config/credit_snapshots.yaml).
+    - revenue
+    - rpo
+    - operating_margin
+    - capex
 
 # RPO growth deceleration alerts (issue #36): the canary trigger for the
 # per-seat disruption thesis. A ticker's alert fires when its RPO YoY

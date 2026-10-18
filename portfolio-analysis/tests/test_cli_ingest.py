@@ -37,6 +37,7 @@ def test_ingest_fetches_the_universe_and_the_benchmark(tmp_path):
         ("GFS", 6),
         ("IONQ", 6),
         ("MRNA", 6),
+        ("CRWV", 6),
         ("METU", 6),
         ("GGLL", 6),
         # Index charts (#57) are part of the ingest universe now, and QQQ's
@@ -47,7 +48,7 @@ def test_ingest_fetches_the_universe_and_the_benchmark(tmp_path):
         # Industry benchmarks ride along after the universe, in
         # symbol order, deduplicated: META->MAGS, NOW->CLOU, NVDA->SOXX,
         # METU->MAGS (already fetched), GFS->SOXX (already fetched),
-        # IONQ->QTUM, MRNA->XBI.
+        # IONQ->QTUM, MRNA->XBI, CRWV->SPY (already fetched as an index).
         ("MAGS", 6),
         ("CLOU", 6),
         ("SOXX", 6),
