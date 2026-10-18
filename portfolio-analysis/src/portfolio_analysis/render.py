@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
+from portfolio_analysis import credit as credit_module
 from portfolio_analysis import kpis as kpis_module
 from portfolio_analysis import manual_kpis as manual_kpis_module
 from portfolio_analysis import positions as positions_module
@@ -561,6 +562,22 @@ def _kpi_data(store: Store, symbol: str) -> dict[str, Any] | None:
     if not metrics:
         return None
     return {"metrics": order_panels_by_group(metrics)}
+
+
+def _credit_data(symbol: str) -> dict[str, Any] | None:
+    """Dated credit snapshot block for the per-stock chart (issue #165).
+
+    Hand-vendored prints from ``config/credit_snapshots.yaml`` (bond
+    yields, CDS, leverage markers) - each entry carries its as-of date
+    and source, rendered as its own section after Business metrics.
+    None when the ticker has no snapshot entries (nearly all of them);
+    a broken snapshot config degrades to no block, never a crash - the
+    same rule as the KPI configs above.
+    """
+    try:
+        return credit_module.credit_block(symbol)
+    except credit_module.CreditError:
+        return None
 
 
 def _attach_rpo_deceleration_alert(symbol: str, metrics: list[dict[str, Any]]) -> None:
@@ -1245,6 +1262,9 @@ def render_chart(
             default=None,
         )
         data["fundamentals_as_of"] = fund_at[:10] if fund_at else None
+        # Credit snapshot (issue #165): dated, sourced credit-stress
+        # prints for issuers that have them (CRWV); None otherwise.
+        data["credit"] = _credit_data(symbol)
         # Trade markers (issue #65): this ticker's buy/sell history for the
         # vertical markers on the price chart and the regime sparklines. A
         # missing trades file renders exactly as before; a corrupt one fails
