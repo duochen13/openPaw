@@ -33,6 +33,7 @@ so the design doc still lives under the misspelled folder.
 | `homework-pilot/assembly/` | [#113](https://github.com/duochen13/openPaw/issues/113) [#114](https://github.com/duochen13/openPaw/issues/114) | [#125](https://github.com/duochen13/openPaw/pull/125) | Personalized assembly rules engine (per-student 当前/薄弱点/复习 mix, teacher budget cap, 共同题） + AI question generation with pre-release validation | `tests/test_engine.py`, `test_generate.py`, `test_review_queue.py` in PR |
 | `homework-pilot/review/` | [#115](https://github.com/duochen13/openPaw/issues/115) | [#127](https://github.com/duochen13/openPaw/pull/127) | Teacher review workflow （审核： approve/reject/replace/adjust at shared-question level) + print-ready PDF export (student sheets + teacher key) | `tests/test_export.py`, `tests/test_review.py` in PR |
 | `homework-pilot/privacy/` | [#117](https://github.com/duochen13/openPaw/issues/117) | [#121](https://github.com/duochen13/openPaw/pull/121) | Privacy guard: student-ID-only enforcement, no names anywhere | `tests/test_guard.py` in PR |
+| `homework-pilot/webui/` | [#167](https://github.com/duochen13/openPaw/issues/167) | this PR | Teacher console UI (Muse desktop design language): one self-contained HTML with 工作台 / 识别确认 / 薄弱点确认 / 作业审核 / 导出， bound to synthetic demo fixtures | `tests/test_webui.py` in PR |
 | `homework-pilot/docs/` | [#108](https://github.com/duochen13/openPaw/issues/108) [#116](https://github.com/duochen13/openPaw/issues/116) [#117](https://github.com/duochen13/openPaw/issues/117) | [#120](https://github.com/duochen13/openPaw/pull/120) (checklist), [#119](https://github.com/duochen13/openPaw/pull/119) (protocol + tracking sheet), [#121](https://github.com/duochen13/openPaw/pull/121) (governance doc) | Field-materials checklist, validation protocol + pilot tracking sheet, privacy-governance doc | n/a (docs) |
 
 ## Issue status
@@ -47,6 +48,7 @@ so the design doc still lives under the misspelled folder.
 | [#115](https://github.com/duochen13/openPaw/issues/115) review/export | [#127](https://github.com/duochen13/openPaw/pull/127) open — review workflow + PDF export. |
 | [#116](https://github.com/duochen13/openPaw/issues/116) validation protocol | [#119](https://github.com/duochen13/openPaw/pull/119) open — pre-registered protocol + tracking sheet. |
 | [#117](https://github.com/duochen13/openPaw/issues/117) privacy/governance | [#121](https://github.com/duochen13/openPaw/pull/121) open — governance doc + privacy guard. |
+| [#167](https://github.com/duochen13/openPaw/issues/167) teacher console UI | this PR — first frontend (demo fixtures; live wiring still gated on #108). Relates to #108, does not close it. |
 
 ## Running tests
 
@@ -68,4 +70,4 @@ Student-ID-only: there is no name field anywhere in the repo. See `docs/privacy-
 - Field materials: 5 sample graded papers, textbook/reference answers, teacher consent + data-use consent forms (#108).
 - Real question bank (current generator output is AI-drafted and unvalidated by the teacher).
 - CJK font for print PDFs (PDF export is stdlib-only; Chinese typesetting needs a bundled font).
-- Clickable teacher UI — the pilot runs on scripts + generated PDFs; review happens via the `ReviewSession` API until a UI is built.
+- Teacher UI wiring — a first console UI exists in `webui/` (#167) rendering demo fixtures; connecting it to live `ReviewSession` decisions, real scanned pages, and real exports still waits on #108 field materials. Until then the pilot runs on scripts + generated PDFs.
