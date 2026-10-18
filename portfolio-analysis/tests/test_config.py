@@ -69,6 +69,7 @@ def test_the_shipped_config_loads_and_is_valid():
         "GFS",
         "IONQ",
         "MRNA",
+        "CRWV",
         "METU",
         "GGLL",
     )
@@ -251,3 +252,11 @@ def test_shipped_mrna_entry_has_sec_cik():
     entry = portfolio.entry("MRNA")
     assert entry.cik == 1682852
     assert entry.name == "Moderna, Inc."
+
+
+@pytest.mark.unit
+def test_shipped_crwv_entry_has_sec_cik():
+    portfolio = load_portfolio()
+    entry = portfolio.entry("CRWV")
+    assert entry.cik == 1769628
+    assert entry.name == "CoreWeave, Inc."
