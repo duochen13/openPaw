@@ -513,20 +513,47 @@ def _history_badges(portfolio: Portfolio, args: argparse.Namespace) -> dict[str,
 
 
 def _dashboard(args: argparse.Namespace) -> int:
-    """Multi-stock builds go stale the same way single charts do, so
-    `dashboard` gets the identical freshness treatment as `chart` (#56)."""
+    """Build the complete offline dashboard and every page it links to.
+
+    The index is useful only when its chart cards and analysis tabs resolve,
+    so this command keeps the dependent artifacts in the same build step.
+    """
     portfolio = load_portfolio()
     symbols = list(portfolio.chart_symbols)
     if _refresh_if_stale(args, portfolio, symbols):
         return 1
     _warn_if_price_stale(args, portfolio, symbols)
+    # New symbols may not have a moves artifact yet.  Generate all move
+    # artifacts before rendering so cards such as SPCX and IONQ are clickable.
+    detect_args = argparse.Namespace(
+        ticker=None,
+        db=args.db,
+        moves_dir=None,
+    )
+    if _detect_moves(detect_args):
+        return 1
+    out_dir = Path(args.out_dir) if args.out_dir else portfolio.path("out")
     try:
-        target = render_dashboard(
-            portfolio,
-            Path(args.out_dir) if args.out_dir else portfolio.path("out"),
-            history_badges=_history_badges(portfolio, args),
+        for symbol in symbols:
+            target = render_chart(
+                portfolio,
+                symbol,
+                db=Path(args.db) if args.db else portfolio.path("db"),
+                moves_dir=portfolio.path("moves"),
+                events_dir=portfolio.path("events"),
+                out_dir=out_dir,
+            )
+            print(f"{symbol}: chart written -> {target}")
+        insight = render_insight_dashboard(
+            insight_dashboard_data(), out_dir
         )
-    except OSError as exc:
+        print(f"insight dashboard written -> {insight}")
+        ai_trade = render_ai_trade_dashboard(ai_trade_data(), out_dir)
+        print(f"ai trade dashboard written -> {ai_trade}")
+        target = render_dashboard(
+            portfolio, out_dir, history_badges=_history_badges(portfolio, args)
+        )
+    except (OSError, ValueError) as exc:
         print(f"dashboard: {exc}", file=sys.stderr)
         return 1
     print(f"dashboard written -> {target}")
