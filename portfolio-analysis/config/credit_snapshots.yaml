@@ -1,0 +1,100 @@
+# Dated credit-stress snapshots (issue #165).
+#
+# Schema: ticker -> list of snapshot entries.
+#   - key:    stable metric id (unique per ticker)
+#   - label:  display label
+#   - value:  the number, in the unit implied by `format`:
+#             percent -> a fraction (0.151, not 15.1);
+#             currency -> raw USD (35550000000, not 35.55);
+#             bp -> basis points (1117)
+#   - format: percent | currency | bp
+#   - as_of:  REQUIRED - YYYY-MM-DD, the date the value describes
+#             (a quarter-end for filing figures, the print date for
+#             market figures)
+#   - source: REQUIRED - where the number came from
+#   - note:   optional context (definitions, ranges, cross-references)
+#
+# This file is the escape hatch for credit numbers SEC EDGAR never tags
+# and no honest live feed carries - the per-ticker application of the
+# AI-trade tab's dated CDS snapshot philosophy
+# (data/ai_trade/cds_snapshots.csv). Dated prints only: no live or
+# fabricated feeds, no projections, no interpolations. When a fresher
+# print is vendored, add a new entry state by updating value/as_of/source
+# in place and saying so in the PR - the git history is the audit trail.
+#
+# RULES
+# - Real numbers only, copied from the cited source. Never invent a value.
+# - A malformed file raises CreditError (unit-tested); the dashboard
+#   render degrades to "no credit block", never a crash and never a
+#   silently wrong number.
+
+credit_snapshots:
+  CRWV:
+    - key: notes_2032_yield
+      label: 2032 senior notes yield
+      value: 0.151
+      format: percent
+      as_of: '2026-10-16'
+      source: Press / market coverage, Oct 2026
+      note: >-
+        9.625% senior notes due 2032. Yields were reported in a ~14-16%
+        range through mid-Oct 2026 as the AI-credit selloff intensified;
+        ~15.1% is the 2026-10-16 print.
+    - key: cds_5y
+      label: 5Y CDS spread
+      value: 1117
+      format: bp
+      as_of: '2026-10-14'
+      source: data/ai_trade/cds_snapshots.csv (press reports, Oct 2026)
+      note: >-
+        Dated point print vendored for the AI-trade tab; prints through
+        mid-Oct 2026 ranged ~1,038-1,200 bp.
+    - key: gross_margin
+      label: Gross margin (2026Q2)
+      value: 0.659
+      format: percent
+      as_of: '2026-06-30'
+      source: SEC EDGAR companyfacts, CIK 1769628
+      note: >-
+        Revenue minus cost of revenue over revenue, quarter ended
+        2026-06-30. CoreWeave does not XBRL-tag GrossProfit, so this
+        margin cannot come from the KPI registry (same gap as MRNA).
+    - key: net_margin
+      label: Net margin (2026Q2)
+      value: -0.243
+      format: percent
+      as_of: '2026-06-30'
+      source: SEC EDGAR companyfacts, CIK 1769628
+      note: Net loss -$626M on revenue $2,575M, quarter ended 2026-06-30.
+    - key: interest_expense
+      label: Interest expense (2026Q2)
+      value: 558000000
+      format: currency
+      as_of: '2026-06-30'
+      source: SEC EDGAR companyfacts (InterestExpenseDebt), CIK 1769628
+      note: >-
+        Gross interest on debt, ~22% of 2026Q2 revenue. Net interest
+        expense was ~$640M (~25% of revenue) per earnings coverage.
+    - key: depreciation_amortization
+      label: Depreciation & amortization (2026Q2)
+      value: 1393000000
+      format: currency
+      as_of: '2026-06-30'
+      source: SEC EDGAR companyfacts (DepreciationDepletionAndAmortization), CIK 1769628
+      note: Discrete quarter derived from filed YTD cash-flow spans.
+    - key: revenue_backlog
+      label: Revenue backlog
+      value: 104200000000
+      format: currency
+      as_of: '2026-06-30'
+      source: CoreWeave Q2 2026 earnings release (company-reported)
+      note: >-
+        Includes the $103.7B remaining performance obligation that is
+        XBRL-tagged in the filings - see the RPO business-metrics panel
+        for the quarterly series.
+    - key: total_debt
+      label: Total debt (carrying amount)
+      value: 35550000000
+      format: currency
+      as_of: '2026-06-30'
+      source: SEC EDGAR companyfacts (DebtInstrumentCarryingAmount), CIK 1769628
