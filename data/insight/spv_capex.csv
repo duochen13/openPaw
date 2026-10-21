@@ -1,4 +1,6 @@
 year,reported_big4_usd_b,spv_est_usd_b,anchor_deals,chart_label,source,status
+2021,125,0,,,company 10-Ks,verified
+2022,150,0,,,company 10-Ks,verified
 2023,141,0,,,company 10-Ks,verified
 2024,220,25,MSFT $100B AI Infrastructure Partnership SPV announced Sep-2024; annualized over ~4 build years,MSFT $100B AI Infra Partnership SPV ('24),company filings + Sep-2024 press,estimated
 2025,375,60,FT Dec-2025: $120B+ of data-centre debt moved off-BS by ORCL/META/xAI/CRWV in under two years (Pimco/BlackRock/Apollo/Blue Owl),FT: $120B+ moved off-BS ORCL/META/xAI/CRWV ('25),FT Dec 2025,estimated
