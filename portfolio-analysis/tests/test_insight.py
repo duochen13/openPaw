@@ -19,6 +19,9 @@ from portfolio_analysis.insight_dashboard import (
     InsightDataError,
     insight_dashboard_data,
     load_cds_spreads,
+    load_fedwatch_snapshots,
+    load_mortgage_rates,
+    load_pending_home_sales,
     load_revenue,
     load_spv_capex,
     render_insight_dashboard,
@@ -268,3 +271,136 @@ def test_render_includes_intensity_panel(tmp_path):
     assert "Capex as percent of revenue" in page  # svg aria-label
     assert "ttm-partial" not in page  # status stays in data, chart shows the "*" label
     assert "2026E*" in page  # guidance capex on TTM revenue, labeled
+
+
+# --------------------------------------------------------------------------
+# Section C (#171): macro early-warning figures
+
+
+PHS_HEADER = "month,level,source,release_date\n"
+MTG_HEADER = "month,avg_rate,source\n"
+FW_HEADER = "as_of,meeting,p_cut,p_hold,p_hike,source\n"
+
+
+def test_shipped_housing_csv_matches_nar_anchors():
+    rows = load_pending_home_sales(DATA_DIR)
+    # Coverage starts Dec 2021 (Jan-Nov 2021 monthly values not fetchable
+    # from a primary table - see the PR), ends at the latest NAR release.
+    assert rows[0].month == "2021-12"
+    assert rows[-1].month == "2026-09"
+    by_month = {r.month: r.level for r in rows}
+    # Anchors from NAR's Sep 2026 release (2026-10-20): Sep 2026 = 66.0,
+    # -7.3% MoM off Aug 2026 = 71.2, -11.3% YoY off Sep 2025 = 74.4.
+    assert by_month["2026-09"] == 66.0
+    assert by_month["2026-08"] == 71.2
+    assert by_month["2025-09"] == 74.4
+    for r in rows:
+        assert r.source, f"{r.month}: level without source"
+        assert len(r.release_date) == 10, f"{r.month}: release_date must be a full date"
+
+
+def test_shipped_housing_mom_yoy_reproduce_release():
+    data = insight_dashboard_data(DATA_DIR)
+    last = data["housing"][-1]
+    assert last["month"] == "2026-09"
+    assert last["mom_pct"] == pytest.approx(-7.3, abs=0.05)
+    assert last["yoy_pct"] == pytest.approx(-11.3, abs=0.05)
+    assert data["housing"][0]["mom_pct"] is None  # no Nov 2021 level chained
+
+
+def test_housing_missing_source_raises(tmp_path):
+    d = tmp_path / "insight"
+    d.mkdir()
+    (d / "pending_home_sales.csv").write_text(
+        PHS_HEADER + "2026-09,66.0,,2026-10-20\n"
+    )
+    with pytest.raises(InsightDataError, match="source"):
+        load_pending_home_sales(d)
+
+
+def test_housing_bad_month_raises(tmp_path):
+    d = tmp_path / "insight"
+    d.mkdir()
+    (d / "pending_home_sales.csv").write_text(
+        PHS_HEADER + "2026-13,66.0,NAR release,2026-10-20\n"
+    )
+    with pytest.raises(InsightDataError, match="month"):
+        load_pending_home_sales(d)
+
+
+def test_shipped_mortgage_csv_is_fred_monthly_averages():
+    rows = load_mortgage_rates(DATA_DIR)
+    assert rows[0].month == "2021-01"
+    assert rows[-1].month == "2026-10"
+    for r in rows:
+        assert r.source == "FRED MORTGAGE30US weekly, monthly average"
+    # Oct 2026 averages the three published weekly prints 7.28/7.40/7.40.
+    assert rows[-1].avg_rate == pytest.approx(7.36)
+
+
+def test_mortgage_missing_source_raises(tmp_path):
+    d = tmp_path / "insight"
+    d.mkdir()
+    (d / "mortgage_rates.csv").write_text(MTG_HEADER + "2026-10,7.36,\n")
+    with pytest.raises(InsightDataError, match="source"):
+        load_mortgage_rates(d)
+
+
+def test_shipped_fedwatch_seed_rows():
+    rows = load_fedwatch_snapshots(DATA_DIR)
+    assert len(rows) == 5
+    assert {r.meeting for r in rows} == {"2026-10-28", "2026-12-09"}
+    for r in rows:
+        assert r.p_cut + r.p_hold + r.p_hike == pytest.approx(100.0)
+        assert r.source
+    oct28 = [r for r in rows if r.meeting == "2026-10-28"]
+    assert [r.p_hike for r in oct28] == [17.7, 18.0, 49.3, 16.1]
+
+
+def test_fedwatch_bad_probability_sum_raises(tmp_path):
+    d = tmp_path / "insight"
+    d.mkdir()
+    (d / "fedwatch_snapshots.csv").write_text(
+        FW_HEADER + "2026-10-20,2026-10-28,0,60.0,20.0,CME FedWatch\n"
+    )
+    with pytest.raises(InsightDataError, match="sum"):
+        load_fedwatch_snapshots(d)
+
+
+def test_fedwatch_missing_source_raises(tmp_path):
+    d = tmp_path / "insight"
+    d.mkdir()
+    (d / "fedwatch_snapshots.csv").write_text(
+        FW_HEADER + "2026-10-20,2026-10-28,0,84.0,16.0,\n"
+    )
+    with pytest.raises(InsightDataError, match="required"):
+        load_fedwatch_snapshots(d)
+
+
+def test_render_includes_section_c(tmp_path):
+    data = insight_dashboard_data(DATA_DIR)
+    target = render_insight_dashboard(data, tmp_path / "out")
+    page = target.read_text()
+    assert "Section C" in page
+    assert "Macro early-warning" in page
+    assert "Pending home sales index" in page  # housing svg aria-label
+    assert ">2021</text>" in page  # housing chart's first tick is 2021
+    assert "Sep 2026: 66.0" in page  # latest print annotated
+    assert "pre-2026 low" in page
+    assert "30-year mortgage rate, monthly average" in page
+    assert "FedWatch hike probabilities by FOMC meeting" in page
+    assert "FOMC Oct 28: hike 16%" in page
+    assert "FOMC Dec 9: hike 92%" in page
+
+
+def test_dashboard_data_without_section_c_files_still_renders(tmp_path):
+    # Section C is additive: a data dir without the new CSVs renders A/B.
+    d = _cds_dir(tmp_path, 'ORCL,2026-09,,Some press,cds-level:reported,A note\n')
+    data = insight_dashboard_data(d)
+    assert data["housing"] == []
+    assert data["mortgage"] == []
+    assert data["fedwatch"] == []
+    target = render_insight_dashboard(data, tmp_path / "out")
+    page = target.read_text()
+    assert "Section C" in page  # block renders with unavailable notes
+    assert "data unavailable" in page

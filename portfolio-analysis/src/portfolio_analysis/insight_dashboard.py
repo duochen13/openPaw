@@ -1,4 +1,4 @@
-"""Insight dashboard: hidden AI leverage, in two sections (issues #34 + #35).
+"""Insight dashboard: hidden AI leverage + macro early-warning (#34, #35, #171).
 
 One self-contained offline page:
 
@@ -16,6 +16,16 @@ One self-contained offline page:
   labeled with its proxy type, never presented as a CDS print. The schema
   accepts real weekly 5Y CDS points (``proxy_label`` "cds-print:5y");
   when present they render as a line chart above the timeline.
+- Section C (#171): macro early-warning figures - the series that crack
+  before credit does. The NAR Pending Home Sales Index
+  (``data/insight/pending_home_sales.csv``, monthly; NAR benchmark-
+  revises it, so each row cites the release table / snapshot its level
+  was read from), the 30-year mortgage rate
+  (``data/insight/mortgage_rates.csv``: FRED MORTGAGE30US weekly
+  observations stored as monthly averages) and CME FedWatch target-rate
+  probability snapshots (``data/insight/fedwatch_snapshots.csv``) - one
+  line per FOMC meeting, snapshots appended over time and never
+  connected across meetings.
 """
 
 # The embedded HTML/SVG is intentionally kept in one readable template
@@ -26,6 +36,7 @@ from __future__ import annotations
 
 import csv
 import html
+import math
 import re
 from dataclasses import dataclass
 from datetime import date
@@ -47,9 +58,17 @@ _SPv_REQUIRED = {
 }
 _CDS_REQUIRED = {"ticker", "date", "spread_bps", "source", "proxy_label", "note"}
 _REV_REQUIRED = {"year", "revenue_big4_usd_b", "source", "status"}
+_HOUSING_REQUIRED = {"month", "level", "source", "release_date"}
+_MORTGAGE_REQUIRED = {"month", "avg_rate", "source"}
+_FEDWATCH_REQUIRED = {"as_of", "meeting", "p_cut", "p_hold", "p_hike", "source"}
 _SPV_STATUSES = {"verified", "estimated", "guidance"}
 _REV_STATUSES = {"verified", "ttm-partial", "estimated"}
 _DATE_RE = re.compile(r"^\d{4}-\d{2}(-\d{2})?$")
+_MONTH_RE = re.compile(r"^\d{4}-(0[1-9]|1[0-2])$")
+_MONTH_ABBR = (
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+)
 
 #: Badge colors per proxy type on the Section B timeline.
 _PROXY_COLORS = {
@@ -109,6 +128,52 @@ class RevenueRow:
     revenue: float  # Big-4 revenue, USD billions
     source: str
     status: str  # verified | ttm-partial | estimated
+
+
+@dataclass(frozen=True)
+class HousingRow:
+    """One monthly NAR Pending Home Sales Index print (SAAR, 2001 = 100).
+
+    NAR benchmark-revises the index, so ``release_date`` dates the source
+    document the level was read from (a release table or a dated
+    snapshot), not the first release of that month's data.
+    """
+
+    month: str  # YYYY-MM
+    level: float
+    source: str
+    release_date: str  # YYYY-MM-DD, date of the source document/snapshot
+
+
+@dataclass(frozen=True)
+class MortgageRow:
+    """One month of the 30-year fixed mortgage rate, percent.
+
+    ``avg_rate`` is the mean of that month's FRED MORTGAGE30US weekly
+    observations; the final month may average only the weeks published
+    so far. ``source`` says exactly that on every row.
+    """
+
+    month: str  # YYYY-MM
+    avg_rate: float
+    source: str
+
+
+@dataclass(frozen=True)
+class FedWatchRow:
+    """One CME FedWatch snapshot: target-rate probabilities for a meeting.
+
+    Snapshots are append-only history - a later snapshot of the same
+    meeting never overwrites an earlier one, and the chart connects
+    snapshots of one meeting only.
+    """
+
+    as_of: str  # YYYY-MM-DD, when the snapshot was taken
+    meeting: str  # YYYY-MM-DD, the FOMC meeting date
+    p_cut: float  # percent probability of a cut at that meeting
+    p_hold: float  # percent probability of no change
+    p_hike: float  # percent probability of a hike
+    source: str
 
 
 def _read_csv(path: Path, required: set[str]) -> list[dict[str, str]]:
@@ -240,11 +305,161 @@ def load_cds_spreads(data_dir: Path | None = None) -> list[CdsPoint]:
     return points
 
 
+def _check_month(raw: str, *, where: str) -> str:
+    month = raw.strip()
+    if not _MONTH_RE.match(month):
+        raise InsightDataError(f"{where}: month {raw!r} must be YYYY-MM")
+    return month
+
+
+def _check_full_date(raw: str, *, where: str, field: str) -> str:
+    value = raw.strip()
+    try:
+        date.fromisoformat(value)
+    except ValueError as exc:
+        raise InsightDataError(
+            f"{where}: {field} {raw!r} must be YYYY-MM-DD"
+        ) from exc
+    if len(value) != 10:
+        raise InsightDataError(f"{where}: {field} {raw!r} must be YYYY-MM-DD")
+    return value
+
+
+def _month_label(month: str) -> str:
+    """ "2026-09" -> "Sep 2026". """
+    return f"{_MONTH_ABBR[int(month[5:7]) - 1]} {month[:4]}"
+
+
+def load_pending_home_sales(data_dir: Path | None = None) -> list[HousingRow]:
+    """Validated monthly Pending Home Sales Index rows.
+
+    The source rule: every level carries the document it was read from -
+    NAR revises this series, so an unsourced level could silently mix
+    vintages. Months must be unique; MoM/YoY are computed downstream
+    from the chained levels, never stored.
+    """
+    path = (data_dir or DATA_DIR) / "pending_home_sales.csv"
+    rows = []
+    seen: set[str] = set()
+    for i, r in enumerate(_read_csv(path, _HOUSING_REQUIRED), 1):
+        where = f"{path}:{i}"
+        month = _check_month(r["month"], where=where)
+        if month in seen:
+            raise InsightDataError(f"{where}: duplicate month {month!r}")
+        seen.add(month)
+        level = _parse_amount(r["level"], where=where)
+        if level <= 0:
+            raise InsightDataError(f"{where}: level must be positive")
+        if not r["source"].strip():
+            raise InsightDataError(f"{where}: level without source")
+        rows.append(
+            HousingRow(
+                month=month,
+                level=level,
+                source=r["source"].strip(),
+                release_date=_check_full_date(
+                    r["release_date"], where=where, field="release_date"
+                ),
+            )
+        )
+    rows.sort(key=lambda r: r.month)
+    return rows
+
+
+def load_mortgage_rates(data_dir: Path | None = None) -> list[MortgageRow]:
+    """Validated monthly mortgage-rate rows (monthly averages of weekly).
+
+    The source rule: every row names its series and aggregation
+    ("FRED MORTGAGE30US weekly, monthly average") so a stored average is
+    never mistaken for a weekly print.
+    """
+    path = (data_dir or DATA_DIR) / "mortgage_rates.csv"
+    rows = []
+    seen: set[str] = set()
+    for i, r in enumerate(_read_csv(path, _MORTGAGE_REQUIRED), 1):
+        where = f"{path}:{i}"
+        month = _check_month(r["month"], where=where)
+        if month in seen:
+            raise InsightDataError(f"{where}: duplicate month {month!r}")
+        seen.add(month)
+        rate = _parse_amount(r["avg_rate"], where=where)
+        if not 0 < rate < 25:
+            raise InsightDataError(f"{where}: avg_rate {rate} outside a sane 0-25% band")
+        if not r["source"].strip():
+            raise InsightDataError(f"{where}: avg_rate without source")
+        rows.append(
+            MortgageRow(month=month, avg_rate=rate, source=r["source"].strip())
+        )
+    rows.sort(key=lambda r: r.month)
+    return rows
+
+
+def load_fedwatch_snapshots(data_dir: Path | None = None) -> list[FedWatchRow]:
+    """Validated CME FedWatch snapshot rows.
+
+    The probability rule: cut + hold + hike must sum to ~100 (within
+    rounding tolerance) - a snapshot that does not is a parsing error,
+    not a market view, and never renders.
+    """
+    path = (data_dir or DATA_DIR) / "fedwatch_snapshots.csv"
+    rows = []
+    for i, r in enumerate(_read_csv(path, _FEDWATCH_REQUIRED), 1):
+        where = f"{path}:{i}"
+        for key in ("as_of", "meeting", "source"):
+            if not r[key].strip():
+                raise InsightDataError(f"{where}: {key} is required")
+        probs = {
+            key: _parse_amount(r[key], where=where)
+            for key in ("p_cut", "p_hold", "p_hike")
+        }
+        for key, value in probs.items():
+            if value > 100:
+                raise InsightDataError(f"{where}: {key} probability {value} above 100")
+        total = sum(probs.values())
+        if abs(total - 100.0) > 1.5:
+            raise InsightDataError(
+                f"{where}: probabilities sum to {total:.1f}, not ~100"
+            )
+        rows.append(
+            FedWatchRow(
+                as_of=_check_full_date(r["as_of"], where=where, field="as_of"),
+                meeting=_check_full_date(r["meeting"], where=where, field="meeting"),
+                p_cut=probs["p_cut"],
+                p_hold=probs["p_hold"],
+                p_hike=probs["p_hike"],
+                source=r["source"].strip(),
+            )
+        )
+    rows.sort(key=lambda r: (r.meeting, r.as_of))
+    return rows
+
+
+def _load_optional(name: str, loader: Any, data_dir: Path | None) -> list:
+    """Load an additive Section C CSV when present.
+
+    Section C is additive (issue #171): a data dir that predates it
+    renders Sections A/B unchanged. A present-but-malformed file still
+    raises - absence is tolerated, bad data is not.
+    """
+    if not ((data_dir or DATA_DIR) / name).exists():
+        return []
+    return loader(data_dir)
+
+
 def insight_dashboard_data(data_dir: Path | None = None) -> dict[str, Any]:
-    """Section A rows, revenue-scaled intensity, Section B timeline, real CDS prints."""
+    """Section A rows, revenue-scaled intensity, Section B timeline, real
+    CDS prints, and the Section C macro figures (housing, mortgage,
+    FedWatch) with MoM/YoY computed from the chained housing levels."""
     spv = load_spv_capex(data_dir)
     rev = {r.year: r for r in load_revenue(data_dir)}
     cds = load_cds_spreads(data_dir)
+    housing_rows = _load_optional(
+        "pending_home_sales.csv", load_pending_home_sales, data_dir
+    )
+    mortgage_rows = _load_optional("mortgage_rates.csv", load_mortgage_rates, data_dir)
+    fedwatch_rows = _load_optional(
+        "fedwatch_snapshots.csv", load_fedwatch_snapshots, data_dir
+    )
     prints: dict[str, list[tuple[str, float]]] = {}
     for p in cds:
         if p.spread_bps is not None:
@@ -273,6 +488,26 @@ def insight_dashboard_data(data_dir: Path | None = None) -> dict[str, Any]:
                 "status": r.status,
             }
         )
+    levels = {r.month: r.level for r in housing_rows}
+
+    def _shift_month(month: str, months: int) -> str:
+        idx = int(month[:4]) * 12 + int(month[5:7]) - 1 + months
+        return f"{idx // 12:04d}-{idx % 12 + 1:02d}"
+
+    housing = []
+    for r in housing_rows:
+        prev = levels.get(_shift_month(r.month, -1))
+        year_ago = levels.get(_shift_month(r.month, -12))
+        housing.append(
+            {
+                "month": r.month,
+                "level": r.level,
+                "mom_pct": 100.0 * (r.level / prev - 1) if prev else None,
+                "yoy_pct": 100.0 * (r.level / year_ago - 1) if year_ago else None,
+                "source": r.source,
+                "release_date": r.release_date,
+            }
+        )
     return {
         "spv": spv_rows,
         "cds": [
@@ -288,6 +523,22 @@ def insight_dashboard_data(data_dir: Path | None = None) -> dict[str, Any]:
         ],
         "cds_prints": prints,
         "asof": max(data_dates) if data_dates else "",
+        "housing": housing,
+        "mortgage": [
+            {"month": r.month, "avg_rate": r.avg_rate, "source": r.source}
+            for r in mortgage_rows
+        ],
+        "fedwatch": [
+            {
+                "as_of": r.as_of,
+                "meeting": r.meeting,
+                "p_cut": r.p_cut,
+                "p_hold": r.p_hold,
+                "p_hike": r.p_hike,
+                "source": r.source,
+            }
+            for r in fedwatch_rows
+        ],
     }
 
 
@@ -533,6 +784,305 @@ def _timeline_html(points: list[dict[str, Any]]) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Section C charts (#171): housing, mortgage rates, FedWatch snapshots
+
+
+def _year_ticks(rows: list[dict[str, Any]], x: Any, base_y: float) -> list[str]:
+    """Year tick labels: the first point's year, then every January."""
+    parts = []
+    seen_years: set[str] = set()
+    for r in rows:
+        year = r["month"][:4]
+        if r["month"][5:7] == "01" or not seen_years:
+            if year not in seen_years:
+                seen_years.add(year)
+                parts.append(
+                    f'<line x1="{x(r["month"]):.1f}" y1="{base_y:.1f}" '
+                    f'x2="{x(r["month"]):.1f}" y2="{base_y + 5:.1f}" stroke="#c9cabf"/>'
+                    f'<text x="{x(r["month"]):.1f}" y="{base_y + 24:.1f}" '
+                    f'text-anchor="middle" font-size="13" fill="#21231f">{year}</text>'
+                )
+    return parts
+
+
+def _svg_housing_chart(rows: list[dict[str, Any]]) -> str:
+    """NAR Pending Home Sales Index line; latest print + pre-2026 low marked."""
+    if not rows:
+        return (
+            '<p class="cap">Pending home sales data unavailable '
+            "(data/insight/pending_home_sales.csv not loaded).</p>"
+        )
+    W, H = 1000, 420
+    pad_l, pad_r, pad_t, pad_b = 70, 30, 42, 54
+
+    def dnum(m: str) -> float:
+        return date(int(m[:4]), int(m[5:7]), 1).toordinal()
+
+    lo_x, hi_x = dnum(rows[0]["month"]), dnum(rows[-1]["month"])
+    span_x = max(hi_x - lo_x, 1)
+    lo_v = min(r["level"] for r in rows)
+    hi_v = max(r["level"] for r in rows)
+    ymin = math.floor((lo_v - 5) / 10) * 10
+    ymax = math.ceil((hi_v + 5) / 10) * 10
+
+    def x(m: str) -> float:
+        return pad_l + (W - pad_l - pad_r) * (dnum(m) - lo_x) / span_x
+
+    def y(v: float) -> float:
+        return pad_t + (H - pad_t - pad_b) * (1 - (v - ymin) / (ymax - ymin))
+
+    parts = [
+        f'<svg viewBox="0 0 {W} {H}" role="img" aria-label="Pending home sales index">'
+    ]
+    g = ymin + 10.0
+    while g < ymax:
+        parts.append(
+            f'<line x1="{pad_l}" y1="{y(g):.1f}" x2="{W - pad_r}" y2="{y(g):.1f}" '
+            f'stroke="#e5e4da" stroke-width="1"/>'
+            f'<text x="{pad_l - 10}" y="{y(g) + 5:.1f}" text-anchor="end" '
+            f'font-size="13" fill="#65685f">{g:.0f}</text>'
+        )
+        g += 10.0
+    # Pre-2026 series low: dashed warning line.
+    pre = [r for r in rows if r["month"] < "2026-01"]
+    if pre:
+        low_row = min(pre, key=lambda r: r["level"])
+        ly = y(low_row["level"])
+        parts.append(
+            f'<line x1="{pad_l}" y1="{ly:.1f}" x2="{W - pad_r}" y2="{ly:.1f}" '
+            f'stroke="#dc2626" stroke-width="1.5" stroke-dasharray="7,5"/>'
+            f'<text x="{W - pad_r - 4}" y="{ly - 8:.1f}" text-anchor="end" '
+            f'font-size="12.5" fill="#dc2626">pre-2026 low {low_row["level"]:.1f} '
+            f'({_month_label(low_row["month"])})</text>'
+        )
+    pts = " ".join(f"{x(r['month']):.1f},{y(r['level']):.1f}" for r in rows)
+    parts.append(f'<polyline points="{pts}" fill="none" stroke="#1f6feb" stroke-width="2.5"/>')
+    for r in rows:
+        parts.append(
+            f'<circle cx="{x(r["month"]):.1f}" cy="{y(r["level"]):.1f}" r="2" fill="#1f6feb"/>'
+        )
+    last = rows[-1]
+    parts.append(
+        f'<circle cx="{x(last["month"]):.1f}" cy="{y(last["level"]):.1f}" r="5.5" fill="#dc2626">'
+        f"<title>{html.escape(_month_label(last['month']))}: {last['level']:.1f}</title></circle>"
+        f'<text x="{x(last["month"]):.1f}" y="{y(last["level"]) - 14:.1f}" text-anchor="end" '
+        f'font-size="14" font-weight="700" fill="#dc2626">'
+        f'{html.escape(_month_label(last["month"]))}: {last["level"]:.1f} - series low</text>'
+    )
+    parts.extend(_year_ticks(rows, x, H - pad_b))
+    parts.append(
+        f'<text x="{pad_l}" y="{H - 8}" font-size="12" fill="#65685f">'
+        "NAR Pending Home Sales Index, seasonally adjusted (2001 = 100). Levels are the "
+        "latest vintage fetched per month - NAR benchmark-revises the series (per-row "
+        "sources in the CSV). Coverage starts Dec 2021: Jan-Nov 2021 monthly values were "
+        "not available from a fetchable primary table."
+        "</text>"
+    )
+    parts.append("</svg>")
+    return "".join(parts)
+
+
+def _svg_mortgage_chart(rows: list[dict[str, Any]]) -> str:
+    """30-year mortgage rate: monthly averages of the FRED weekly series."""
+    if not rows:
+        return (
+            '<p class="cap">Mortgage rate data unavailable '
+            "(data/insight/mortgage_rates.csv not loaded).</p>"
+        )
+    W, H = 1000, 380
+    pad_l, pad_r, pad_t, pad_b = 70, 30, 42, 54
+
+    def dnum(m: str) -> float:
+        return date(int(m[:4]), int(m[5:7]), 1).toordinal()
+
+    lo_x, hi_x = dnum(rows[0]["month"]), dnum(rows[-1]["month"])
+    span_x = max(hi_x - lo_x, 1)
+    lo_v = min(r["avg_rate"] for r in rows)
+    hi_v = max(r["avg_rate"] for r in rows)
+    ymin = math.floor((lo_v - 0.4) * 2) / 2
+    ymax = math.ceil((hi_v + 0.4) * 2) / 2
+
+    def x(m: str) -> float:
+        return pad_l + (W - pad_l - pad_r) * (dnum(m) - lo_x) / span_x
+
+    def y(v: float) -> float:
+        return pad_t + (H - pad_t - pad_b) * (1 - (v - ymin) / (ymax - ymin))
+
+    parts = [
+        f'<svg viewBox="0 0 {W} {H}" role="img" '
+        'aria-label="30-year mortgage rate, monthly average">'
+    ]
+    g = math.ceil(ymin) + 0.0
+    while g < ymax:
+        parts.append(
+            f'<line x1="{pad_l}" y1="{y(g):.1f}" x2="{W - pad_r}" y2="{y(g):.1f}" '
+            f'stroke="#e5e4da" stroke-width="1"/>'
+            f'<text x="{pad_l - 10}" y="{y(g) + 5:.1f}" text-anchor="end" '
+            f'font-size="13" fill="#65685f">{g:.0f}%</text>'
+        )
+        g += 1.0
+    pts = " ".join(f"{x(r['month']):.1f},{y(r['avg_rate']):.1f}" for r in rows)
+    parts.append(f'<polyline points="{pts}" fill="none" stroke="#d97706" stroke-width="2.5"/>')
+    peak = max(rows, key=lambda r: r["avg_rate"])
+    parts.append(
+        f'<circle cx="{x(peak["month"]):.1f}" cy="{y(peak["avg_rate"]):.1f}" r="4.5" fill="#d97706">'
+        f"<title>Peak {_month_label(peak['month'])}: {peak['avg_rate']:.2f}%</title></circle>"
+        f'<text x="{x(peak["month"]):.1f}" y="{y(peak["avg_rate"]) - 12:.1f}" text-anchor="middle" '
+        f'font-size="13" font-weight="700" fill="#9a3412">peak {peak["avg_rate"]:.2f}% '
+        f'({html.escape(_month_label(peak["month"]))})</text>'
+    )
+    last = rows[-1]
+    parts.append(
+        f'<circle cx="{x(last["month"]):.1f}" cy="{y(last["avg_rate"]):.1f}" r="4.5" fill="#d97706">'
+        f"<title>{_month_label(last['month'])}: {last['avg_rate']:.2f}%</title></circle>"
+        f'<text x="{x(last["month"]):.1f}" y="{y(last["avg_rate"]) - 12:.1f}" text-anchor="end" '
+        f'font-size="13" font-weight="700" fill="#9a3412">'
+        f'{html.escape(_month_label(last["month"]))}: {last["avg_rate"]:.2f}% (partial month)</text>'
+    )
+    parts.extend(_year_ticks(rows, x, H - pad_b))
+    parts.append(
+        f'<text x="{pad_l}" y="{H - 8}" font-size="12" fill="#65685f">'
+        "30-year fixed mortgage rate (FRED MORTGAGE30US): weekly observations averaged "
+        "by calendar month. The final month averages only the weeks published so far."
+        "</text>"
+    )
+    parts.append("</svg>")
+    return "".join(parts)
+
+
+def _svg_fedwatch_chart(rows: list[dict[str, Any]]) -> str:
+    """FedWatch hike probability: one line per FOMC meeting, snapshots only."""
+    if not rows:
+        return (
+            '<p class="cap">FedWatch snapshots unavailable '
+            "(data/insight/fedwatch_snapshots.csv not loaded).</p>"
+        )
+    palette = ["#dc2626", "#1f6feb", "#d97706", "#16a34a", "#7c3aed"]
+    W, H = 1000, 380
+    pad_l, pad_r, pad_t, pad_b = 70, 150, 42, 54
+
+    def dnum(d: str) -> float:
+        return date.fromisoformat(d).toordinal()
+
+    meetings: dict[str, list[dict[str, Any]]] = {}
+    for r in rows:
+        meetings.setdefault(r["meeting"], []).append(r)
+    xs = [dnum(r["as_of"]) for r in rows]
+    lo_x, hi_x = min(xs) - 2, max(xs) + 2
+    span_x = max(hi_x - lo_x, 1)
+
+    def x(d: str) -> float:
+        return pad_l + (W - pad_l - pad_r) * (dnum(d) - lo_x) / span_x
+
+    def y(v: float) -> float:
+        return pad_t + (H - pad_t - pad_b) * (1 - v / 100.0)
+
+    parts = [
+        f'<svg viewBox="0 0 {W} {H}" role="img" '
+        'aria-label="FedWatch hike probabilities by FOMC meeting">'
+    ]
+    for gval in (25.0, 50.0, 75.0, 100.0):
+        parts.append(
+            f'<line x1="{pad_l}" y1="{y(gval):.1f}" x2="{W - pad_r}" y2="{y(gval):.1f}" '
+            f'stroke="#e5e4da" stroke-width="1"/>'
+            f'<text x="{pad_l - 10}" y="{y(gval) + 5:.1f}" text-anchor="end" '
+            f'font-size="13" fill="#65685f">{gval:.0f}%</text>'
+        )
+    parts.append(
+        f'<text x="{pad_l - 10}" y="{y(0) + 5:.1f}" text-anchor="end" '
+        f'font-size="13" fill="#65685f">0%</text>'
+    )
+    for i, (meeting, snaps) in enumerate(sorted(meetings.items())):
+        color = palette[i % len(palette)]
+        snaps = sorted(snaps, key=lambda r: r["as_of"])
+        if len(snaps) > 1:
+            pts = " ".join(
+                f"{x(s['as_of']):.1f},{y(s['p_hike']):.1f}" for s in snaps
+            )
+            parts.append(
+                f'<polyline points="{pts}" fill="none" stroke="{color}" stroke-width="2.5"/>'
+            )
+        for s in snaps:
+            parts.append(
+                f'<circle cx="{x(s["as_of"]):.1f}" cy="{y(s["p_hike"]):.1f}" r="4.5" fill="{color}">'
+                f"<title>FOMC {html.escape(meeting)} as of {html.escape(s['as_of'])}: "
+                f"cut {s['p_cut']:.1f}% / hold {s['p_hold']:.1f}% / hike {s['p_hike']:.1f}%"
+                "</title></circle>"
+            )
+        last = snaps[-1]
+        label = (
+            f"FOMC {_MONTH_ABBR[int(meeting[5:7]) - 1]} {int(meeting[8:10])}: "
+            f"hike {last['p_hike']:.0f}%"
+        )
+        parts.append(
+            f'<text x="{x(last["as_of"]) + 10:.1f}" y="{y(last["p_hike"]) + 5:.1f}" '
+            f'font-size="13" font-weight="700" fill="{color}">{html.escape(label)}</text>'
+        )
+    for d in sorted({r["as_of"] for r in rows}):
+        parts.append(
+            f'<text x="{x(d):.1f}" y="{H - pad_b + 24:.1f}" text-anchor="middle" '
+            f'font-size="13" fill="#21231f">{_MONTH_ABBR[int(d[5:7]) - 1]} {int(d[8:10])}</text>'
+        )
+    parts.append(
+        f'<text x="{pad_l}" y="{H - 8}" font-size="12" fill="#65685f">'
+        "CME FedWatch implied probability of a rate HIKE at each FOMC meeting. Lines "
+        "join snapshots of the SAME meeting only - never across meetings. Cut probability "
+        "is 0% in every snapshot so far; the notes carry the full cut/hold/hike split."
+        "</text>"
+    )
+    parts.append("</svg>")
+    return "".join(parts)
+
+
+def _housing_notes(rows: list[dict[str, Any]]) -> str:
+    if not rows:
+        return ""
+    last = rows[-1]
+    bits = [f"Latest: {_month_label(last['month'])} at {last['level']:.1f}"]
+    if last["mom_pct"] is not None:
+        bits.append(f"{last['mom_pct']:+.1f}% MoM")
+    if last["yoy_pct"] is not None:
+        bits.append(f"{last['yoy_pct']:+.1f}% YoY")
+    return (
+        '<p class="cap">' + html.escape(", ".join(bits)) + " - the lowest print in the "
+        "series' history per NAR's release. Contract signings lead closings by one to "
+        "two months, which makes this the earliest housing read on the page.</p>"
+    )
+
+
+def _mortgage_notes(rows: list[dict[str, Any]]) -> str:
+    if not rows:
+        return ""
+    last = rows[-1]
+    peak = max(rows, key=lambda r: r["avg_rate"])
+    return (
+        f'<p class="cap">Latest monthly average: {_month_label(last["month"])} '
+        f'at {last["avg_rate"]:.2f}% (partial month). Cycle peak: '
+        f'{_month_label(peak["month"])} at {peak["avg_rate"]:.2f}%. Every 1% on this '
+        "rate is roughly a tenth of a buyer's purchasing power - the channel from the "
+        "Fed path below to the signings above.</p>"
+    )
+
+
+def _fedwatch_notes(rows: list[dict[str, Any]]) -> str:
+    if not rows:
+        return ""
+    meetings: dict[str, list[dict[str, Any]]] = {}
+    for r in rows:
+        meetings.setdefault(r["meeting"], []).append(r)
+    bits = []
+    for meeting, snaps in sorted(meetings.items()):
+        s = sorted(snaps, key=lambda r: r["as_of"])[-1]
+        bits.append(
+            f"FOMC {_MONTH_ABBR[int(meeting[5:7]) - 1]} {int(meeting[8:10])} "
+            f"(as of {_MONTH_ABBR[int(s['as_of'][5:7]) - 1]} {int(s['as_of'][8:10])}): "
+            f"cut {s['p_cut']:.1f}% / hold {s['p_hold']:.1f}% / hike {s['p_hike']:.1f}% "
+            f"[{s['source']}]"
+        )
+    return '<p class="cap">' + html.escape(" · ".join(bits)) + "</p>"
+
+
+# ---------------------------------------------------------------------------
 # Page
 
 
@@ -566,7 +1116,7 @@ table.src td,table.src th{border:1px solid var(--line);padding:4px 8px;text-alig
 </style></head><body><main>
 <div class="top"><span class="brand">OPENPAW / MARKET NOTES</span></div>
 <h1>Insight.</h1>
-<p class="sub">Where the reported numbers understate the leverage: AI capex hidden in SPVs, and what credit markets charge for it. Data as of __ASOF__.</p>
+<p class="sub">Where the reported numbers understate the leverage: AI capex hidden in SPVs, what credit markets charge for it, and the macro figures that crack first - housing, mortgage rates, the Fed path. Data as of __ASOF__.</p>
 <a class="back" href="index.html">&larr; Back to the portfolio dashboard</a>
 <div class="chart-block"><h2>Reported vs true AI capex</h2>
 <p class="cap">Annual Big-4 (MSFT + AMZN + GOOGL + META) capex vs reported + SPV/off-balance-sheet. The shaded gap is the hidden leverage - every estimate anchored to a named deal (hover the labels).</p>
@@ -579,7 +1129,15 @@ __SPV_TABLE__</div>
 <p class="cap">5Y CDS history is paywalled, so this is an annotated timeline of verified credit-stress anchors - each point labeled with its proxy type. A proxy is never a CDS print.</p>
 __CDS_CHART__
 <div class="tl">__TIMELINE__</div></div>
-<p class="note">Method: SPV estimates are anchored to named deals and spread over build years (see data/insight/spv_capex.csv); reported capex from company filings. Revenue is the calendar-year sum of quarterly us-gaap Revenues for MSFT+AMZN+GOOGL+META from SEC EDGAR companyfacts (see data/insight/revenue_big4.csv). CDS timeline points carry source + proxy labels (see data/insight/cds_spreads.csv) - add real weekly 5Y prints there with proxy_label <code>cds-print:5y</code> to grow the spread chart. Reported history, not a forecast.</p>
+<div class="chart-block"><h2>Section C — Macro early-warning: housing &amp; the Fed path</h2>
+<p class="cap">The figures that turn before credit does: contract signings, the mortgage rate that drives them, and what futures markets charge for the Fed's next moves.</p>
+<div class="chart">__HOUSING_SVG__</div>
+__HOUSING_NOTES__
+<div class="chart">__MORTGAGE_SVG__</div>
+__MORTGAGE_NOTES__
+<div class="chart">__FEDWATCH_SVG__</div>
+__FEDWATCH_NOTES__</div>
+<p class="note">Method: SPV estimates are anchored to named deals and spread over build years (see data/insight/spv_capex.csv); reported capex from company filings. Revenue is the calendar-year sum of quarterly us-gaap Revenues for MSFT+AMZN+GOOGL+META from SEC EDGAR companyfacts (see data/insight/revenue_big4.csv). CDS timeline points carry source + proxy labels (see data/insight/cds_spreads.csv) - add real weekly 5Y prints there with proxy_label <code>cds-print:5y</code> to grow the spread chart. Section C: housing levels are the latest NAR vintage fetched per month, each row sourced in data/insight/pending_home_sales.csv; mortgage rates are FRED MORTGAGE30US weekly observations averaged by month (data/insight/mortgage_rates.csv); FedWatch rows are dated snapshots - append new snapshots, never overwrite (data/insight/fedwatch_snapshots.csv). Reported history, not a forecast.</p>
 </main></body></html>"""
 
 
@@ -617,6 +1175,12 @@ def render_insight_dashboard(data: dict[str, Any], out_dir: Path) -> Path:
         .replace("__SPV_TABLE__", _spv_table(data["spv"]))
         .replace("__CDS_CHART__", cds_chart)
         .replace("__TIMELINE__", _timeline_html(data["cds"]))
+        .replace("__HOUSING_SVG__", _svg_housing_chart(data.get("housing", [])))
+        .replace("__HOUSING_NOTES__", _housing_notes(data.get("housing", [])))
+        .replace("__MORTGAGE_SVG__", _svg_mortgage_chart(data.get("mortgage", [])))
+        .replace("__MORTGAGE_NOTES__", _mortgage_notes(data.get("mortgage", [])))
+        .replace("__FEDWATCH_SVG__", _svg_fedwatch_chart(data.get("fedwatch", [])))
+        .replace("__FEDWATCH_NOTES__", _fedwatch_notes(data.get("fedwatch", [])))
     )
     target.write_text(page)
     return target
