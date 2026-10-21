@@ -66,12 +66,15 @@ def _cds_dir(tmp_path: Path, rows: str) -> Path:
 
 def test_shipped_spv_csv_loads_with_combined_math():
     rows = load_spv_capex(DATA_DIR)
-    assert [r.year for r in rows] == ["2023", "2024", "2025", "2026"]
-    assert rows[0].spv == 0  # 2023: no SPV layer
+    assert [r.year for r in rows] == ["2021", "2022", "2023", "2024", "2025", "2026"]
+    assert rows[0].spv == 0  # 2021: pre-SPV era (#169 backfill)
+    assert rows[1].spv == 0  # 2022: pre-SPV era (#169 backfill)
+    assert rows[2].spv == 0  # 2023: no SPV layer
     assert rows[-1].combined == pytest.approx(833.0)  # 733 reported + 100 SPV
-    for r in rows[1:]:
-        assert r.anchor_deals, f"{r.year}: estimate without anchor deals"
-        assert r.source, f"{r.year}: estimate without source"
+    for r in rows:
+        if r.spv > 0:
+            assert r.anchor_deals, f"{r.year}: estimate without anchor deals"
+            assert r.source, f"{r.year}: estimate without source"
 
 
 def test_spv_estimate_without_anchor_raises(tmp_path):
@@ -165,7 +168,7 @@ def test_cds_bad_date_raises(tmp_path):
 
 def test_dashboard_data_shape():
     data = insight_dashboard_data(DATA_DIR)
-    assert len(data["spv"]) == 4
+    assert len(data["spv"]) == 6
     assert len(data["cds"]) == 4
     assert data["cds_prints"] == {}  # no real prints in the seed
     assert data["asof"] == "2026-09"
@@ -200,6 +203,22 @@ def test_render_with_real_prints_draws_spread_chart(tmp_path):
     assert "5Y CDS spreads (bps)" in page
 
 
+def test_cds_chart_axis_starts_2021_with_no_data_region(tmp_path):
+    d = _cds_dir(
+        tmp_path,
+        "ORCL,2026-09-11,140,Dealer poll,cds-print:5y,Week 1\n"
+        "ORCL,2026-09-18,150,Dealer poll,cds-print:5y,Week 2\n",
+    )
+    data = insight_dashboard_data(d)
+    target = render_insight_dashboard(data, tmp_path / "out")
+    page = target.read_text()
+    # Axis aligned with the capex panels (#169): a 2021 tick is drawn even
+    # though collection only began in Sep 2026, and the pre-data span is
+    # labeled as such instead of silently empty or backfilled.
+    assert ">2021</text>" in page
+    assert "No collected prints before Sep 2026" in page
+
+
 # --------------------------------------------------------------------------
 # Section A, revenue layer: capex intensity (% of revenue)
 
@@ -207,6 +226,8 @@ def test_render_with_real_prints_draws_spread_chart(tmp_path):
 def test_shipped_revenue_csv_loads_edgar_values():
     rows = load_revenue(DATA_DIR)
     assert [(r.year, r.revenue, r.status) for r in rows] == [
+        ("2021", 1030.3, "verified"),
+        ("2022", 1117.5, "verified"),
         ("2023", 1244.7, "verified"),
         ("2024", 1414.3, "verified"),
         ("2025", 1626.2, "verified"),
