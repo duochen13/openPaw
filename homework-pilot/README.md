@@ -5,6 +5,13 @@ The pilot teacher is Daniel's mother: she teaches **2 classes, ~80 students**, a
 **Chapter 3 《能量的转化与守恒》 (Energy Conversion and Conservation)** of **浙教版 Science, Grade 9 Vol. 1**
 (浙教版科学九年级上册） — bound to the teacher's actual textbook and teaching pace.
 
+**Direction update (2026-10-25, [#176](https://github.com/duochen13/openPaw/issues/176)):** the product now starts
+from the **student side**. The MVP is a student uploading a scanned PDF of a paper they have already completed and
+getting a per-question verdict （对 / 错 / 待确认； sources in priority order: teacher's red-pen marks > answer key >
+model self-solve), with a confirmation queue whose confirmations become labeled training data. The `webui/` frontend
+was pivoted to this MVP on PR #168; the teacher-loop packages below (evidence / ingestion / taxonomy / assembly /
+review) are unchanged and remain the longer-term backend direction.
+
 ## Flow
 
 1. Teacher uploads graded paper homework (photos or scanned PDFs: 原题， 参考答案， graded student work).
@@ -33,7 +40,7 @@ so the design doc still lives under the misspelled folder.
 | `homework-pilot/assembly/` | [#113](https://github.com/duochen13/openPaw/issues/113) [#114](https://github.com/duochen13/openPaw/issues/114) | [#125](https://github.com/duochen13/openPaw/pull/125) | Personalized assembly rules engine (per-student 当前/薄弱点/复习 mix, teacher budget cap, 共同题） + AI question generation with pre-release validation | `tests/test_engine.py`, `test_generate.py`, `test_review_queue.py` in PR |
 | `homework-pilot/review/` | [#115](https://github.com/duochen13/openPaw/issues/115) | [#127](https://github.com/duochen13/openPaw/pull/127) | Teacher review workflow （审核： approve/reject/replace/adjust at shared-question level) + print-ready PDF export (student sheets + teacher key) | `tests/test_export.py`, `tests/test_review.py` in PR |
 | `homework-pilot/privacy/` | [#117](https://github.com/duochen13/openPaw/issues/117) | [#121](https://github.com/duochen13/openPaw/pull/121) | Privacy guard: student-ID-only enforcement, no names anywhere | `tests/test_guard.py` in PR |
-| `homework-pilot/webui/` | [#167](https://github.com/duochen13/openPaw/issues/167) | this PR | Teacher console UI (Muse desktop design language): one self-contained HTML with 工作台 / 识别确认 / 薄弱点确认 / 作业审核 / 导出， bound to synthetic demo fixtures | `tests/test_webui.py` in PR |
+| `homework-pilot/webui/` | [#176](https://github.com/duochen13/openPaw/issues/176) (opened as [#167](https://github.com/duochen13/openPaw/issues/167)) | this PR | Student-side MVP UI (Muse desktop design language): one self-contained HTML with 试卷 / 结果 / 待确认， bound to synthetic demo fixtures. Originally a teacher console (#167); pivoted to the student MVP per #176 — the old console design is preserved in this branch's git history | `tests/test_webui.py` in PR |
 | `homework-pilot/docs/` | [#108](https://github.com/duochen13/openPaw/issues/108) [#116](https://github.com/duochen13/openPaw/issues/116) [#117](https://github.com/duochen13/openPaw/issues/117) | [#120](https://github.com/duochen13/openPaw/pull/120) (checklist), [#119](https://github.com/duochen13/openPaw/pull/119) (protocol + tracking sheet), [#121](https://github.com/duochen13/openPaw/pull/121) (governance doc) | Field-materials checklist, validation protocol + pilot tracking sheet, privacy-governance doc | n/a (docs) |
 
 ## Issue status
@@ -48,7 +55,8 @@ so the design doc still lives under the misspelled folder.
 | [#115](https://github.com/duochen13/openPaw/issues/115) review/export | [#127](https://github.com/duochen13/openPaw/pull/127) open — review workflow + PDF export. |
 | [#116](https://github.com/duochen13/openPaw/issues/116) validation protocol | [#119](https://github.com/duochen13/openPaw/pull/119) open — pre-registered protocol + tracking sheet. |
 | [#117](https://github.com/duochen13/openPaw/issues/117) privacy/governance | [#121](https://github.com/duochen13/openPaw/pull/121) open — governance doc + privacy guard. |
-| [#167](https://github.com/duochen13/openPaw/issues/167) teacher console UI | this PR — first frontend (demo fixtures; live wiring still gated on #108). Relates to #108, does not close it. |
+| [#167](https://github.com/duochen13/openPaw/issues/167) teacher console UI | this PR — built as a teacher console, then **pivoted to the student-side MVP (#176)** on the same branch; see the #176 row. |
+| [#176](https://github.com/duochen13/openPaw/issues/176) student-side MVP | this PR — student uploads a completed paper scan (PDF) and gets per-question 对 / 错 / 待确认 verdicts with a confirmation queue. Demo fixtures only; live pipeline wiring and any real student data still gated on #108 Phase 2 (school stance / privacy). |
 
 ## Running tests
 
@@ -70,4 +78,4 @@ Student-ID-only: there is no name field anywhere in the repo. See `docs/privacy-
 - Field materials: 5 sample graded papers, textbook/reference answers, teacher consent + data-use consent forms (#108).
 - Real question bank (current generator output is AI-drafted and unvalidated by the teacher).
 - CJK font for print PDFs (PDF export is stdlib-only; Chinese typesetting needs a bundled font).
-- Teacher UI wiring — a first console UI exists in `webui/` (#167) rendering demo fixtures; connecting it to live `ReviewSession` decisions, real scanned pages, and real exports still waits on #108 field materials. Until then the pilot runs on scripts + generated PDFs.
+- Student UI wiring — a student-side MVP UI exists in `webui/` (#176, on the PR that began as the #167 teacher console) rendering demo fixtures; connecting it to the live upload → segmentation → transcription → verdict pipeline still waits on #108 field materials and the Phase 2 school-stance decision. Until then the pilot runs on scripts + generated PDFs.
