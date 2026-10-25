@@ -442,9 +442,9 @@ def _cloud_dir(tmp_path: Path, rows: str) -> Path:
     return d
 
 
-def test_shipped_cloud_csv_covers_three_vendors_2021_to_2026q2():
+def test_shipped_cloud_csv_covers_three_vendors_2020_to_2026q2():
     rows = load_cloud_revenue(DATA_DIR)
-    assert len(rows) == 66  # 22 calendar quarters x 3 vendors
+    assert len(rows) == 78  # 26 calendar quarters x 3 vendors
     by_vendor: dict[str, list] = {}
     for r in rows:
         by_vendor.setdefault(r.vendor, []).append(r)
@@ -457,9 +457,9 @@ def test_shipped_cloud_csv_covers_three_vendors_2021_to_2026q2():
     }
     for vendor, rows_ in by_vendor.items():
         quarters = [r.quarter for r in rows_]
-        assert quarters[0] == "2021-Q1", vendor
+        assert quarters[0] == "2020-Q1", vendor  # 2020 = the YoY base year
         assert quarters[-1] == "2026-Q2", vendor
-        assert len(set(quarters)) == 22, vendor
+        assert len(set(quarters)) == 26, vendor
     by_key = {(r.vendor, r.quarter): r.revenue for r in rows}
     # Anchors from the Q2 2026 earnings releases.
     assert by_key[("GOOGL", "2026-Q2")] == pytest.approx(24.768)
@@ -467,6 +467,10 @@ def test_shipped_cloud_csv_covers_three_vendors_2021_to_2026q2():
     assert by_key[("AMZN", "2026-Q1")] == pytest.approx(37.587)  # Amazon 10-Q table
     assert by_key[("MSFT", "2026-Q2")] == pytest.approx(39.306)
     assert by_key[("GOOGL", "2023-Q2")] == pytest.approx(8.031)  # 8-K Ex-99.1
+    # 2020 base-year anchors, from the 2020 earnings releases.
+    assert by_key[("GOOGL", "2020-Q4")] == pytest.approx(3.831)
+    assert by_key[("AMZN", "2020-Q1")] == pytest.approx(10.219)
+    assert by_key[("MSFT", "2020-Q3")] == pytest.approx(12.986)  # FY21 Q1
 
 
 def test_shipped_cloud_yoy_reproduces_reported_growth():
@@ -481,6 +485,16 @@ def test_shipped_cloud_yoy_reproduces_reported_growth():
     assert amzn["2026-Q2"] == pytest.approx(36.8, abs=0.1)  # reported +37%
     msft = {p["quarter"]: p["yoy_pct"] for p in cloud["MSFT"]["points"]}
     assert msft["2026-Q2"] == pytest.approx(31.6, abs=0.1)  # reported +31.6%
+    # The 2020 backfill makes YoY computable from 2021-Q1 (the pre-AI-wave
+    # growth rates); 2021 anchors are the as-reported growth for that year.
+    for vendor, series in (("GOOGL", googl), ("AMZN", amzn), ("MSFT", msft)):
+        path2021 = [series[f"2021-Q{i}"] for i in range(1, 5)]
+        expected = {
+            "GOOGL": [45.7, 53.9, 44.9, 44.6],
+            "AMZN": [32.1, 37.0, 38.9, 39.5],
+            "MSFT": [23.0, 29.6, 30.2, 24.8],
+        }[vendor]
+        assert path2021 == pytest.approx(expected, abs=0.15), vendor
     # YoY is chained math: each vendor's first four quarters have none.
     for s in data["cloud"]:
         assert all(p["yoy_pct"] is None for p in s["points"][:4])
@@ -539,6 +553,10 @@ def test_render_includes_cloud_panel(tmp_path):
     assert "not disclose Azure revenue in dollars" in page
     # The Microsoft resegmentation caveat rides on the panel.
     assert "redefined the Intelligent Cloud" in page
+    # The full quarterly YoY table is in the panel, 2021-Q1 first.
+    assert "The growth chart as a table" in page
+    assert "+45.7" in page  # Google Cloud 2021-Q1 YoY, first table row
+    assert "<td>+0.1*</td>" in page  # MSFT 2025-Q1, asterisked (redefinition)
 
 
 def test_dashboard_data_without_cloud_file_still_renders(tmp_path):
