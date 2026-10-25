@@ -714,7 +714,12 @@ def _svg_intensity_chart(rows: list[dict[str, Any]]) -> str:
 
 
 def _svg_cds_chart(prints: dict[str, list[tuple[str, float]]]) -> str:
-    """Line chart of real weekly 5Y CDS prints, one series per ticker."""
+    """Line chart of real weekly 5Y CDS prints, one series per ticker.
+
+    The time axis starts at 2021 to align with the capex panels (#169);
+    the span before the first collected print is shaded and labeled as a
+    no-data region rather than left empty or, worse, backfilled.
+    """
     palette = ["#16a34a", "#1f6feb", "#d97706", "#dc2626", "#7c3aed", "#0891b2"]
     W, H = 1000, 380
     pad_l, pad_r, pad_t, pad_b = 70, 30, 30, 50
@@ -728,15 +733,45 @@ def _svg_cds_chart(prints: dict[str, list[tuple[str, float]]]) -> str:
     vs = [v for _, _, v in all_pts]
     lo_x, hi_x = min(xs), max(xs)
     hi_v = max(vs) * 1.15
+    # The x-axis is aligned with the capex panels: it starts at 2021 even
+    # though print collection began much later (#169). The span before the
+    # first collected print is drawn as an explicit no-data region below -
+    # never interpolated, never backfilled.
+    first_x = lo_x
+    first_date = min(d for _, d, _ in all_pts if dnum(d) == first_x)
+    lo_x = min(lo_x, date(2021, 1, 1).toordinal())
     span_x = max(hi_x - lo_x, 1)
 
+    def xo(o: float) -> float:
+        return pad_l + (W - pad_l - pad_r) * (o - lo_x) / span_x
+
     def x(d: str) -> float:
-        return pad_l + (W - pad_l - pad_r) * (dnum(d) - lo_x) / span_x
+        return xo(dnum(d))
 
     def y(v: float) -> float:
         return pad_t + (H - pad_t - pad_b) * (1 - v / hi_v)
 
     parts = [f'<svg viewBox="0 0 {W} {H}" role="img" aria-label="5Y CDS spreads">']
+    if first_x - lo_x > 45:
+        first_dt = date.fromisoformat(
+            first_date if len(first_date) > 7 else first_date + "-01"
+        )
+        parts.append(
+            f'<rect x="{xo(lo_x):.1f}" y="{pad_t}" width="{xo(first_x) - xo(lo_x):.1f}" '
+            f'height="{H - pad_t - pad_b}" fill="#21231f" opacity="0.05"/>'
+            f'<text x="{(xo(lo_x) + xo(first_x)) / 2:.1f}" y="{(pad_t + H - pad_b) / 2:.1f}" '
+            f'text-anchor="middle" font-size="13" fill="#65685f">'
+            f"No collected prints before {first_dt.strftime('%b %Y')}</text>"
+        )
+    for yr in range(2021, date.fromordinal(int(hi_x)).year + 1):
+        o = date(yr, 1, 1).toordinal()
+        if lo_x <= o <= hi_x:
+            parts.append(
+                f'<line x1="{xo(o):.1f}" y1="{H - pad_b}" x2="{xo(o):.1f}" y2="{H - pad_b + 6}" '
+                f'stroke="#65685f" stroke-width="1"/>'
+                f'<text x="{xo(o):.1f}" y="{H - pad_b + 22:.1f}" text-anchor="middle" '
+                f'font-size="12" fill="#65685f">{yr}</text>'
+            )
     for i, (ticker, series) in enumerate(sorted(prints.items())):
         color = palette[i % len(palette)]
         pts = " ".join(f"{x(d):.1f},{y(v):.1f}" for d, v in series)
