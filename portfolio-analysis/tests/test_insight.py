@@ -19,6 +19,7 @@ from portfolio_analysis.insight_dashboard import (
     InsightDataError,
     insight_dashboard_data,
     load_cds_spreads,
+    load_cloud_revenue,
     load_fedwatch_snapshots,
     load_mortgage_rates,
     load_pending_home_sales,
@@ -425,3 +426,145 @@ def test_dashboard_data_without_section_c_files_still_renders(tmp_path):
     page = target.read_text()
     assert "Section C" in page  # block renders with unavailable notes
     assert "data unavailable" in page
+
+
+# --------------------------------------------------------------------------
+# Section D (#174): hyperscaler cloud revenue & growth
+
+
+CLOUD_HEADER = "vendor,segment,quarter,revenue_usd_b,source,status\n"
+
+
+def _cloud_dir(tmp_path: Path, rows: str) -> Path:
+    d = tmp_path / "insight"
+    d.mkdir()
+    (d / "cloud_revenue.csv").write_text(CLOUD_HEADER + rows)
+    return d
+
+
+def test_shipped_cloud_csv_covers_three_vendors_2020_to_2026q2():
+    rows = load_cloud_revenue(DATA_DIR)
+    assert len(rows) == 78  # 26 calendar quarters x 3 vendors
+    by_vendor: dict[str, list] = {}
+    for r in rows:
+        by_vendor.setdefault(r.vendor, []).append(r)
+        assert r.source, f"{r.vendor} {r.quarter}: revenue without source"
+        assert r.status == "verified"
+    assert {v: rows_[0].segment for v, rows_ in by_vendor.items()} == {
+        "GOOGL": "Google Cloud",
+        "AMZN": "Amazon Web Services",
+        "MSFT": "Intelligent Cloud",
+    }
+    for vendor, rows_ in by_vendor.items():
+        quarters = [r.quarter for r in rows_]
+        assert quarters[0] == "2020-Q1", vendor  # 2020 = the YoY base year
+        assert quarters[-1] == "2026-Q2", vendor
+        assert len(set(quarters)) == 26, vendor
+    by_key = {(r.vendor, r.quarter): r.revenue for r in rows}
+    # Anchors from the Q2 2026 earnings releases.
+    assert by_key[("GOOGL", "2026-Q2")] == pytest.approx(24.768)
+    assert by_key[("AMZN", "2026-Q2")] == pytest.approx(42.232)
+    assert by_key[("AMZN", "2026-Q1")] == pytest.approx(37.587)  # Amazon 10-Q table
+    assert by_key[("MSFT", "2026-Q2")] == pytest.approx(39.306)
+    assert by_key[("GOOGL", "2023-Q2")] == pytest.approx(8.031)  # 8-K Ex-99.1
+    # 2020 base-year anchors, from the 2020 earnings releases.
+    assert by_key[("GOOGL", "2020-Q4")] == pytest.approx(3.831)
+    assert by_key[("AMZN", "2020-Q1")] == pytest.approx(10.219)
+    assert by_key[("MSFT", "2020-Q3")] == pytest.approx(12.986)  # FY21 Q1
+
+
+def test_shipped_cloud_yoy_reproduces_reported_growth():
+    data = insight_dashboard_data(DATA_DIR)
+    cloud = {s["vendor"]: s for s in data["cloud"]}
+    assert [s["vendor"] for s in data["cloud"]] == ["GOOGL", "AMZN", "MSFT"]
+    googl = {p["quarter"]: p["yoy_pct"] for p in cloud["GOOGL"]["points"]}
+    # Alphabet's reported Google Cloud growth path, Q3'25 -> Q2'26.
+    path = [googl[q] for q in ("2025-Q3", "2025-Q4", "2026-Q1", "2026-Q2")]
+    assert path == pytest.approx([33.5, 47.8, 63.4, 81.8], abs=0.15)
+    amzn = {p["quarter"]: p["yoy_pct"] for p in cloud["AMZN"]["points"]}
+    assert amzn["2026-Q2"] == pytest.approx(36.8, abs=0.1)  # reported +37%
+    msft = {p["quarter"]: p["yoy_pct"] for p in cloud["MSFT"]["points"]}
+    assert msft["2026-Q2"] == pytest.approx(31.6, abs=0.1)  # reported +31.6%
+    # The 2020 backfill makes YoY computable from 2021-Q1 (the pre-AI-wave
+    # growth rates); 2021 anchors are the as-reported growth for that year.
+    for vendor, series in (("GOOGL", googl), ("AMZN", amzn), ("MSFT", msft)):
+        path2021 = [series[f"2021-Q{i}"] for i in range(1, 5)]
+        expected = {
+            "GOOGL": [45.7, 53.9, 44.9, 44.6],
+            "AMZN": [32.1, 37.0, 38.9, 39.5],
+            "MSFT": [23.0, 29.6, 30.2, 24.8],
+        }[vendor]
+        assert path2021 == pytest.approx(expected, abs=0.15), vendor
+    # YoY is chained math: each vendor's first four quarters have none.
+    for s in data["cloud"]:
+        assert all(p["yoy_pct"] is None for p in s["points"][:4])
+        assert all(p["yoy_pct"] is not None for p in s["points"][4:])
+
+
+def test_cloud_duplicate_quarter_raises(tmp_path):
+    d = _cloud_dir(
+        tmp_path,
+        "GOOGL,Google Cloud,2026-Q2,24.768,Release,verified\n"
+        "GOOGL,Google Cloud,2026-Q2,24.768,Release,verified\n",
+    )
+    with pytest.raises(InsightDataError, match="duplicate"):
+        load_cloud_revenue(d)
+
+
+def test_cloud_bad_quarter_raises(tmp_path):
+    d = _cloud_dir(
+        tmp_path, "GOOGL,Google Cloud,2026-2Q,24.768,Release,verified\n"
+    )
+    with pytest.raises(InsightDataError, match="quarter"):
+        load_cloud_revenue(d)
+
+
+def test_cloud_missing_source_raises(tmp_path):
+    d = _cloud_dir(
+        tmp_path, "GOOGL,Google Cloud,2026-Q2,24.768,,verified\n"
+    )
+    with pytest.raises(InsightDataError, match="source"):
+        load_cloud_revenue(d)
+
+
+def test_cloud_two_segments_for_one_vendor_raises(tmp_path):
+    d = _cloud_dir(
+        tmp_path,
+        "MSFT,Intelligent Cloud,2026-Q1,34.700,Release,verified\n"
+        "MSFT,Azure,2026-Q2,39.306,Release,verified\n",
+    )
+    with pytest.raises(InsightDataError, match="two segments"):
+        load_cloud_revenue(d)
+
+
+def test_render_includes_cloud_panel(tmp_path):
+    data = insight_dashboard_data(DATA_DIR)
+    target = render_insight_dashboard(data, tmp_path / "out")
+    page = target.read_text()
+    assert "Hyperscaler cloud revenue &amp; growth" in page
+    assert "Hyperscaler cloud segment revenue by quarter" in page  # svg aria
+    assert "Hyperscaler cloud segment revenue growth, year over year" in page
+    assert "$42.2B" in page  # AWS latest, end label
+    assert "$24.8B" in page  # Google Cloud latest, end label
+    assert "$39.3B" in page  # Intelligent Cloud latest, end label
+    assert "+82%" in page  # Google Cloud latest YoY, end label
+    # Azure is annotated as text with its source, never plotted.
+    assert "Azure and other cloud services grew +43% YoY" in page
+    assert "not disclose Azure revenue in dollars" in page
+    # The Microsoft resegmentation caveat rides on the panel.
+    assert "redefined the Intelligent Cloud" in page
+    # The full quarterly YoY table is in the panel, 2021-Q1 first.
+    assert "The growth chart as a table" in page
+    assert "+45.7" in page  # Google Cloud 2021-Q1 YoY, first table row
+    assert "<td>+0.1*</td>" in page  # MSFT 2025-Q1, asterisked (redefinition)
+
+
+def test_dashboard_data_without_cloud_file_still_renders(tmp_path):
+    # Section D is additive like Section C: no CSV, page still renders.
+    d = _cds_dir(tmp_path, 'ORCL,2026-09,,Some press,cds-level:reported,A note\n')
+    data = insight_dashboard_data(d)
+    assert data["cloud"] == []
+    target = render_insight_dashboard(data, tmp_path / "out")
+    page = target.read_text()
+    assert "Hyperscaler cloud revenue &amp; growth" in page
+    assert "Cloud revenue data unavailable" in page

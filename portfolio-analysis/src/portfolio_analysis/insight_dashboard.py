@@ -26,6 +26,13 @@ One self-contained offline page:
   probability snapshots (``data/insight/fedwatch_snapshots.csv``) - one
   line per FOMC meeting, snapshots appended over time and never
   connected across meetings.
+- Section D (#174): hyperscaler cloud revenue & growth - quarterly
+  segment revenue and YoY growth for Google Cloud, AWS and Microsoft
+  Intelligent Cloud (``data/insight/cloud_revenue.csv``, calendar
+  quarters). Microsoft does not disclose Azure dollar revenue, so
+  Microsoft is plotted on its Intelligent Cloud segment in both
+  charts; Azure's reported growth rate appears only as a sourced
+  text annotation, never as a plotted series.
 """
 
 # The embedded HTML/SVG is intentionally kept in one readable template
@@ -61,6 +68,18 @@ _REV_REQUIRED = {"year", "revenue_big4_usd_b", "source", "status"}
 _HOUSING_REQUIRED = {"month", "level", "source", "release_date"}
 _MORTGAGE_REQUIRED = {"month", "avg_rate", "source"}
 _FEDWATCH_REQUIRED = {"as_of", "meeting", "p_cut", "p_hold", "p_hike", "source"}
+_CLOUD_REQUIRED = {"vendor", "segment", "quarter", "revenue_usd_b", "source", "status"}
+_CLOUD_STATUSES = {"verified", "estimated"}
+_QUARTER_RE = re.compile(r"^\d{4}-Q[1-4]$")
+
+#: Section D chart order and line colors: (vendor ticker, segment, color).
+#: Labels render from each row's own segment field; this table only
+#: fixes the vendor order and colors.
+_CLOUD_SERIES = (
+    ("GOOGL", "Google Cloud", "#1f6feb"),
+    ("AMZN", "AWS", "#d97706"),
+    ("MSFT", "Microsoft Intelligent Cloud", "#16a34a"),
+)
 _SPV_STATUSES = {"verified", "estimated", "guidance"}
 _REV_STATUSES = {"verified", "ttm-partial", "estimated"}
 _DATE_RE = re.compile(r"^\d{4}-\d{2}(-\d{2})?$")
@@ -174,6 +193,26 @@ class FedWatchRow:
     p_hold: float  # percent probability of no change
     p_hike: float  # percent probability of a hike
     source: str
+
+
+@dataclass(frozen=True)
+class CloudRow:
+    """One vendor-quarter of cloud segment revenue (USD billions).
+
+    ``quarter`` is the CALENDAR quarter the segment revenue belongs
+    to. Microsoft reports on a fiscal calendar (fiscal Q3 = calendar
+    Q1, fiscal Q4 = calendar Q2, fiscal Q1 = calendar Q3, fiscal Q2 =
+    calendar Q4); its rows are stored already mapped to calendar
+    quarters. YoY growth is computed downstream from the chained
+    revenue, never stored.
+    """
+
+    vendor: str  # ticker, e.g. "GOOGL"
+    segment: str  # reported segment name, e.g. "Google Cloud"
+    quarter: str  # calendar quarter, "2021-Q1"
+    revenue: float  # segment revenue, USD billions
+    source: str
+    status: str  # verified | estimated
 
 
 def _read_csv(path: Path, required: set[str]) -> list[dict[str, str]]:
@@ -434,12 +473,85 @@ def load_fedwatch_snapshots(data_dir: Path | None = None) -> list[FedWatchRow]:
     return rows
 
 
-def _load_optional(name: str, loader: Any, data_dir: Path | None) -> list:
-    """Load an additive Section C CSV when present.
+def _check_quarter(raw: str, *, where: str) -> str:
+    quarter = raw.strip()
+    if not _QUARTER_RE.match(quarter):
+        raise InsightDataError(f"{where}: quarter {raw!r} must be YYYY-Qn")
+    return quarter
 
-    Section C is additive (issue #171): a data dir that predates it
-    renders Sections A/B unchanged. A present-but-malformed file still
-    raises - absence is tolerated, bad data is not.
+
+def _shift_quarter(quarter: str, quarters: int) -> str:
+    idx = int(quarter[:4]) * 4 + int(quarter[6]) - 1 + quarters
+    return f"{idx // 4:04d}-Q{idx % 4 + 1}"
+
+
+def _quarter_label(quarter: str) -> str:
+    """ "2026-Q2" -> "Q2 2026". """
+    return f"Q{quarter[6]} {quarter[:4]}"
+
+
+def load_cloud_revenue(data_dir: Path | None = None) -> list[CloudRow]:
+    """Validated quarterly cloud segment revenue rows (Section D).
+
+    The source rule: every quarter carries where its revenue was read
+    from - segment definitions differ per vendor (and Microsoft
+    redefined Intelligent Cloud in FY2025), so an unsourced number
+    could silently mix definitions. Each vendor must report a single
+    segment name; (vendor, quarter) pairs must be unique. YoY is
+    computed downstream from the chained revenue, never stored.
+    """
+    path = (data_dir or DATA_DIR) / "cloud_revenue.csv"
+    rows = []
+    seen: set[tuple[str, str]] = set()
+    segments: dict[str, str] = {}
+    for i, r in enumerate(_read_csv(path, _CLOUD_REQUIRED), 1):
+        where = f"{path}:{i}"
+        vendor = r["vendor"].strip().upper()
+        if not vendor:
+            raise InsightDataError(f"{where}: vendor is required")
+        segment = r["segment"].strip()
+        if not segment:
+            raise InsightDataError(f"{where}: segment is required")
+        if segments.setdefault(vendor, segment) != segment:
+            raise InsightDataError(
+                f"{where}: vendor {vendor} reports two segments "
+                f"({segments[vendor]!r} and {segment!r})"
+            )
+        quarter = _check_quarter(r["quarter"], where=where)
+        if (vendor, quarter) in seen:
+            raise InsightDataError(f"{where}: duplicate {vendor} {quarter}")
+        seen.add((vendor, quarter))
+        revenue = _parse_amount(r["revenue_usd_b"], where=where)
+        if revenue <= 0:
+            raise InsightDataError(f"{where}: revenue must be positive")
+        if not r["source"].strip():
+            raise InsightDataError(f"{where}: revenue without source")
+        status = r["status"].strip().lower()
+        if status not in _CLOUD_STATUSES:
+            raise InsightDataError(
+                f"{where}: status {r['status']!r} not in {sorted(_CLOUD_STATUSES)}"
+            )
+        rows.append(
+            CloudRow(
+                vendor=vendor,
+                segment=segment,
+                quarter=quarter,
+                revenue=revenue,
+                source=r["source"].strip(),
+                status=status,
+            )
+        )
+    rows.sort(key=lambda r: (r.vendor, r.quarter))
+    return rows
+
+
+def _load_optional(name: str, loader: Any, data_dir: Path | None) -> list:
+    """Load an additive Section C/D CSV when present.
+
+    Sections C (#171) and D (#174) are additive: a data dir that
+    predates them renders the earlier sections unchanged. A
+    present-but-malformed file still raises - absence is tolerated,
+    bad data is not.
     """
     if not ((data_dir or DATA_DIR) / name).exists():
         return []
@@ -448,8 +560,10 @@ def _load_optional(name: str, loader: Any, data_dir: Path | None) -> list:
 
 def insight_dashboard_data(data_dir: Path | None = None) -> dict[str, Any]:
     """Section A rows, revenue-scaled intensity, Section B timeline, real
-    CDS prints, and the Section C macro figures (housing, mortgage,
-    FedWatch) with MoM/YoY computed from the chained housing levels."""
+    CDS prints, the Section C macro figures (housing, mortgage,
+    FedWatch) with MoM/YoY computed from the chained housing levels,
+    and the Section D cloud series with YoY computed from the chained
+    quarterly revenue."""
     spv = load_spv_capex(data_dir)
     rev = {r.year: r for r in load_revenue(data_dir)}
     cds = load_cds_spreads(data_dir)
@@ -460,6 +574,7 @@ def insight_dashboard_data(data_dir: Path | None = None) -> dict[str, Any]:
     fedwatch_rows = _load_optional(
         "fedwatch_snapshots.csv", load_fedwatch_snapshots, data_dir
     )
+    cloud_rows = _load_optional("cloud_revenue.csv", load_cloud_revenue, data_dir)
     prints: dict[str, list[tuple[str, float]]] = {}
     for p in cds:
         if p.spread_bps is not None:
@@ -508,6 +623,36 @@ def insight_dashboard_data(data_dir: Path | None = None) -> dict[str, Any]:
                 "release_date": r.release_date,
             }
         )
+    cloud_by_vendor: dict[str, dict[str, Any]] = {}
+    for r in cloud_rows:
+        entry = cloud_by_vendor.setdefault(
+            r.vendor, {"vendor": r.vendor, "segment": r.segment, "by_quarter": {}}
+        )
+        entry["by_quarter"][r.quarter] = r.revenue
+    cloud_order = {vendor: i for i, (vendor, _, _) in enumerate(_CLOUD_SERIES)}
+    cloud = []
+    for entry in sorted(
+        cloud_by_vendor.values(),
+        key=lambda e: cloud_order.get(e["vendor"], len(cloud_order)),
+    ):
+        by_quarter = entry["by_quarter"]
+        points = []
+        for quarter in sorted(by_quarter):
+            year_ago = by_quarter.get(_shift_quarter(quarter, -4))
+            points.append(
+                {
+                    "quarter": quarter,
+                    "revenue": by_quarter[quarter],
+                    "yoy_pct": (
+                        100.0 * (by_quarter[quarter] / year_ago - 1)
+                        if year_ago
+                        else None
+                    ),
+                }
+            )
+        cloud.append(
+            {"vendor": entry["vendor"], "segment": entry["segment"], "points": points}
+        )
     return {
         "spv": spv_rows,
         "cds": [
@@ -539,6 +684,7 @@ def insight_dashboard_data(data_dir: Path | None = None) -> dict[str, Any]:
             }
             for r in fedwatch_rows
         ],
+        "cloud": cloud,
     }
 
 
@@ -1118,6 +1264,263 @@ def _fedwatch_notes(rows: list[dict[str, Any]]) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Section D charts (#174): hyperscaler cloud revenue & growth
+
+
+def _cloud_color(vendor: str, index: int) -> str:
+    palette = ["#1f6feb", "#d97706", "#16a34a", "#dc2626", "#7c3aed", "#0891b2"]
+    for known, _, color in _CLOUD_SERIES:
+        if vendor == known:
+            return color
+    return palette[index % len(palette)]
+
+
+def _svg_cloud_lines(
+    series: list[dict[str, Any]],
+    *,
+    key: str,
+    fmt: Any,
+    end_fmt: Any,
+    grid_step: float,
+    caption: str,
+    aria: str,
+) -> str:
+    """Multi-vendor quarterly line chart shared by the Section D panels.
+
+    Points sit at quarter starts on a calendar axis spanning the
+    chained data: revenue from 2020 (the YoY base year), growth from
+    2021. A point with no value (YoY for a vendor's first four
+    quarters) is simply not drawn - the line starts when the chained
+    data does, never at an interpolated value.
+    """
+    W, H = 1000, 380
+    pad_l, pad_r, pad_t, pad_b = 70, 30, 42, 54
+
+    def dnum(quarter: str) -> float:
+        return date(int(quarter[:4]), (int(quarter[6]) - 1) * 3 + 1, 1).toordinal()
+
+    plotted = [
+        (s, p) for s in series for p in s["points"] if p[key] is not None
+    ]
+    xs = [dnum(p["quarter"]) for _, p in plotted]
+    vs = [p[key] for _, p in plotted]
+    lo_x, hi_x = min(xs), max(xs)
+    span_x = max(hi_x - lo_x, 1)
+    ymin = min(0.0, math.floor(min(vs) / grid_step) * grid_step)
+    ymax = math.ceil(max(vs) * 1.12 / grid_step) * grid_step
+
+    def x(quarter: str) -> float:
+        return pad_l + (W - pad_l - pad_r) * (dnum(quarter) - lo_x) / span_x
+
+    def y(v: float) -> float:
+        return pad_t + (H - pad_t - pad_b) * (1 - (v - ymin) / (ymax - ymin))
+
+    parts = [f'<svg viewBox="0 0 {W} {H}" role="img" aria-label="{aria}">']
+    g = ymin + grid_step
+    while g < ymax:
+        parts.append(
+            f'<line x1="{pad_l}" y1="{y(g):.1f}" x2="{W - pad_r}" y2="{y(g):.1f}" '
+            f'stroke="#e5e4da" stroke-width="1"/>'
+            f'<text x="{pad_l - 10}" y="{y(g) + 5:.1f}" text-anchor="end" '
+            f'font-size="13" fill="#65685f">{fmt(g)}</text>'
+        )
+        g += grid_step
+    if ymin < 0:
+        parts.append(
+            f'<line x1="{pad_l}" y1="{y(0):.1f}" x2="{W - pad_r}" y2="{y(0):.1f}" '
+            f'stroke="#c9cabf" stroke-width="1.5"/>'
+        )
+    parts.append(
+        f'<text x="{pad_l - 10}" y="{y(ymin) + 5:.1f}" text-anchor="end" '
+        f'font-size="13" fill="#65685f">{fmt(ymin)}</text>'
+    )
+    end_labels: list[tuple[float, float, str, str]] = []
+    for i, s in enumerate(series):
+        color = _cloud_color(s["vendor"], i)
+        pts = [
+            p for p in s["points"] if p[key] is not None
+        ]
+        if not pts:
+            continue
+        poly = " ".join(f"{x(p['quarter']):.1f},{y(p[key]):.1f}" for p in pts)
+        parts.append(
+            f'<polyline points="{poly}" fill="none" stroke="{color}" stroke-width="2.5"/>'
+        )
+        for p in pts:
+            parts.append(
+                f'<circle cx="{x(p["quarter"]):.1f}" cy="{y(p[key]):.1f}" r="2" fill="{color}">'
+                f"<title>{html.escape(s['segment'])} "
+                f"{html.escape(_quarter_label(p['quarter']))}: {end_fmt(p[key])}</title></circle>"
+            )
+        last = pts[-1]
+        parts.append(
+            f'<circle cx="{x(last["quarter"]):.1f}" cy="{y(last[key]):.1f}" r="4.5" fill="{color}"/>'
+        )
+        end_labels.append(
+            (x(last["quarter"]), y(last[key]) - 12, color, end_fmt(last[key]))
+        )
+        lx = pad_l + 10 + i * 250
+        parts.append(
+            f'<line x1="{lx}" y1="14" x2="{lx + 24}" y2="14" stroke="{color}" stroke-width="3"/>'
+            f'<text x="{lx + 30}" y="18" font-size="13" fill="#21231f">{html.escape(s["segment"])}</text>'
+        )
+    # End labels share the right edge: push overlapping ones apart.
+    end_labels.sort(key=lambda t: t[1])
+    for j in range(1, len(end_labels)):
+        lx, ly, color, text = end_labels[j]
+        if ly < end_labels[j - 1][1] + 16:
+            end_labels[j] = (lx, end_labels[j - 1][1] + 16, color, text)
+    for lx, ly, color, text in end_labels:
+        parts.append(
+            f'<text x="{lx:.1f}" y="{ly:.1f}" text-anchor="end" '
+            f'font-size="13" font-weight="700" fill="{color}">{text}</text>'
+        )
+    def xo(o: float) -> float:
+        return pad_l + (W - pad_l - pad_r) * (o - lo_x) / span_x
+
+    for yr in range(
+        date.fromordinal(int(lo_x)).year, date.fromordinal(int(hi_x)).year + 1
+    ):
+        o = date(yr, 1, 1).toordinal()
+        if lo_x <= o <= hi_x:
+            parts.append(
+                f'<line x1="{xo(o):.1f}" y1="{H - pad_b}" x2="{xo(o):.1f}" '
+                f'y2="{H - pad_b + 6}" stroke="#65685f" stroke-width="1"/>'
+                f'<text x="{xo(o):.1f}" y="{H - pad_b + 22:.1f}" text-anchor="middle" '
+                f'font-size="12" fill="#65685f">{yr}</text>'
+            )
+    parts.append(
+        f'<text x="{pad_l}" y="{H - 8}" font-size="12" fill="#65685f">{caption}</text>'
+    )
+    parts.append("</svg>")
+    return "".join(parts)
+
+
+def _svg_cloud_revenue_chart(series: list[dict[str, Any]]) -> str:
+    """Quarterly cloud segment revenue (USD B), one line per vendor."""
+    if not series:
+        return (
+            '<p class="cap">Cloud revenue data unavailable '
+            "(data/insight/cloud_revenue.csv not loaded).</p>"
+        )
+    return _svg_cloud_lines(
+        series,
+        key="revenue",
+        fmt=lambda v: f"{v:.0f}",
+        end_fmt=lambda v: f"${v:.1f}B",
+        grid_step=10.0,
+        caption=(
+            "Quarterly cloud segment revenue, USD billions, calendar quarters. "
+            "Microsoft: Intelligent Cloud segment (Azure dollar revenue is not "
+            "disclosed - see the note below)."
+        ),
+        aria="Hyperscaler cloud segment revenue by quarter",
+    )
+
+
+def _svg_cloud_growth_chart(series: list[dict[str, Any]]) -> str:
+    """Quarterly YoY growth of cloud segment revenue, one line per vendor."""
+    if not series:
+        return (
+            '<p class="cap">Cloud growth data unavailable '
+            "(data/insight/cloud_revenue.csv not loaded).</p>"
+        )
+    return _svg_cloud_lines(
+        series,
+        key="yoy_pct",
+        fmt=lambda v: f"{v:.0f}%",
+        end_fmt=lambda v: f"{v:+.0f}%",
+        grid_step=20.0,
+        caption=(
+            "YoY growth of segment revenue, computed from the chained quarterly "
+            "revenue - never stored. Each line starts four quarters in, at its "
+            "first YoY."
+        ),
+        aria="Hyperscaler cloud segment revenue growth, year over year",
+    )
+
+
+#: Microsoft chained YoY cells that straddle the FY2025 segment
+#: redefinition (new-basis quarters against old-basis year-ago
+#: quarters) - asterisked in the Section D table, explained in the
+#: note under it.
+_CLOUD_TABLE_STAR_MSFT = {"2024-Q3", "2024-Q4", "2025-Q1", "2025-Q2"}
+
+
+def _cloud_yoy_table(series: list[dict[str, Any]]) -> str:
+    """The growth chart as a table: one row per quarter from each
+    vendor's first YoY, segment YoY % to one decimal. The same table
+    renders on the AI trade tab's Panel 8 from the same CSV."""
+    if not series:
+        return ""
+    by_vendor = {
+        s["vendor"]: {p["quarter"]: p["yoy_pct"] for p in s["points"]}
+        for s in series
+    }
+    quarters = sorted(
+        {
+            q
+            for by_q in by_vendor.values()
+            for q, v in by_q.items()
+            if v is not None
+        }
+    )
+    head = "".join(
+        f"<th>{html.escape(s['segment'])} YoY %</th>" for s in series
+    )
+    trs = []
+    for q in quarters:
+        tds = []
+        for s in series:
+            v = by_vendor[s["vendor"]].get(q)
+            if v is None:
+                tds.append("<td>\u2014</td>")
+            else:
+                star = (
+                    "*"
+                    if s["vendor"] == "MSFT" and q in _CLOUD_TABLE_STAR_MSFT
+                    else ""
+                )
+                tds.append(f"<td>{v:+.1f}{star}</td>")
+        trs.append(f"<tr><td>{html.escape(q)}</td>" + "".join(tds) + "</tr>")
+    return (
+        '<p class="cap">The growth chart as a table - quarterly YoY % of '
+        "segment revenue, one decimal. * Microsoft cells chained across "
+        "the FY2025 segment redefinition (see the note below).</p>"
+        '<table class="src"><tr><th>Quarter</th>' + head + "</tr>"
+        + "".join(trs) + "</table>"
+    )
+
+
+def _cloud_notes(series: list[dict[str, Any]]) -> str:
+    if not series:
+        return ""
+    bits = []
+    for s in series:
+        last = s["points"][-1]
+        bit = f"{s['segment']} ${last['revenue']:.1f}B"
+        if last["yoy_pct"] is not None:
+            bit += f" ({last['yoy_pct']:+.0f}% YoY)"
+        bits.append(bit)
+    latest = max(s["points"][-1]["quarter"] for s in series)
+    return (
+        '<p class="cap">'
+        + html.escape(f"Latest ({_quarter_label(latest)}): " + " · ".join(bits) + ". ")
+        + "Microsoft does not disclose Azure revenue in dollars, so Microsoft is "
+        "plotted on its Intelligent Cloud segment in both charts. Azure and other "
+        "cloud services grew +43% YoY in Q2 2026 (Microsoft FY26 Q4 earnings "
+        "release, 2026-07-29) - a growth rate only, shown here as text and never "
+        "plotted against segment revenue. Microsoft quarters are calendar-aligned "
+        "(fiscal Q4 = calendar Q2). Microsoft redefined the Intelligent Cloud "
+        "segment in FY2025: quarters from Sep 2024 are as reported under the new "
+        "composition, so the 2024 level shift - and the near-zero YoY prints that "
+        "follow it in the chained math - are definitional, not a revenue decline "
+        "(as-reported growth for the Sep 2024 quarter was +20% on the recast "
+        "basis).</p>"
+    )
+
+
+# ---------------------------------------------------------------------------
 # Page
 
 
@@ -1151,7 +1554,7 @@ table.src td,table.src th{border:1px solid var(--line);padding:4px 8px;text-alig
 </style></head><body><main>
 <div class="top"><span class="brand">OPENPAW / MARKET NOTES</span></div>
 <h1>Insight.</h1>
-<p class="sub">Where the reported numbers understate the leverage: AI capex hidden in SPVs, what credit markets charge for it, and the macro figures that crack first - housing, mortgage rates, the Fed path. Data as of __ASOF__.</p>
+<p class="sub">Where the reported numbers understate the leverage: AI capex hidden in SPVs, what credit markets charge for it, the cloud revenue funding it, and the macro figures that crack first - housing, mortgage rates, the Fed path. Data as of __ASOF__.</p>
 <a class="back" href="index.html">&larr; Back to the portfolio dashboard</a>
 <div class="chart-block"><h2>Reported vs true AI capex</h2>
 <p class="cap">Annual Big-4 (MSFT + AMZN + GOOGL + META) capex vs reported + SPV/off-balance-sheet. The shaded gap is the hidden leverage - every estimate anchored to a named deal (hover the labels).</p>
@@ -1164,6 +1567,12 @@ __SPV_TABLE__</div>
 <p class="cap">5Y CDS history is paywalled, so this is an annotated timeline of verified credit-stress anchors - each point labeled with its proxy type. A proxy is never a CDS print.</p>
 __CDS_CHART__
 <div class="tl">__TIMELINE__</div></div>
+<div class="chart-block"><h2>Hyperscaler cloud revenue &amp; growth</h2>
+<p class="cap">The franchises funding the capex above: quarterly cloud segment revenue and its year-over-year growth for Google Cloud, AWS and Microsoft Intelligent Cloud, calendar quarters. Points only, from reported segment revenue - no projections, no interpolation.</p>
+<div class="chart">__CLOUD_REV_SVG__</div>
+<div class="chart">__CLOUD_GROWTH_SVG__</div>
+__CLOUD_TABLE__
+__CLOUD_NOTES__</div>
 <div class="chart-block"><h2>Section C — Macro early-warning: housing &amp; the Fed path</h2>
 <p class="cap">The figures that turn before credit does: contract signings, the mortgage rate that drives them, and what futures markets charge for the Fed's next moves.</p>
 <div class="chart">__HOUSING_SVG__</div>
@@ -1172,7 +1581,7 @@ __HOUSING_NOTES__
 __MORTGAGE_NOTES__
 <div class="chart">__FEDWATCH_SVG__</div>
 __FEDWATCH_NOTES__</div>
-<p class="note">Method: SPV estimates are anchored to named deals and spread over build years (see data/insight/spv_capex.csv); reported capex from company filings. Revenue is the calendar-year sum of quarterly us-gaap Revenues for MSFT+AMZN+GOOGL+META from SEC EDGAR companyfacts (see data/insight/revenue_big4.csv). CDS timeline points carry source + proxy labels (see data/insight/cds_spreads.csv) - add real weekly 5Y prints there with proxy_label <code>cds-print:5y</code> to grow the spread chart. Section C: housing levels are the latest NAR vintage fetched per month, each row sourced in data/insight/pending_home_sales.csv; mortgage rates are FRED MORTGAGE30US weekly observations averaged by month (data/insight/mortgage_rates.csv); FedWatch rows are dated snapshots - append new snapshots, never overwrite (data/insight/fedwatch_snapshots.csv). Reported history, not a forecast.</p>
+<p class="note">Method: SPV estimates are anchored to named deals and spread over build years (see data/insight/spv_capex.csv); reported capex from company filings. Revenue is the calendar-year sum of quarterly us-gaap Revenues for MSFT+AMZN+GOOGL+META from SEC EDGAR companyfacts (see data/insight/revenue_big4.csv). CDS timeline points carry source + proxy labels (see data/insight/cds_spreads.csv) - add real weekly 5Y prints there with proxy_label <code>cds-print:5y</code> to grow the spread chart. Section C: housing levels are the latest NAR vintage fetched per month, each row sourced in data/insight/pending_home_sales.csv; mortgage rates are FRED MORTGAGE30US weekly observations averaged by month (data/insight/mortgage_rates.csv); FedWatch rows are dated snapshots - append new snapshots, never overwrite (data/insight/fedwatch_snapshots.csv). Cloud panel: one row per vendor-quarter in data/insight/cloud_revenue.csv - Google Cloud and AWS from company earnings releases; Microsoft Intelligent Cloud quarterly values differenced from trailing-twelve-month segment history and cross-checked to Microsoft Investor Relations annual segment totals; YoY computed from the chained series, never stored. Azure dollar revenue is not disclosed by Microsoft and is never plotted. Reported history, not a forecast.</p>
 </main></body></html>"""
 
 
@@ -1216,6 +1625,14 @@ def render_insight_dashboard(data: dict[str, Any], out_dir: Path) -> Path:
         .replace("__MORTGAGE_NOTES__", _mortgage_notes(data.get("mortgage", [])))
         .replace("__FEDWATCH_SVG__", _svg_fedwatch_chart(data.get("fedwatch", [])))
         .replace("__FEDWATCH_NOTES__", _fedwatch_notes(data.get("fedwatch", [])))
+        .replace(
+            "__CLOUD_REV_SVG__", _svg_cloud_revenue_chart(data.get("cloud", []))
+        )
+        .replace(
+            "__CLOUD_GROWTH_SVG__", _svg_cloud_growth_chart(data.get("cloud", []))
+        )
+        .replace("__CLOUD_TABLE__", _cloud_yoy_table(data.get("cloud", [])))
+        .replace("__CLOUD_NOTES__", _cloud_notes(data.get("cloud", [])))
     )
     target.write_text(page)
     return target

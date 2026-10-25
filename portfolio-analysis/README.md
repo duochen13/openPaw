@@ -332,8 +332,10 @@ Factor trajectories (beta/alpha over time) remain available per stock in the
 ## AI trade dashboard (issue #163)
 
 The dashboard index links a second tab next to Insight: `ai-trade.html`, the
-AI slowdown watch's 7-panel chart (inflation, rates, Big-3 capex, credit
-stress, CoreWeave equity vs debt cost, compute economics, and 5Y CDS)
+AI slowdown watch's 8-panel chart (inflation, rates, Big-3 capex, credit
+stress, CoreWeave equity vs debt cost, compute economics, 5Y CDS, and
+hyperscaler cloud — Chart C's indexed fit vs actual revenue, and YoY
+growth)
 rendered natively as line charts — no embedded image, no fetching at build
 or view time.
 
@@ -352,8 +354,30 @@ press-reported 5Y CDS prints only — the format has no room for an estimate
 or a projection, and Panel 7 never draws one), and `series_notes.csv`
 (per-series source + as-of date; every plotted series must have one).
 
+Panel 8 (hyperscaler cloud, issue #174) is the exception to the vendoring
+rule: it reads the Insight page's `data/insight/cloud_revenue.csv` through
+that module's own loader — one source of truth shared with Section D — and
+appears only when that CSV is present. It leads with Chart C, an indexed
+view (2025-Q3 = 1, log scale): a fitted inference net index (Google
+first-party API volume × frontier flagship blended list price) with a
+decaying-growth scenario extension, plotted against the three clouds'
+actual segment-revenue indices and the dashed Q3 2026 Wall Street bars
+(published consensus / company guidance). Below it, the reported YoY
+growth chart (2020 quarters are the YoY base year) for Google Cloud, AWS
+and Microsoft Intelligent Cloud, plus the full quarterly YoY table;
+Microsoft's Azure dollar revenue is not disclosed and is never plotted.
+Chart C's fit, scenario and bar points are vendored in
+`data/ai_trade/cloud_fit_index.csv` — a missing or malformed file fails
+the build, and the scenario points are validated against their
+documented recursion (volume growth decaying +30% → +24% → +19% → +15%,
+price −5%/quarter).
+
 Refresh: re-run the watcher's `make_combined_chart.py`, re-extract
 `combined-monthly.csv` into `monthly.csv`, update `snapshots.csv` /
 `cds_snapshots.csv` from the watch logs (`anthropic-arr.log`,
 `spread-tracker/`) and the script's dated CDS block, and bump the `as_of`
-dates in `series_notes.csv`.
+dates in `series_notes.csv`. Panel 8 refreshes with the Insight page:
+append quarters to `data/insight/cloud_revenue.csv`, and recompute
+`data/ai_trade/cloud_fit_index.csv` for the new quarter (refit from the
+disclosed API volume and flagship list prices, roll the scenario, reset
+the bars to the new consensus / guidance).

@@ -1,0 +1,12 @@
+series,vendor,quarter,value
+cloud_fit_index,,2025-Q3,1.000
+cloud_fit_index,,2025-Q4,1.4286
+cloud_fit_index,,2026-Q1,3.551
+cloud_fit_index,,2026-Q2,4.883
+cloud_fit_scenario,,2026-Q3,6.0305
+cloud_fit_scenario,,2026-Q4,7.1039
+cloud_fit_scenario,,2027-Q1,8.031
+cloud_fit_scenario,,2027-Q2,8.7739
+cloud_q3_bars,GOOGL,2026-Q3,1.89
+cloud_q3_bars,AMZN,2026-Q3,1.35
+cloud_q3_bars,MSFT,2026-Q3,1.33
