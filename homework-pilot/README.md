@@ -40,7 +40,7 @@ so the design doc still lives under the misspelled folder.
 | `homework-pilot/assembly/` | [#113](https://github.com/duochen13/openPaw/issues/113) [#114](https://github.com/duochen13/openPaw/issues/114) | [#125](https://github.com/duochen13/openPaw/pull/125) | Personalized assembly rules engine (per-student 当前/薄弱点/复习 mix, teacher budget cap, 共同题） + AI question generation with pre-release validation | `tests/test_engine.py`, `test_generate.py`, `test_review_queue.py` in PR |
 | `homework-pilot/review/` | [#115](https://github.com/duochen13/openPaw/issues/115) | [#127](https://github.com/duochen13/openPaw/pull/127) | Teacher review workflow （审核： approve/reject/replace/adjust at shared-question level) + print-ready PDF export (student sheets + teacher key) | `tests/test_export.py`, `tests/test_review.py` in PR |
 | `homework-pilot/privacy/` | [#117](https://github.com/duochen13/openPaw/issues/117) | [#121](https://github.com/duochen13/openPaw/pull/121) | Privacy guard: student-ID-only enforcement, no names anywhere | `tests/test_guard.py` in PR |
-| `homework-pilot/webui/` | [#176](https://github.com/duochen13/openPaw/issues/176) (opened as [#167](https://github.com/duochen13/openPaw/issues/167)) | this PR | Student-side MVP UI (Muse desktop design language): one self-contained HTML with 试卷 / 结果 / 待确认， bound to synthetic demo fixtures. Originally a teacher console (#167); pivoted to the student MVP per #176 — the old console design is preserved in this branch's git history | `tests/test_webui.py` in PR |
+| `homework-pilot/webui/` | [#176](https://github.com/duochen13/openPaw/issues/176) (opened as [#167](https://github.com/duochen13/openPaw/issues/167)), [#179](https://github.com/duochen13/openPaw/issues/179) | this PR | Student-side MVP UI (Muse desktop design language): one self-contained HTML with 试卷 / 结果 / 待确认， bound to synthetic demo fixtures; plus `serve.py` (#179), a stdlib-only local web server wiring the same views to the live `grading/` pipeline + persistent confirmation store. Originally a teacher console (#167); pivoted to the student MVP per #176 — the old console design is preserved in this branch's git history | `tests/test_webui.py`, `tests/test_serve.py` in PR |
 | `homework-pilot/grading/` | [#176](https://github.com/duochen13/openPaw/issues/176) | this PR | Student MVP pipeline behind the UI: ingest → segment → transcribe → judge → confirm/export, with pluggable backends. Judge priority is strict — (1) red-pen marks, (2) answer-key comparison (determinate items only), (3) self-solve interface (v1 stub always declines) — and recognition reliability never enters a verdict. Output mirrors `webui.models` (see `grading/adapter.py`); confirmed items export as JSONL labeled examples | `tests/test_models.py`, `test_judge.py`, `test_pipeline.py`, `test_confirm.py`, `test_adapter.py` in PR |
 | `homework-pilot/docs/` | [#108](https://github.com/duochen13/openPaw/issues/108) [#116](https://github.com/duochen13/openPaw/issues/116) [#117](https://github.com/duochen13/openPaw/issues/117) | [#120](https://github.com/duochen13/openPaw/pull/120) (checklist), [#119](https://github.com/duochen13/openPaw/pull/119) (protocol + tracking sheet), [#121](https://github.com/duochen13/openPaw/pull/121) (governance doc) | Field-materials checklist, validation protocol + pilot tracking sheet, privacy-governance doc | n/a (docs) |
 | `homework-pilot/pilot-kit/` | [#108](https://github.com/duochen13/openPaw/issues/108) | this PR (Phase 1 kit) | Pilot starter kit (all **synthetic**): template assignment A-CH3-01 (questions + 参考答案 + 评分说明 + ingestion layout template), 5 rendered graded test papers with `AnswerRecord`/`EvidenceRecord` JSON, TEST weakest-skill judgments, template confirmation checklist (assumed answers marked) | `tests/test_pilot_kit.py` + `tools/run_end_to_end.py` (run from `pilot-kit/`) |
@@ -59,6 +59,7 @@ so the design doc still lives under the misspelled folder.
 | [#117](https://github.com/duochen13/openPaw/issues/117) privacy/governance | [#121](https://github.com/duochen13/openPaw/pull/121) open — governance doc + privacy guard. |
 | [#167](https://github.com/duochen13/openPaw/issues/167) teacher console UI | this PR — built as a teacher console, then **pivoted to the student-side MVP (#176)** on the same branch; see the #176 row. |
 | [#176](https://github.com/duochen13/openPaw/issues/176) student-side MVP | UI merged (demo fixtures); **pipeline in this PR** — `grading/` runs scan → per-question 对 / 错 / 待确认 verdicts with a confirmation queue on the synthetic kit (segmentation/transcription backends are kit-deterministic in v1; self-solve is an interface + non-guessing stub). Real student data still gated on #108 Phase 2 (school stance / privacy). |
+| [#179](https://github.com/duochen13/openPaw/issues/179) local web server for the student MVP | **In this PR** — `webui/serve.py`: stdlib-only local server (`python3 -m webui --serve`) wiring the webui views to the `grading/` pipeline and the `confirm` store: PDF uploads graded through the kit-backed test-double path (non-kit uploads stored as 未识别, never judged), persisted confirmations, JSONL export. Real VLM/OCR backends and real student data remain out of scope (the latter still gated on #108 Phase 2). |
 
 ## How to run
 
@@ -82,6 +83,21 @@ python3 -m webui /path/out.html  # or choose the output path
 
 Expected output: `wrote student-mvp.html (34084 chars)`. Open the file in any browser — it is one self-contained HTML file (no server, no external assets) showing the 试卷 / 结果 / 待确认 views over synthetic demo fixtures (student ID S-023). Deep links: `?view=papers|result|confirm`, plus `&paper=<id>`.
 
+### Local web server (`webui/serve.py`, #179)
+
+The runtime that connects the UI to the pipeline and the confirmation store. Run from `homework-pilot/`:
+
+```bash
+python3 -m webui --serve                 # http://127.0.0.1:8000/
+python3 -m webui --serve --port 8123     # or pick a port
+```
+
+Routes: `GET /` （试卷 list + upload form), `POST /papers` (multipart PDF upload → grade → redirect to results), `GET /papers/<id>` （结果）, `GET /confirm` + `POST /confirm` （待确认 queue: confirm a proposal, override a verdict, or fix a transcription — persisted via `grading/confirm.py`), `GET /export` (all confirmed items as a JSONL download). Stdlib only (`http.server.ThreadingHTTPServer`), binds 127.0.0.1 by default — a local single-student tool, no accounts or auth. The static render above keeps working unchanged.
+
+**v1 upload behavior, stated plainly:** the v1 segmentation/transcription backends are the synthetic kit's deterministic test doubles, so an upload is graded *by student ID* through the kit path (`grading.pipeline.grade_kit_paper`). For a kit student (S-001…S-005) the results page shows exactly the pipeline's output for that student's kit paper; the uploaded bytes are stored for provenance and hash-compared against the kit's `paper.pdf`, and the page says whether they matched (and says the grading came from the kit records when they did not). For any other student ID the upload is stored and marked **未识别**: v1 cannot read an arbitrary scan, so nothing is segmented and nothing is judged — no verdicts are invented. Inside a kit paper the pipeline's honesty rule is unchanged (unreadable/undecidable items land in 待确认 with a reason; pending items with no system lean get a manual-verdict form in the queue instead of a fabricated proposal).
+
+Uploads and records live in `homework-pilot/.local-data/` (gitignored): one JSON record per paper under `papers/`, the uploaded PDF under `uploads/`. Every record passes `privacy.guard.assert_id_only` before it is written; students are IDs only and the client's original filename is never stored. Confirmations survive server restarts (records are re-read from disk) and export through `GET /export`.
+
 ### Student MVP pipeline (`grading/`)
 
 The pipeline behind the UI, run end-to-end on the synthetic kit (both verdict modes — with red-pen marks, and marks withheld so the answer key judges alone — plus a confirm/export pass). Runnable from anywhere:
@@ -102,7 +118,7 @@ python3 -m unittest discover -s ingestion/tests -t .   # 14 tests
 python3 -m unittest discover -s taxonomy/tests -t .    # 26 tests
 python3 -m unittest discover -s assembly/tests -t .    # 33 tests
 python3 -m unittest discover -s privacy/tests -t .     # 25 tests
-python3 -m unittest discover -s webui/tests -t .       # 24 tests
+python3 -m unittest discover -s webui/tests -t .       # 38 tests
 python3 -m unittest discover -s grading/tests -t .     # 58 tests
 python3 -m pytest review/tests                         # 32 tests (pytest required, see above)
 ```
@@ -117,7 +133,7 @@ python3 -m unittest discover -s tests                  # 13 tests
 Or the whole suite at once, from `homework-pilot/` (needs pytest):
 
 ```bash
-python3 -m pytest                                      # 247 passed
+python3 -m pytest                                      # 261 passed
 ```
 
 ### End-to-end smoke run (pilot-kit)
@@ -149,4 +165,4 @@ Student-ID-only: there is no name field anywhere in the repo. See `docs/privacy-
 - Field materials (Phase 2 of #108): 5 **real** sample graded papers, the teacher's real assignment + reference answers, teacher consent + data-use consent forms. A synthetic stand-in kit exists (`pilot-kit/`) so engineering is not blocked meanwhile.
 - Real question bank (current generator output is AI-drafted and unvalidated by the teacher).
 - CJK font for print PDFs (PDF export is stdlib-only; Chinese typesetting needs a bundled font).
-- Student UI wiring — a student-side MVP UI exists in `webui/` (#176, on the PR that began as the #167 teacher console) rendering demo fixtures; connecting it to the live upload → segmentation → transcription → verdict pipeline still waits on #108 field materials and the Phase 2 school-stance decision. Until then the pilot runs on scripts + generated PDFs.
+- Student UI wiring — the student-side MVP UI exists in `webui/` (#176) and, since #179, a local web server (`webui/serve.py`) wires it to the live `grading/` pipeline + confirmation store on the synthetic kit. Using **real** student papers at all still waits on #108 field materials and the Phase 2 school-stance decision. Until then the pilot runs on scripts + generated PDFs.
