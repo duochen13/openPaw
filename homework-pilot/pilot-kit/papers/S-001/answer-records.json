@@ -1,0 +1,290 @@
+[
+ {
+  "student_id": "S-001",
+  "assignment_number": "A-CH3-01",
+  "question_id": "Q1",
+  "part_id": null,
+  "item_key": "Q1",
+  "student_answer": "C",
+  "grading_mark": {
+   "kind": "correct",
+   "score": null,
+   "comment": null
+  },
+  "source": "ocr",
+  "reliability": 0.99,
+  "page_ref": "papers/S-001/page-1.png"
+ },
+ {
+  "student_id": "S-001",
+  "assignment_number": "A-CH3-01",
+  "question_id": "Q2",
+  "part_id": null,
+  "item_key": "Q2",
+  "student_answer": "B",
+  "grading_mark": {
+   "kind": "correct",
+   "score": null,
+   "comment": null
+  },
+  "source": "ocr",
+  "reliability": 0.99,
+  "page_ref": "papers/S-001/page-1.png"
+ },
+ {
+  "student_id": "S-001",
+  "assignment_number": "A-CH3-01",
+  "question_id": "Q3",
+  "part_id": "a",
+  "item_key": "Q3#a",
+  "student_answer": "0.8 m，木板重心在中点，重心越过桌边木板就会下落",
+  "grading_mark": {
+   "kind": "correct",
+   "score": null,
+   "comment": null
+  },
+  "source": "ocr",
+  "reliability": 0.97,
+  "page_ref": "papers/S-001/page-1.png"
+ },
+ {
+  "student_id": "S-001",
+  "assignment_number": "A-CH3-01",
+  "question_id": "Q3",
+  "part_id": "b",
+  "item_key": "Q3#b",
+  "student_answer": "W = fs = 20 × 0.8 = 16 J",
+  "grading_mark": {
+   "kind": "correct",
+   "score": null,
+   "comment": null
+  },
+  "source": "ocr",
+  "reliability": 0.98,
+  "page_ref": "papers/S-001/page-1.png"
+ },
+ {
+  "student_id": "S-001",
+  "assignment_number": "A-CH3-01",
+  "question_id": "Q4",
+  "part_id": null,
+  "item_key": "Q4",
+  "student_answer": "W = mgh = 50×10×12 = 6000 J；P = W/t = 6000÷30 = 200 W",
+  "grading_mark": {
+   "kind": "correct",
+   "score": null,
+   "comment": null
+  },
+  "source": "ocr",
+  "reliability": 0.96,
+  "page_ref": "papers/S-001/page-1.png"
+ },
+ {
+  "student_id": "S-001",
+  "assignment_number": "A-CH3-01",
+  "question_id": "Q5",
+  "part_id": "blank1",
+  "item_key": "Q5#blank1",
+  "student_answer": "重力势",
+  "grading_mark": {
+   "kind": "correct",
+   "score": null,
+   "comment": null
+  },
+  "source": "ocr",
+  "reliability": 0.98,
+  "page_ref": "papers/S-001/page-1.png"
+ },
+ {
+  "student_id": "S-001",
+  "assignment_number": "A-CH3-01",
+  "question_id": "Q5",
+  "part_id": "blank2",
+  "item_key": "Q5#blank2",
+  "student_answer": "动",
+  "grading_mark": {
+   "kind": "correct",
+   "score": null,
+   "comment": null
+  },
+  "source": "ocr",
+  "reliability": 0.98,
+  "page_ref": "papers/S-001/page-1.png"
+ },
+ {
+  "student_id": "S-001",
+  "assignment_number": "A-CH3-01",
+  "question_id": "Q6",
+  "part_id": null,
+  "item_key": "Q6",
+  "student_answer": "W1 = mgh = 60×10×0.5 = 300 J；W = 300×12 = 3600 J；P = 3600÷60 = 60 W",
+  "grading_mark": {
+   "kind": "correct",
+   "score": null,
+   "comment": null
+  },
+  "source": "ocr",
+  "reliability": 0.97,
+  "page_ref": "papers/S-001/page-1.png"
+ },
+ {
+  "student_id": "S-001",
+  "assignment_number": "A-CH3-01",
+  "question_id": "Q7",
+  "part_id": null,
+  "item_key": "Q7",
+  "student_answer": "B",
+  "grading_mark": {
+   "kind": "correct",
+   "score": null,
+   "comment": null
+  },
+  "source": "ocr",
+  "reliability": 0.99,
+  "page_ref": "papers/S-001/page-2.png"
+ },
+ {
+  "student_id": "S-001",
+  "assignment_number": "A-CH3-01",
+  "question_id": "Q8",
+  "part_id": null,
+  "item_key": "Q8",
+  "student_answer": "G = 5×10 = 50 N；W = Gh = 50×8 = 400 J",
+  "grading_mark": {
+   "kind": "correct",
+   "score": null,
+   "comment": null
+  },
+  "source": "ocr",
+  "reliability": 0.98,
+  "page_ref": "papers/S-001/page-2.png"
+ },
+ {
+  "student_id": "S-001",
+  "assignment_number": "A-CH3-01",
+  "question_id": "Q9",
+  "part_id": null,
+  "item_key": "Q9",
+  "student_answer": "重力势能转化为动能；机械能守恒，因为只有重力做功",
+  "grading_mark": {
+   "kind": "correct",
+   "score": null,
+   "comment": null
+  },
+  "source": "ocr",
+  "reliability": 0.95,
+  "page_ref": "papers/S-001/page-2.png"
+ },
+ {
+  "student_id": "S-001",
+  "assignment_number": "A-CH3-01",
+  "question_id": "Q10",
+  "part_id": null,
+  "item_key": "Q10",
+  "student_answer": "F = f = 2000 N；s = 20×300 = 6000 m；W = 1.2×10⁷ J；P = 4×10⁴ W",
+  "grading_mark": {
+   "kind": "score",
+   "score": "9/12",
+   "comment": "过程完整；(1) 中先把 5 min 写成 5 s，已自行划改订正，卷面扣分"
+  },
+  "source": "ocr",
+  "reliability": 0.93,
+  "page_ref": "papers/S-001/page-2.png"
+ },
+ {
+  "student_id": "S-001",
+  "assignment_number": "A-CH3-01",
+  "question_id": "Q11",
+  "part_id": "a",
+  "item_key": "Q11#a",
+  "student_answer": "不做功。蹬地时脚没有离开地面，沿支持力方向没有位移",
+  "grading_mark": {
+   "kind": "correct",
+   "score": null,
+   "comment": null
+  },
+  "source": "ocr",
+  "reliability": 0.96,
+  "page_ref": "papers/S-001/page-2.png"
+ },
+ {
+  "student_id": "S-001",
+  "assignment_number": "A-CH3-01",
+  "question_id": "Q11",
+  "part_id": "b",
+  "item_key": "Q11#b",
+  "student_answer": "0 J，最高点速度为零",
+  "grading_mark": {
+   "kind": "correct",
+   "score": null,
+   "comment": null
+  },
+  "source": "ocr",
+  "reliability": 0.97,
+  "page_ref": "papers/S-001/page-2.png"
+ },
+ {
+  "student_id": "S-001",
+  "assignment_number": "A-CH3-01",
+  "question_id": "Q11",
+  "part_id": "c",
+  "item_key": "Q11#c",
+  "student_answer": "W1 = 300 J；W = 6000 J；P = 100 W",
+  "grading_mark": {
+   "kind": "correct",
+   "score": null,
+   "comment": null
+  },
+  "source": "ocr",
+  "reliability": 0.96,
+  "page_ref": "papers/S-001/page-2.png"
+ },
+ {
+  "student_id": "S-001",
+  "assignment_number": "A-CH3-01",
+  "question_id": "Q12",
+  "part_id": "blank1",
+  "item_key": "Q12#blank1",
+  "student_answer": "重力势",
+  "grading_mark": {
+   "kind": "correct",
+   "score": null,
+   "comment": null
+  },
+  "source": "ocr",
+  "reliability": 0.98,
+  "page_ref": "papers/S-001/page-2.png"
+ },
+ {
+  "student_id": "S-001",
+  "assignment_number": "A-CH3-01",
+  "question_id": "Q12",
+  "part_id": "blank2",
+  "item_key": "Q12#blank2",
+  "student_answer": "弹性势",
+  "grading_mark": {
+   "kind": "correct",
+   "score": null,
+   "comment": null
+  },
+  "source": "ocr",
+  "reliability": 0.98,
+  "page_ref": "papers/S-001/page-2.png"
+ },
+ {
+  "student_id": "S-001",
+  "assignment_number": "A-CH3-01",
+  "question_id": "Q12",
+  "part_id": "blank3",
+  "item_key": "Q12#blank3",
+  "student_answer": "增大；上升初期弹力大于重力，速度增大；弹力小于重力后速度减小",
+  "grading_mark": {
+   "kind": "correct",
+   "score": null,
+   "comment": null
+  },
+  "source": "ocr",
+  "reliability": 0.94,
+  "page_ref": "papers/S-001/page-2.png"
+ }
+]
