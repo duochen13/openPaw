@@ -7,11 +7,11 @@ screens of the teacher's loop from `design.md`:
 
 | View | What the teacher does there |
 |---|---|
-| 工作台 | To-do overview: 待确认识别 / 待确认薄弱点 / 待审核题目 counts, 最近一次导出， and the round's flow checklist. Class switcher （九年级1班 / 九年级2班） in the sidebar. |
-| 识别确认 | Per student-ID × 小题： recognized answer, grading mark, reliability badge （可靠 / 存疑 / 需手录）, original-image placeholder, 确认 / 修改 / 手录. |
-| 薄弱点确认 | Per student-ID skill hypotheses with the five teaching-judgment states, dated evidence snippets, 确认 / 修改状态 / 驳回. |
-| 作业审核 | Shared-question cards （题干 / 目标技能 / 推荐原因 / 预期难度 / 参考答案 / 解题过程 / 评分说明 / mix tag), per-student mix summary, 通过 / 替换 / 移除. |
-| 导出 | Student PDF list by ID with page counts, 全班批量导出， and the separate 教师版 (answer key) card. |
+| 工作台 | Just the key loop: the single next action, plus the three pending counts （待确认识别 / 待确认薄弱点 / 待审核题目）. Class switcher （九年级1班 / 九年级2班） in the sidebar. |
+| 识别确认 | Per student-ID × 小题： recognized answer, grading mark, reliability badge （可靠 / 存疑 / 需手录）, compact original-image placeholder, icon actions 确认 / 修改 / 手录. |
+| 薄弱点确认 | Per student-ID skill hypotheses with the five teaching-judgment states, dated evidence snippets, icon actions 确认 / 修改状态 / 驳回. |
+| 作业审核 | Shared-question cards （题干 / 参考答案 up front; 目标技能 / 推荐原因 / 预期难度 / 解题过程 / 评分说明 folded into a 详情 expander), per-student mix summary, icon actions 通过 / 替换 / 移除. |
+| 导出 | Student PDF list by ID with page counts and per-row download icons, 全班批量导出， and the separate 教师版 (answer key) card. |
 
 ## Render
 
@@ -28,6 +28,25 @@ nothing is saved). Export buttons are inert too — each carries a
 `data-export-fn` attribute and a title naming the `review/export.py`
 function it will call (`export_class`, `export_student_sheet`,
 `export_teacher_key`).
+
+**Icon buttons, key features first** (2026-10-24 simplification pass,
+per Daniel: simpler, like the Muse app, icons over text). Card actions
+are inline-SVG icon buttons — 确认 / 通过 = check, 修改 / 修改状态 =
+pencil, 手录 = keyboard, 驳回 = ×, 替换 = swap arrows, 移除 = trash,
+下载 = download — and the action word is carried in `title` (tooltip)
+and `aria-label` only, never as visible text. Two spots keep visible
+text because an icon alone would be ambiguous: the **全班批量导出**
+button (its scope is the whole class, not one row) and the sidebar nav
+/ class switcher (there the label *is* the identity). Views show only
+their decision-carrying elements: the dashboard is the next action plus
+the three counts (the flow checklist and instructions cards are gone);
+recognition cards keep the answer, reliability tier and grading mark
+(the image placeholder shrank to a slim strip); hypothesis cards keep
+the note, the qualitative 把握 and the evidence list; review-question
+details （目标技能 / 推荐原因 / 预期难度 / 解题过程 / 评分说明） fold
+into a native `<details>` expander under the stem + 参考答案. Only
+decision-carrying pills remain: reliability tiers, grading results,
+the five skill states, and the mix category.
 
 ## Data contract
 
@@ -79,6 +98,7 @@ real materials are pending #108 and must never be pasted into fixtures.
 | Display font | `"Tiempos Text", "Source Serif 4", Georgia, "Songti SC", "Noto Serif SC", serif` |
 | UI font | `"Söhne", -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif` |
 | Layout | fixed 252px left sidebar; centered content column ≤ 1020px; pill badges; no gradients, no dark mode |
+| Buttons | icon-only 38px squares (inline SVG: check / pencil / keyboard / × / swap / trash / download), charcoal-filled for the primary action; visible text kept only on 全班批量导出 |
 
 Fonts are system stacks only — the file must stay self-contained, so no
 webfonts are loaded.
