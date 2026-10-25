@@ -1,0 +1,255 @@
+{
+ "synthetic": true,
+ "kit": "homework-pilot Phase 1 pilot starter kit (issue #108)",
+ "assignment_number": "A-CH3-01",
+ "note": "All five papers are invented test data (student IDs only). Phase 2 replaces them with real anonymized papers in the same shapes.",
+ "papers": [
+  {
+   "student_id": "S-001",
+   "upload_id": "UP-S-001",
+   "uploaded_by": "TEST (synthetic)",
+   "media_type": "photo",
+   "files": [
+    {
+     "path": "papers/S-001/page-1.png",
+     "media_type": "photo",
+     "page_count": 1
+    },
+    {
+     "path": "papers/S-001/page-2.png",
+     "media_type": "photo",
+     "page_count": 1
+    },
+    {
+     "path": "papers/S-001/paper.pdf",
+     "media_type": "pdf_scan",
+     "page_count": 2
+    }
+   ],
+   "total_score": 97,
+   "total_points": 100,
+   "points_earned": {
+    "Q1": 3,
+    "Q2": 3,
+    "Q3#a": 4,
+    "Q3#b": 4,
+    "Q4": 10,
+    "Q5#blank1": 3,
+    "Q5#blank2": 3,
+    "Q6": 8,
+    "Q7": 4,
+    "Q8": 8,
+    "Q9": 6,
+    "Q10": 9,
+    "Q11#a": 6,
+    "Q11#b": 6,
+    "Q11#c": 6,
+    "Q12#blank1": 4,
+    "Q12#blank2": 5,
+    "Q12#blank3": 5
+   },
+   "defects": [
+    "neat handwriting",
+    "one self-correction with cross-out (Q10)"
+   ]
+  },
+  {
+   "student_id": "S-002",
+   "upload_id": "UP-S-002",
+   "uploaded_by": "TEST (synthetic)",
+   "media_type": "photo",
+   "files": [
+    {
+     "path": "papers/S-002/page-1.png",
+     "media_type": "photo",
+     "page_count": 1
+    },
+    {
+     "path": "papers/S-002/page-2.png",
+     "media_type": "photo",
+     "page_count": 1
+    },
+    {
+     "path": "papers/S-002/paper.pdf",
+     "media_type": "pdf_scan",
+     "page_count": 2
+    }
+   ],
+   "total_score": 82,
+   "total_points": 100,
+   "points_earned": {
+    "Q1": 3,
+    "Q2": 3,
+    "Q3#a": 4,
+    "Q3#b": 2,
+    "Q4": 6,
+    "Q5#blank1": 3,
+    "Q5#blank2": 3,
+    "Q6": 6,
+    "Q7": 4,
+    "Q8": 8,
+    "Q9": 3,
+    "Q10": 12,
+    "Q11#a": 6,
+    "Q11#b": 6,
+    "Q11#c": 4,
+    "Q12#blank1": 4,
+    "Q12#blank2": 5,
+    "Q12#blank3": 0
+   },
+   "defects": [
+    "average handwriting",
+    "one overwritten digit (Q4)"
+   ]
+  },
+  {
+   "student_id": "S-003",
+   "upload_id": "UP-S-003",
+   "uploaded_by": "TEST (synthetic)",
+   "media_type": "photo",
+   "files": [
+    {
+     "path": "papers/S-003/page-1.png",
+     "media_type": "photo",
+     "page_count": 1
+    },
+    {
+     "path": "papers/S-003/page-2.png",
+     "media_type": "photo",
+     "page_count": 1
+    },
+    {
+     "path": "papers/S-003/paper.pdf",
+     "media_type": "pdf_scan",
+     "page_count": 2
+    }
+   ],
+   "total_score": 63,
+   "total_points": 100,
+   "points_earned": {
+    "Q1": 3,
+    "Q2": 0,
+    "Q3#a": 4,
+    "Q3#b": 4,
+    "Q4": 0,
+    "Q5#blank1": 3,
+    "Q5#blank2": 0,
+    "Q6": 3,
+    "Q7": 0,
+    "Q8": 8,
+    "Q9": 4,
+    "Q10": 8,
+    "Q11#a": 3,
+    "Q11#b": 6,
+    "Q11#c": 6,
+    "Q12#blank1": 4,
+    "Q12#blank2": 2,
+    "Q12#blank3": 5
+   },
+   "defects": [
+    "fast, slanted handwriting",
+    "several answers without units"
+   ]
+  },
+  {
+   "student_id": "S-004",
+   "upload_id": "UP-S-004",
+   "uploaded_by": "TEST (synthetic)",
+   "media_type": "photo",
+   "files": [
+    {
+     "path": "papers/S-004/page-1.png",
+     "media_type": "photo",
+     "page_count": 1
+    },
+    {
+     "path": "papers/S-004/page-2.png",
+     "media_type": "photo",
+     "page_count": 1
+    },
+    {
+     "path": "papers/S-004/paper.pdf",
+     "media_type": "pdf_scan",
+     "page_count": 2
+    }
+   ],
+   "total_score": 37,
+   "total_points": 100,
+   "points_earned": {
+    "Q1": 3,
+    "Q2": 3,
+    "Q3#a": 0,
+    "Q3#b": 0,
+    "Q4": 5,
+    "Q5#blank1": 0,
+    "Q5#blank2": 3,
+    "Q6": 4,
+    "Q7": 0,
+    "Q8": 8,
+    "Q9": 2,
+    "Q10": 3,
+    "Q11#a": 0,
+    "Q11#b": 0,
+    "Q11#c": 4,
+    "Q12#blank1": 0,
+    "Q12#blank2": 2,
+    "Q12#blank3": 0
+   },
+   "defects": [
+    "heavy cross-outs and rewrites (Q3, Q8)",
+    "one answer corrected after cross-out (Q8; the evidence records keep the crossed-out attempt linked via correction_of)",
+    "cramped writing, answers run into the margins"
+   ]
+  },
+  {
+   "student_id": "S-005",
+   "upload_id": "UP-S-005",
+   "uploaded_by": "TEST (synthetic)",
+   "media_type": "photo",
+   "files": [
+    {
+     "path": "papers/S-005/page-1.png",
+     "media_type": "photo",
+     "page_count": 1
+    },
+    {
+     "path": "papers/S-005/page-2.png",
+     "media_type": "photo",
+     "page_count": 1
+    },
+    {
+     "path": "papers/S-005/paper.pdf",
+     "media_type": "pdf_scan",
+     "page_count": 2
+    }
+   ],
+   "total_score": 57,
+   "total_points": 100,
+   "points_earned": {
+    "Q1": 3,
+    "Q2": 3,
+    "Q3#a": 4,
+    "Q3#b": 3,
+    "Q4": 5,
+    "Q5#blank1": 3,
+    "Q5#blank2": 3,
+    "Q6": 0,
+    "Q7": 4,
+    "Q8": 8,
+    "Q9": 0,
+    "Q10": 9,
+    "Q11#a": 6,
+    "Q11#b": 0,
+    "Q11#c": 2,
+    "Q12#blank1": 4,
+    "Q12#blank2": 0,
+    "Q12#blank3": 0
+   },
+   "defects": [
+    "LOW-QUALITY PHOTO: blurred, dark, rotated about 2 degrees, low contrast (the kit's low-quality OCR stress case)",
+    "messy handwriting",
+    "two items unreadable (Q9, Q12 blank3)"
+   ]
+  }
+ ]
+}
