@@ -41,6 +41,7 @@ so the design doc still lives under the misspelled folder.
 | `homework-pilot/review/` | [#115](https://github.com/duochen13/openPaw/issues/115) | [#127](https://github.com/duochen13/openPaw/pull/127) | Teacher review workflow （审核： approve/reject/replace/adjust at shared-question level) + print-ready PDF export (student sheets + teacher key) | `tests/test_export.py`, `tests/test_review.py` in PR |
 | `homework-pilot/privacy/` | [#117](https://github.com/duochen13/openPaw/issues/117) | [#121](https://github.com/duochen13/openPaw/pull/121) | Privacy guard: student-ID-only enforcement, no names anywhere | `tests/test_guard.py` in PR |
 | `homework-pilot/webui/` | [#176](https://github.com/duochen13/openPaw/issues/176) (opened as [#167](https://github.com/duochen13/openPaw/issues/167)) | this PR | Student-side MVP UI (Muse desktop design language): one self-contained HTML with 试卷 / 结果 / 待确认， bound to synthetic demo fixtures. Originally a teacher console (#167); pivoted to the student MVP per #176 — the old console design is preserved in this branch's git history | `tests/test_webui.py` in PR |
+| `homework-pilot/grading/` | [#176](https://github.com/duochen13/openPaw/issues/176) | this PR | Student MVP pipeline behind the UI: ingest → segment → transcribe → judge → confirm/export, with pluggable backends. Judge priority is strict — (1) red-pen marks, (2) answer-key comparison (determinate items only), (3) self-solve interface (v1 stub always declines) — and recognition reliability never enters a verdict. Output mirrors `webui.models` (see `grading/adapter.py`); confirmed items export as JSONL labeled examples | `tests/test_models.py`, `test_judge.py`, `test_pipeline.py`, `test_confirm.py`, `test_adapter.py` in PR |
 | `homework-pilot/docs/` | [#108](https://github.com/duochen13/openPaw/issues/108) [#116](https://github.com/duochen13/openPaw/issues/116) [#117](https://github.com/duochen13/openPaw/issues/117) | [#120](https://github.com/duochen13/openPaw/pull/120) (checklist), [#119](https://github.com/duochen13/openPaw/pull/119) (protocol + tracking sheet), [#121](https://github.com/duochen13/openPaw/pull/121) (governance doc) | Field-materials checklist, validation protocol + pilot tracking sheet, privacy-governance doc | n/a (docs) |
 | `homework-pilot/pilot-kit/` | [#108](https://github.com/duochen13/openPaw/issues/108) | this PR (Phase 1 kit) | Pilot starter kit (all **synthetic**): template assignment A-CH3-01 (questions + 参考答案 + 评分说明 + ingestion layout template), 5 rendered graded test papers with `AnswerRecord`/`EvidenceRecord` JSON, TEST weakest-skill judgments, template confirmation checklist (assumed answers marked) | `tests/test_pilot_kit.py` + `tools/run_end_to_end.py` (run from `pilot-kit/`) |
 
@@ -57,7 +58,7 @@ so the design doc still lives under the misspelled folder.
 | [#116](https://github.com/duochen13/openPaw/issues/116) validation protocol | [#119](https://github.com/duochen13/openPaw/pull/119) open — pre-registered protocol + tracking sheet. |
 | [#117](https://github.com/duochen13/openPaw/issues/117) privacy/governance | [#121](https://github.com/duochen13/openPaw/pull/121) open — governance doc + privacy guard. |
 | [#167](https://github.com/duochen13/openPaw/issues/167) teacher console UI | this PR — built as a teacher console, then **pivoted to the student-side MVP (#176)** on the same branch; see the #176 row. |
-| [#176](https://github.com/duochen13/openPaw/issues/176) student-side MVP | this PR — student uploads a completed paper scan (PDF) and gets per-question 对 / 错 / 待确认 verdicts with a confirmation queue. Demo fixtures only; live pipeline wiring and any real student data still gated on #108 Phase 2 (school stance / privacy). |
+| [#176](https://github.com/duochen13/openPaw/issues/176) student-side MVP | UI merged (demo fixtures); **pipeline in this PR** — `grading/` runs scan → per-question 对 / 错 / 待确认 verdicts with a confirmation queue on the synthetic kit (segmentation/transcription backends are kit-deterministic in v1; self-solve is an interface + non-guessing stub). Real student data still gated on #108 Phase 2 (school stance / privacy). |
 
 ## How to run
 
@@ -81,6 +82,16 @@ python3 -m webui /path/out.html  # or choose the output path
 
 Expected output: `wrote student-mvp.html (34084 chars)`. Open the file in any browser — it is one self-contained HTML file (no server, no external assets) showing the 试卷 / 结果 / 待确认 views over synthetic demo fixtures (student ID S-023). Deep links: `?view=papers|result|confirm`, plus `&paper=<id>`.
 
+### Student MVP pipeline (`grading/`)
+
+The pipeline behind the UI, run end-to-end on the synthetic kit (both verdict modes — with red-pen marks, and marks withheld so the answer key judges alone — plus a confirm/export pass). Runnable from anywhere:
+
+```bash
+python3 homework-pilot/pilot-kit/tools/run_student_mvp.py
+```
+
+Expected: per-paper verdict counts for S-001…S-005, a series of `ok` lines ending in `ALL CHECKS PASSED`, exit code 0. Kit census: 67 items decided （对/错， all from red-pen marks) and 23 routed to 待确认 (19 partial-score 步骤分， 2 comment-only open answers, 2 unreadable) — zero guessed verdicts. In v1 the segmentation/transcription backends are deterministic over the kit's layout template and scripted recognition records; a VLM segmenter/recognizer and a real self-solve model plug into the same interfaces (`grading/backends.py`) later.
+
 ### Tests
 
 Per package, from `homework-pilot/`:
@@ -92,6 +103,7 @@ python3 -m unittest discover -s taxonomy/tests -t .    # 26 tests
 python3 -m unittest discover -s assembly/tests -t .    # 33 tests
 python3 -m unittest discover -s privacy/tests -t .     # 25 tests
 python3 -m unittest discover -s webui/tests -t .       # 24 tests
+python3 -m unittest discover -s grading/tests -t .     # 58 tests
 python3 -m pytest review/tests                         # 32 tests (pytest required, see above)
 ```
 
@@ -105,7 +117,7 @@ python3 -m unittest discover -s tests                  # 13 tests
 Or the whole suite at once, from `homework-pilot/` (needs pytest):
 
 ```bash
-python3 -m pytest                                      # 189 passed
+python3 -m pytest                                      # 247 passed
 ```
 
 ### End-to-end smoke run (pilot-kit)
