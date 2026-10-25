@@ -70,12 +70,12 @@ real materials are pending #108 and must never be pasted into fixtures.
 
 | Token | Value |
 |---|---|
-| Paper background | `#F9F8F6` (sidebar `#F1EEE6`) |
+| Paper background | `#F7F7F7` (sidebar `#EFEFEF`) |
 | Card surface | `#FFFFFF` |
-| Border | `#E7E3D9` (1px), radius 12–16px, very soft shadow |
-| Ink / secondary text | `#1F1E1C` / `#6B675F` |
-| Accent (only) | Muse clay `#D97757` — primary buttons, active nav, key highlights |
-| State tones | muted sage `#4C6B45`, amber `#8A5E14`, soft red `#A34A3A`, blue-gray `#47617A` — never neon |
+| Border | `#E5E5E5` (1px), radius 12–16px, very soft shadow |
+| Ink / secondary text | `#1A1A1A` / `#737373` |
+| Accent (only) | Charcoal `#262626` — primary buttons, active nav, key highlights (revised 2026-10-21 per Daniel: grey + white, replacing Muse clay `#D97757`) |
+| State tones | muted sage `#5C6B58`, amber `#7D6A2F`, soft red `#9E4A3C`, blue-gray `#47617A` — never neon |
 | Display font | `"Tiempos Text", "Source Serif 4", Georgia, "Songti SC", "Noto Serif SC", serif` |
 | UI font | `"Söhne", -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif` |
 | Layout | fixed 252px left sidebar; centered content column ≤ 1020px; pill badges; no gradients, no dark mode |
@@ -91,4 +91,4 @@ webfonts are loaded.
 * The original-image region is a placeholder until scanned pages are
   plumbed through from `ingestion`.
 * Wiring the console to `ReviewSession` decisions and real exports is
-  follow-up work, gated on #108 field materials and teacher sign-off.
+  follow-up work, gated on #108 Phase 1 (templates + test dataset); the live pilot still requires #108 Phase 2 real materials + teacher sign-off.
