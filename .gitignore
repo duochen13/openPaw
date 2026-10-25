@@ -26,3 +26,6 @@ __pycache__/
 temp/
 tmp/
 .gstack/
+
+# homework-pilot local web server data (uploads + records, issue #179)
+homework-pilot/.local-data/
