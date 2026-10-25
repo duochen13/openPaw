@@ -34,12 +34,13 @@ so the design doc still lives under the misspelled folder.
 | `homework-pilot/review/` | [#115](https://github.com/duochen13/openPaw/issues/115) | [#127](https://github.com/duochen13/openPaw/pull/127) | Teacher review workflow （审核： approve/reject/replace/adjust at shared-question level) + print-ready PDF export (student sheets + teacher key) | `tests/test_export.py`, `tests/test_review.py` in PR |
 | `homework-pilot/privacy/` | [#117](https://github.com/duochen13/openPaw/issues/117) | [#121](https://github.com/duochen13/openPaw/pull/121) | Privacy guard: student-ID-only enforcement, no names anywhere | `tests/test_guard.py` in PR |
 | `homework-pilot/docs/` | [#108](https://github.com/duochen13/openPaw/issues/108) [#116](https://github.com/duochen13/openPaw/issues/116) [#117](https://github.com/duochen13/openPaw/issues/117) | [#120](https://github.com/duochen13/openPaw/pull/120) (checklist), [#119](https://github.com/duochen13/openPaw/pull/119) (protocol + tracking sheet), [#121](https://github.com/duochen13/openPaw/pull/121) (governance doc) | Field-materials checklist, validation protocol + pilot tracking sheet, privacy-governance doc | n/a (docs) |
+| `homework-pilot/pilot-kit/` | [#108](https://github.com/duochen13/openPaw/issues/108) | this PR (Phase 1 kit) | Pilot starter kit (all **synthetic**): template assignment A-CH3-01 (questions + 参考答案 + 评分说明 + ingestion layout template), 5 rendered graded test papers with `AnswerRecord`/`EvidenceRecord` JSON, TEST weakest-skill judgments, template confirmation checklist (assumed answers marked) | `tests/test_pilot_kit.py` + `tools/run_end_to_end.py` (run from `pilot-kit/`) |
 
 ## Issue status
 
 | Issue | Status |
 |---|---|
-| [#108](https://github.com/duochen13/openPaw/issues/108) field work | **HUMAN** — blocked on Daniel/teacher: 5 sample papers + field materials, teacher sign-off. Field-materials checklist in [#120](https://github.com/duochen13/openPaw/pull/120) (`docs/field-materials-checklist.md`; "relates to", does not close). |
+| [#108](https://github.com/duochen13/openPaw/issues/108) pilot starter kit + field work | **Phase 1 DONE (this PR)** — synthetic test kit in `pilot-kit/` (template assignment, 5 test papers, TEST judgments, ASSUMED confirmation checklist); OCR evaluation + taxonomy confirmation run end-to-end on it. **Phase 2 still HUMAN** — real materials + teacher sign-off via `docs/field-materials-checklist.md` ([#120](https://github.com/duochen13/openPaw/pull/120)); the issue stays open until Phase 2 lands. |
 | [#109](https://github.com/duochen13/openPaw/issues/109) evidence ledger | [#122](https://github.com/duochen13/openPaw/pull/122) open — data model implemented. |
 | [#110](https://github.com/duochen13/openPaw/issues/110) + [#111](https://github.com/duochen13/openPaw/issues/111) ingestion/OCR | [#123](https://github.com/duochen13/openPaw/pull/123) open — ingestion + OCR with manual fallback. |
 | [#112](https://github.com/duochen13/openPaw/issues/112) taxonomy | [#124](https://github.com/duochen13/openPaw/pull/124) open — taxonomy + diagnosis; still needs teacher sign-off on the skill list. |
@@ -65,7 +66,7 @@ Student-ID-only: there is no name field anywhere in the repo. See `docs/privacy-
 ## Still pending (not fabricated)
 
 - Teacher sign-off on the skill taxonomy (#112) and on the validation protocol.
-- Field materials: 5 sample graded papers, textbook/reference answers, teacher consent + data-use consent forms (#108).
+- Field materials (Phase 2 of #108): 5 **real** sample graded papers, the teacher's real assignment + reference answers, teacher consent + data-use consent forms. A synthetic stand-in kit exists (`pilot-kit/`) so engineering is not blocked meanwhile.
 - Real question bank (current generator output is AI-drafted and unvalidated by the teacher).
 - CJK font for print PDFs (PDF export is stdlib-only; Chinese typesetting needs a bundled font).
 - Clickable teacher UI — the pilot runs on scripts + generated PDFs; review happens via the `ReviewSession` API until a UI is built.
