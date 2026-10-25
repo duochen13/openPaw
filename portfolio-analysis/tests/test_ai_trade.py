@@ -2,7 +2,8 @@
 
 The 8-panel AI trade dashboard renders from dated snapshots vendored
 into data/ai_trade/ (Panel 8 reads the Insight page's shared cloud
-CSV - see the cloud section below). Discipline, mirroring the Insight
+CSV and vendors Chart C's fit points in cloud_fit_index.csv - see
+the cloud section below). Discipline, mirroring the Insight
 page (PR #38):
 
 - CDS rows are dated press-reported prints with a source on every row;
@@ -26,6 +27,7 @@ from portfolio_analysis.ai_trade_dashboard import (
     _trend_proj,
     ai_trade_data,
     load_cds,
+    load_cloud_fit,
     load_cloud_panel,
     load_monthly,
     load_series_notes,
@@ -39,6 +41,29 @@ MONTHLY_HEADER = "date," + ",".join(MONTHLY_COLUMNS) + "\n"
 SNAP_HEADER = "panel,series,date,value,unit,kind,source,note\n"
 CDS_HEADER = "ticker,date,spread_bps,source,note\n"
 NOTES_HEADER = "series,panel,source,as_of,note\n"
+
+#: A valid cloud_fit_index.csv seed (the shipped values).
+FIT_SEED = (
+    "series,vendor,quarter,value\n"
+    "cloud_fit_index,,2025-Q3,1.000\n"
+    "cloud_fit_index,,2025-Q4,1.4286\n"
+    "cloud_fit_index,,2026-Q1,3.551\n"
+    "cloud_fit_index,,2026-Q2,4.883\n"
+    "cloud_fit_scenario,,2026-Q3,6.0305\n"
+    "cloud_fit_scenario,,2026-Q4,7.1039\n"
+    "cloud_fit_scenario,,2027-Q1,8.031\n"
+    "cloud_fit_scenario,,2027-Q2,8.7739\n"
+    "cloud_q3_bars,GOOGL,2026-Q3,1.89\n"
+    "cloud_q3_bars,AMZN,2026-Q3,1.35\n"
+    "cloud_q3_bars,MSFT,2026-Q3,1.33\n"
+)
+
+#: series_notes rows for Chart C's vendored series.
+FIT_NOTES = (
+    "cloud_fit_index,8,Test source,2026-10-25,\n"
+    "cloud_fit_scenario,8,Test source,2026-10-25,\n"
+    "cloud_q3_bars,8,Test source,2026-10-25,\n"
+)
 
 
 def _monthly_seed(rows: int = 4) -> str:
@@ -64,6 +89,7 @@ def _full_dir(tmp_path: Path, **overrides: str) -> Path:
         + "6,anthropic_arr,2026-12-31,110,$B,expectation,Test source,Stated expectation\n",
         "cds_snapshots.csv": CDS_HEADER + "ORCL,2026-10-15,288,Reuters,Record\n",
         "series_notes.csv": _notes_seed(),
+        "cloud_fit_index.csv": FIT_SEED,
     }
     files.update(overrides)
     for name, text in files.items():
@@ -247,9 +273,9 @@ def test_data_shape_eight_panels_no_cds_projection():
     for s in cds_panel["series"]:
         assert s["proj"] is None, "Panel 7 must never carry a projection segment"
     assert cds_panel["hline"]["value"] == 250.0  # ORCL watch line
-    assert data["asof"] == "2026-10-16"
+    assert data["asof"] == "2026-10-25"  # Chart C's fit notes are the newest
     assert len(data["cds"]) == 10
-    assert len(data["notes"]) == 17  # 14 vendored + 3 Panel 8 cloud series
+    assert len(data["notes"]) == 20  # 14 vendored + 3 cloud + 3 Chart C fit series
 
 
 def test_panel6_expectation_segments_anchor_on_last_reported():
@@ -281,13 +307,75 @@ def test_shipped_cloud_panel_series_and_anchors():
     data = ai_trade_data(DATA_DIR)
     panel = data["panels"][7]
     assert panel["kind"] == "cloud"
-    rev, growth = panel["charts"]
-    by_label = {s["label"]: s for s in rev["series"]}
-    googl = by_label["Google Cloud segment revenue, $B (company earnings releases)"]
-    assert len(googl["points"]) == 26  # 2020-Q1 .. 2026-Q2
-    assert googl["points"][0] == ("2020-01-01", pytest.approx(2.777))
-    assert googl["points"][-1] == ("2026-04-01", pytest.approx(24.768))
-    assert googl["end_label"] == "$24.8B"
+    chartc, growth = panel["charts"]
+    # Chart C: the fitted index and its scenario, exactly as vendored.
+    assert chartc["log"] is True
+    by_label = {s["label"]: s for s in chartc["series"]}
+    fit = by_label[
+        "Fitted inference net index (Google API volume \u00d7 frontier blended list price)"
+    ]
+    assert [v for _d, v in fit["points"]] == pytest.approx(
+        [1.000, 1.4286, 3.551, 4.883]
+    )
+    assert fit["points"][0][0] == "2025-07-01"
+    labels = {d: s["text"] for d, s in fit["point_labels"].items()}
+    assert labels == {
+        "2025-10-01": "+43%",
+        "2026-01-01": "+149%*",  # mix-inflated (GPT-5.4 price hike)
+        "2026-04-01": "+38%",
+    }
+    scen = by_label["Scenario extension (dashed): volume growth decays, price \u22125%/qtr"]
+    assert scen["style"] == "dash"
+    assert [v for _d, v in scen["points"]] == pytest.approx(
+        [4.883, 6.0305, 7.1039, 8.031, 8.7739]
+    )
+    slabels = {d: s["text"] for d, s in scen["point_labels"].items()}
+    assert slabels == {
+        "2026-07-01": "+24%",
+        "2026-10-01": "+18%",
+        "2027-01-01": "+13%",
+        "2027-04-01": "+9%",
+    }
+    # The revenue indices are computed from the shared CSV, 2025-Q3 = 1.
+    googl = by_label["Google Cloud revenue index, actual (2025-Q3 = 1)"]
+    assert [v for _d, v in googl["points"]] == pytest.approx(
+        [1.000, 1.165, 1.321, 1.634], abs=0.001
+    )
+    glabels = {d: s["text"] for d, s in googl["point_labels"].items()}
+    assert glabels == {
+        "2025-10-01": "+17%",
+        "2026-01-01": "+13%",
+        "2026-04-01": "+24%",
+    }
+    aws = by_label["Amazon Web Services revenue index, actual (2025-Q3 = 1)"]
+    assert [v for _d, v in aws["points"]] == pytest.approx(
+        [1.000, 1.078, 1.139, 1.279], abs=0.001
+    )
+    assert aws["point_labels"]["2026-04-01"]["text"] == "Q2 QoQ +12%"
+    msft = by_label["Intelligent Cloud revenue index, actual (2025-Q3 = 1)"]
+    assert [v for _d, v in msft["points"]] == pytest.approx(
+        [1.000, 1.065, 1.123, 1.272], abs=0.001
+    )
+    assert msft["point_labels"]["2026-04-01"]["text"] == "Q2 QoQ +13%"
+    # The Q3 2026 bars: dashed, anchored on each 2026-Q2 actual point.
+    bars = {
+        s["label"]: s for s in chartc["series"] if s["label"].endswith("(dashed)")
+    }
+    assert len(bars) == 3
+    gbar = by_label["Google Cloud Q3 2026 Wall Street bar (dashed)"]
+    assert gbar["points"] == [
+        ("2026-04-01", pytest.approx(1.634, abs=0.001)),
+        ("2026-07-01", pytest.approx(1.890)),
+    ]
+    assert gbar["point_labels"]["2026-07-01"]["text"] == "Q3 bar: $28.6B, QoQ +15.7%"
+    abar = by_label["Amazon Web Services Q3 2026 Wall Street bar (dashed)"]
+    assert abar["points"][-1] == ("2026-07-01", pytest.approx(1.350))
+    assert abar["point_labels"]["2026-07-01"]["text"] == "AWS bar: $44.6B, QoQ +5.5%"
+    mbar = by_label["Intelligent Cloud Q3 2026 Wall Street bar (dashed)"]
+    assert mbar["points"][-1] == ("2026-07-01", pytest.approx(1.330))
+    assert mbar["point_labels"]["2026-07-01"]["text"] == "MSFT bar: $41.1B, QoQ +4.6%"
+    assert len(chartc["notes"]) == 4  # the Chart C footnotes
+    # The y/y growth chart is unchanged.
     g = {s["label"]: s for s in growth["series"]}
     gg = g["Google Cloud revenue y/y % (computed from the chained quarterly revenue)"]
     assert len(gg["points"]) == 22  # 2021-Q1 .. 2026-Q2 (2020 = base year)
@@ -355,7 +443,11 @@ def test_cloud_panel_with_note_renders_eight(tmp_path):
         "GOOGL,Google Cloud,2020-Q1,2.777,Release,verified\n"
         "GOOGL,Google Cloud,2021-Q1,4.047,Release,verified\n",
     )
-    notes = _notes_seed() + "cloud_googl,8,Test source,2026-10-16,\n"
+    notes = (
+        _notes_seed()
+        + "cloud_googl,8,Test source,2026-10-16,\n"
+        + FIT_NOTES
+    )
     d = _full_dir(tmp_path, **{"series_notes.csv": notes})
     data = ai_trade_data(d)
     assert len(data["panels"]) == 8
@@ -371,6 +463,73 @@ def test_cloud_panel_malformed_csv_raises(tmp_path):
     d = _full_dir(tmp_path)
     with pytest.raises(TradeDataError, match="cloud panel"):
         ai_trade_data(d)
+
+
+# --------------------------------------------------------------------------
+# Chart C's vendored fit CSV: fitted index, scenario, Q3 2026 bars
+
+
+def test_load_cloud_fit_shipped_values():
+    fit = load_cloud_fit(DATA_DIR)
+    assert fit["fit"] == [
+        ("2025-07-01", 1.000),
+        ("2025-10-01", pytest.approx(1.4286)),
+        ("2026-01-01", pytest.approx(3.551)),
+        ("2026-04-01", pytest.approx(4.883)),
+    ]
+    assert [v for _d, v in fit["scenario"]] == pytest.approx(
+        [6.0305, 7.1039, 8.031, 8.7739]
+    )
+    assert fit["bars"] == {
+        "GOOGL": ("2026-07-01", pytest.approx(1.89)),
+        "AMZN": ("2026-07-01", pytest.approx(1.35)),
+        "MSFT": ("2026-07-01", pytest.approx(1.33)),
+    }
+
+
+def test_cloud_fit_missing_csv_fails_the_build(tmp_path):
+    # Chart C is part of Panel 8: with the cloud panel present, a
+    # missing fit CSV is a build error, not a silent omission.
+    _cloud_sibling(
+        tmp_path,
+        "GOOGL,Google Cloud,2020-Q1,2.777,Release,verified\n"
+        "GOOGL,Google Cloud,2021-Q1,4.047,Release,verified\n",
+    )
+    notes = _notes_seed() + "cloud_googl,8,Test source,2026-10-16,\n" + FIT_NOTES
+    d = _full_dir(tmp_path, **{"series_notes.csv": notes})
+    (d / "cloud_fit_index.csv").unlink()
+    with pytest.raises(TradeDataError, match="cloud_fit_index"):
+        ai_trade_data(d)
+
+
+def test_cloud_fit_missing_note_raises(tmp_path):
+    _cloud_sibling(
+        tmp_path,
+        "GOOGL,Google Cloud,2020-Q1,2.777,Release,verified\n"
+        "GOOGL,Google Cloud,2021-Q1,4.047,Release,verified\n",
+    )
+    notes = _notes_seed() + "cloud_googl,8,Test source,2026-10-16,\n"  # no fit notes
+    d = _full_dir(tmp_path, **{"series_notes.csv": notes})
+    with pytest.raises(TradeDataError, match="no source note"):
+        ai_trade_data(d)
+
+
+def test_cloud_fit_malformed_rows_raise(tmp_path):
+    d = _full_dir(tmp_path)
+    bad_quarter = FIT_SEED.replace("cloud_fit_index,,2026-Q2,4.883", "")
+    (d / "cloud_fit_index.csv").write_text(bad_quarter)
+    with pytest.raises(TradeDataError, match="cloud_fit_index must cover"):
+        load_cloud_fit(d)
+    off_recursion = FIT_SEED.replace(
+        "cloud_fit_scenario,,2026-Q3,6.0305", "cloud_fit_scenario,,2026-Q3,9.5"
+    )
+    (d / "cloud_fit_index.csv").write_text(off_recursion)
+    with pytest.raises(TradeDataError, match="decay recursion"):
+        load_cloud_fit(d)
+    bad_bar = FIT_SEED.replace("cloud_q3_bars,MSFT,2026-Q3,1.33\n", "")
+    (d / "cloud_fit_index.csv").write_text(bad_bar)
+    with pytest.raises(TradeDataError, match="one bar per cloud vendor"):
+        load_cloud_fit(d)
 
 
 # --------------------------------------------------------------------------
@@ -424,8 +583,12 @@ def test_render_writes_ai_trade_html(tmp_path):
     ]:
         assert f"{n} \u00b7 {name}" in page, f"panel {n} missing"
     assert page.count("<svg") >= 9  # 7 panels + Panel 8's two charts
-    # Panel 8: end labels, the full y/y table, and the Azure footnote.
-    assert "$42.2B" in page  # AWS latest revenue, end label
+    # Panel 8: Chart C's bar labels and fit callouts, the growth end
+    # label, the full y/y table, and the Azure footnote.
+    assert "Q3 bar: $28.6B, QoQ +15.7%" in page  # GOOGL Chart C bar
+    assert "AWS bar: $44.6B, QoQ +5.5%" in page
+    assert "MSFT bar: $41.1B, QoQ +4.6%" in page
+    assert "+149%*" in page  # fitted index 2026-Q1, mix-inflated
     assert "+82%" in page  # Google Cloud latest y/y, end label
     assert "The growth chart as a table" in page
     assert "+45.7" in page  # Google Cloud 2021-Q1 y/y, first table row
@@ -436,7 +599,7 @@ def test_render_writes_ai_trade_html(tmp_path):
     assert "ORCL watch alert line ~250bp" in page
     assert "1,117" in page  # CRWV end label on Panel 7
     assert "Back to the portfolio dashboard" in page
-    assert "Data as of 2026-10-16" in page
+    assert "Data as of 2026-10-25" in page
     # The CDS data table carries the prints with their press sources.
     assert "288" in page and "Reuters" in page
     # Panel 6 expectations are captioned as expectations, never as data.
