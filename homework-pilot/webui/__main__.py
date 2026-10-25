@@ -1,4 +1,4 @@
-"""``python3 -m webui [output.html]`` -- render the demo teacher console."""
+"""``python3 -m webui [output.html]`` -- render the student-side MVP demo."""
 
 from .render import main
 
