@@ -1,0 +1,282 @@
+[
+ {
+  "student_id": "S-005",
+  "assignment_number": "A-CH3-01",
+  "question_id": "Q1",
+  "part_id": null,
+  "item_key": "Q1",
+  "student_answer": "C",
+  "grading_mark": {
+   "kind": "correct",
+   "score": null,
+   "comment": null
+  },
+  "source": "ocr",
+  "reliability": 0.88,
+  "page_ref": "papers/S-005/page-1.png"
+ },
+ {
+  "student_id": "S-005",
+  "assignment_number": "A-CH3-01",
+  "question_id": "Q2",
+  "part_id": null,
+  "item_key": "Q2",
+  "student_answer": "B",
+  "grading_mark": {
+   "kind": "correct",
+   "score": null,
+   "comment": null
+  },
+  "source": "ocr",
+  "reliability": 0.9,
+  "page_ref": "papers/S-005/page-1.png"
+ },
+ {
+  "student_id": "S-005",
+  "assignment_number": "A-CH3-01",
+  "question_id": "Q3",
+  "part_id": "a",
+  "item_key": "Q3#a",
+  "student_answer": "0.8 m",
+  "grading_mark": {
+   "kind": "correct",
+   "score": null,
+   "comment": null
+  },
+  "source": "ocr",
+  "reliability": 0.72,
+  "page_ref": "papers/S-005/page-1.png"
+ },
+ {
+  "student_id": "S-005",
+  "assignment_number": "A-CH3-01",
+  "question_id": "Q3",
+  "part_id": "b",
+  "item_key": "Q3#b",
+  "student_answer": "W = 20 × 0.8 = 16",
+  "grading_mark": {
+   "kind": "score",
+   "score": "3/4",
+   "comment": "结果对，漏写单位 J"
+  },
+  "source": "ocr",
+  "reliability": 0.8,
+  "page_ref": "papers/S-005/page-1.png"
+ },
+ {
+  "student_id": "S-005",
+  "assignment_number": "A-CH3-01",
+  "question_id": "Q4",
+  "part_id": null,
+  "item_key": "Q4",
+  "student_answer": "W = 50×10×12 = 6000 J；P = ……（后半字迹模糊）",
+  "grading_mark": {
+   "kind": "score",
+   "score": "5/10",
+   "comment": "后半部分字迹不清，功率结果无法确认"
+  },
+  "source": "ocr",
+  "reliability": 0.55,
+  "page_ref": "papers/S-005/page-1.png"
+ },
+ {
+  "student_id": "S-005",
+  "assignment_number": "A-CH3-01",
+  "question_id": "Q5",
+  "part_id": "blank1",
+  "item_key": "Q5#blank1",
+  "student_answer": "重力势",
+  "grading_mark": {
+   "kind": "correct",
+   "score": null,
+   "comment": null
+  },
+  "source": "ocr",
+  "reliability": 0.8,
+  "page_ref": "papers/S-005/page-1.png"
+ },
+ {
+  "student_id": "S-005",
+  "assignment_number": "A-CH3-01",
+  "question_id": "Q5",
+  "part_id": "blank2",
+  "item_key": "Q5#blank2",
+  "student_answer": "动",
+  "grading_mark": {
+   "kind": "correct",
+   "score": null,
+   "comment": null
+  },
+  "source": "ocr",
+  "reliability": 0.8,
+  "page_ref": "papers/S-005/page-1.png"
+ },
+ {
+  "student_id": "S-005",
+  "assignment_number": "A-CH3-01",
+  "question_id": "Q6",
+  "part_id": null,
+  "item_key": "Q6",
+  "student_answer": "P = 60×10×0.5 = 300 W",
+  "grading_mark": {
+   "kind": "wrong",
+   "score": null,
+   "comment": "300 J 是一次的功，不是功率"
+  },
+  "source": "ocr",
+  "reliability": 0.78,
+  "page_ref": "papers/S-005/page-1.png"
+ },
+ {
+  "student_id": "S-005",
+  "assignment_number": "A-CH3-01",
+  "question_id": "Q7",
+  "part_id": null,
+  "item_key": "Q7",
+  "student_answer": "B",
+  "grading_mark": {
+   "kind": "correct",
+   "score": null,
+   "comment": null
+  },
+  "source": "ocr",
+  "reliability": 0.9,
+  "page_ref": "papers/S-005/page-2.png"
+ },
+ {
+  "student_id": "S-005",
+  "assignment_number": "A-CH3-01",
+  "question_id": "Q8",
+  "part_id": null,
+  "item_key": "Q8",
+  "student_answer": "W = 50×8 = 400 J",
+  "grading_mark": {
+   "kind": "correct",
+   "score": null,
+   "comment": null
+  },
+  "source": "ocr",
+  "reliability": 0.84,
+  "page_ref": "papers/S-005/page-2.png"
+ },
+ {
+  "student_id": "S-005",
+  "assignment_number": "A-CH3-01",
+  "question_id": "Q9",
+  "part_id": null,
+  "item_key": "Q9",
+  "student_answer": null,
+  "grading_mark": null,
+  "source": "ocr",
+  "reliability": 0.31,
+  "page_ref": "papers/S-005/page-2.png"
+ },
+ {
+  "student_id": "S-005",
+  "assignment_number": "A-CH3-01",
+  "question_id": "Q10",
+  "part_id": null,
+  "item_key": "Q10",
+  "student_answer": "F = 2000 N；W = 2000×6000 = 1.2×10⁷ J；P = 1.2×10⁷÷5 = 2.4×10⁶ W",
+  "grading_mark": {
+   "kind": "score",
+   "score": "9/12",
+   "comment": "（2）时间未换算成秒"
+  },
+  "source": "ocr",
+  "reliability": 0.76,
+  "page_ref": "papers/S-005/page-2.png"
+ },
+ {
+  "student_id": "S-005",
+  "assignment_number": "A-CH3-01",
+  "question_id": "Q11",
+  "part_id": "a",
+  "item_key": "Q11#a",
+  "student_answer": "不做功，脚没有移动",
+  "grading_mark": {
+   "kind": "correct",
+   "score": null,
+   "comment": null
+  },
+  "source": "ocr",
+  "reliability": 0.8,
+  "page_ref": "papers/S-005/page-2.png"
+ },
+ {
+  "student_id": "S-005",
+  "assignment_number": "A-CH3-01",
+  "question_id": "Q11",
+  "part_id": "b",
+  "item_key": "Q11#b",
+  "student_answer": "动能最大，因为速度最快",
+  "grading_mark": {
+   "kind": "wrong",
+   "score": null,
+   "comment": "最高点速度为零，动能为零"
+  },
+  "source": "ocr",
+  "reliability": 0.82,
+  "page_ref": "papers/S-005/page-2.png"
+ },
+ {
+  "student_id": "S-005",
+  "assignment_number": "A-CH3-01",
+  "question_id": "Q11",
+  "part_id": "c",
+  "item_key": "Q11#c",
+  "student_answer": "W1 = 300 J；P = 300÷60 = 5 W",
+  "grading_mark": {
+   "kind": "score",
+   "score": "2/6",
+   "comment": "未把 20 次累加"
+  },
+  "source": "ocr",
+  "reliability": 0.77,
+  "page_ref": "papers/S-005/page-2.png"
+ },
+ {
+  "student_id": "S-005",
+  "assignment_number": "A-CH3-01",
+  "question_id": "Q12",
+  "part_id": "blank1",
+  "item_key": "Q12#blank1",
+  "student_answer": "重力势",
+  "grading_mark": {
+   "kind": "correct",
+   "score": null,
+   "comment": null
+  },
+  "source": "ocr",
+  "reliability": 0.85,
+  "page_ref": "papers/S-005/page-2.png"
+ },
+ {
+  "student_id": "S-005",
+  "assignment_number": "A-CH3-01",
+  "question_id": "Q12",
+  "part_id": "blank2",
+  "item_key": "Q12#blank2",
+  "student_answer": "动能",
+  "grading_mark": {
+   "kind": "wrong",
+   "score": null,
+   "comment": "应为弹性势能"
+  },
+  "source": "ocr",
+  "reliability": 0.79,
+  "page_ref": "papers/S-005/page-2.png"
+ },
+ {
+  "student_id": "S-005",
+  "assignment_number": "A-CH3-01",
+  "question_id": "Q12",
+  "part_id": "blank3",
+  "item_key": "Q12#blank3",
+  "student_answer": null,
+  "grading_mark": null,
+  "source": "ocr",
+  "reliability": 0.38,
+  "page_ref": "papers/S-005/page-2.png"
+ }
+]
