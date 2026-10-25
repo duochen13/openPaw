@@ -1,0 +1,290 @@
+[
+ {
+  "student_id": "S-003",
+  "assignment_number": "A-CH3-01",
+  "question_id": "Q1",
+  "part_id": null,
+  "item_key": "Q1",
+  "student_answer": "C",
+  "grading_mark": {
+   "kind": "correct",
+   "score": null,
+   "comment": null
+  },
+  "source": "ocr",
+  "reliability": 0.97,
+  "page_ref": "papers/S-003/page-1.png"
+ },
+ {
+  "student_id": "S-003",
+  "assignment_number": "A-CH3-01",
+  "question_id": "Q2",
+  "part_id": null,
+  "item_key": "Q2",
+  "student_answer": "A",
+  "grading_mark": {
+   "kind": "wrong",
+   "score": null,
+   "comment": "重力方向竖直向下，沿水平方向没有位移，重力不做功"
+  },
+  "source": "ocr",
+  "reliability": 0.98,
+  "page_ref": "papers/S-003/page-1.png"
+ },
+ {
+  "student_id": "S-003",
+  "assignment_number": "A-CH3-01",
+  "question_id": "Q3",
+  "part_id": "a",
+  "item_key": "Q3#a",
+  "student_answer": "0.8 m",
+  "grading_mark": {
+   "kind": "correct",
+   "score": null,
+   "comment": null
+  },
+  "source": "ocr",
+  "reliability": 0.94,
+  "page_ref": "papers/S-003/page-1.png"
+ },
+ {
+  "student_id": "S-003",
+  "assignment_number": "A-CH3-01",
+  "question_id": "Q3",
+  "part_id": "b",
+  "item_key": "Q3#b",
+  "student_answer": "W = 20×0.8 = 16 J",
+  "grading_mark": {
+   "kind": "correct",
+   "score": null,
+   "comment": null
+  },
+  "source": "ocr",
+  "reliability": 0.95,
+  "page_ref": "papers/S-003/page-1.png"
+ },
+ {
+  "student_id": "S-003",
+  "assignment_number": "A-CH3-01",
+  "question_id": "Q4",
+  "part_id": null,
+  "item_key": "Q4",
+  "student_answer": "W = 6000 J；P = W×t = 6000×30 = 180000 W",
+  "grading_mark": {
+   "kind": "wrong",
+   "score": null,
+   "comment": "功率公式用反了：P = W÷t"
+  },
+  "source": "ocr",
+  "reliability": 0.96,
+  "page_ref": "papers/S-003/page-1.png"
+ },
+ {
+  "student_id": "S-003",
+  "assignment_number": "A-CH3-01",
+  "question_id": "Q5",
+  "part_id": "blank1",
+  "item_key": "Q5#blank1",
+  "student_answer": "重力势",
+  "grading_mark": {
+   "kind": "correct",
+   "score": null,
+   "comment": null
+  },
+  "source": "ocr",
+  "reliability": 0.96,
+  "page_ref": "papers/S-003/page-1.png"
+ },
+ {
+  "student_id": "S-003",
+  "assignment_number": "A-CH3-01",
+  "question_id": "Q5",
+  "part_id": "blank2",
+  "item_key": "Q5#blank2",
+  "student_answer": "势",
+  "grading_mark": {
+   "kind": "wrong",
+   "score": null,
+   "comment": "应为动能"
+  },
+  "source": "ocr",
+  "reliability": 0.95,
+  "page_ref": "papers/S-003/page-1.png"
+ },
+ {
+  "student_id": "S-003",
+  "assignment_number": "A-CH3-01",
+  "question_id": "Q6",
+  "part_id": null,
+  "item_key": "Q6",
+  "student_answer": "W = 60×10×0.5 = 300 J",
+  "grading_mark": {
+   "kind": "score",
+   "score": "3/8",
+   "comment": "只算了 1 次的功，且把功当作功率"
+  },
+  "source": "ocr",
+  "reliability": 0.94,
+  "page_ref": "papers/S-003/page-1.png"
+ },
+ {
+  "student_id": "S-003",
+  "assignment_number": "A-CH3-01",
+  "question_id": "Q7",
+  "part_id": null,
+  "item_key": "Q7",
+  "student_answer": "A",
+  "grading_mark": {
+   "kind": "wrong",
+   "score": null,
+   "comment": "做功多不等于功率大，还要看时间"
+  },
+  "source": "ocr",
+  "reliability": 0.97,
+  "page_ref": "papers/S-003/page-2.png"
+ },
+ {
+  "student_id": "S-003",
+  "assignment_number": "A-CH3-01",
+  "question_id": "Q8",
+  "part_id": null,
+  "item_key": "Q8",
+  "student_answer": "W = Gh = 50×8 = 400 J",
+  "grading_mark": {
+   "kind": "correct",
+   "score": null,
+   "comment": null
+  },
+  "source": "ocr",
+  "reliability": 0.96,
+  "page_ref": "papers/S-003/page-2.png"
+ },
+ {
+  "student_id": "S-003",
+  "assignment_number": "A-CH3-01",
+  "question_id": "Q9",
+  "part_id": null,
+  "item_key": "Q9",
+  "student_answer": "重力势能变成动能，机械能不变",
+  "grading_mark": {
+   "kind": "score",
+   "score": "4/6",
+   "comment": "未说明机械能守恒的理由"
+  },
+  "source": "ocr",
+  "reliability": 0.9,
+  "page_ref": "papers/S-003/page-2.png"
+ },
+ {
+  "student_id": "S-003",
+  "assignment_number": "A-CH3-01",
+  "question_id": "Q10",
+  "part_id": null,
+  "item_key": "Q10",
+  "student_answer": "F = 2000 N；s = 6000 m；W = 1.2×10⁷ J；P = 2000 W",
+  "grading_mark": {
+   "kind": "score",
+   "score": "8/12",
+   "comment": "（2）功率计算错误：P = W÷t = 4×10⁴ W"
+  },
+  "source": "ocr",
+  "reliability": 0.93,
+  "page_ref": "papers/S-003/page-2.png"
+ },
+ {
+  "student_id": "S-003",
+  "assignment_number": "A-CH3-01",
+  "question_id": "Q11",
+  "part_id": "a",
+  "item_key": "Q11#a",
+  "student_answer": "不做功，因为脚没有离开地面",
+  "grading_mark": {
+   "kind": "score",
+   "score": "3/6",
+   "comment": "判断对；理由要说清“沿支持力的方向没有位移”"
+  },
+  "source": "ocr",
+  "reliability": 0.92,
+  "page_ref": "papers/S-003/page-2.png"
+ },
+ {
+  "student_id": "S-003",
+  "assignment_number": "A-CH3-01",
+  "question_id": "Q11",
+  "part_id": "b",
+  "item_key": "Q11#b",
+  "student_answer": "0 J",
+  "grading_mark": {
+   "kind": "correct",
+   "score": null,
+   "comment": null
+  },
+  "source": "ocr",
+  "reliability": 0.95,
+  "page_ref": "papers/S-003/page-2.png"
+ },
+ {
+  "student_id": "S-003",
+  "assignment_number": "A-CH3-01",
+  "question_id": "Q11",
+  "part_id": "c",
+  "item_key": "Q11#c",
+  "student_answer": "W1 = 300 J；W = 6000 J；P = 100 W",
+  "grading_mark": {
+   "kind": "correct",
+   "score": null,
+   "comment": null
+  },
+  "source": "ocr",
+  "reliability": 0.94,
+  "page_ref": "papers/S-003/page-2.png"
+ },
+ {
+  "student_id": "S-003",
+  "assignment_number": "A-CH3-01",
+  "question_id": "Q12",
+  "part_id": "blank1",
+  "item_key": "Q12#blank1",
+  "student_answer": "重力势",
+  "grading_mark": {
+   "kind": "correct",
+   "score": null,
+   "comment": null
+  },
+  "source": "ocr",
+  "reliability": 0.96,
+  "page_ref": "papers/S-003/page-2.png"
+ },
+ {
+  "student_id": "S-003",
+  "assignment_number": "A-CH3-01",
+  "question_id": "Q12",
+  "part_id": "blank2",
+  "item_key": "Q12#blank2",
+  "student_answer": "动",
+  "grading_mark": {
+   "kind": "score",
+   "score": "2/5",
+   "comment": "应为弹性势能"
+  },
+  "source": "ocr",
+  "reliability": 0.93,
+  "page_ref": "papers/S-003/page-2.png"
+ },
+ {
+  "student_id": "S-003",
+  "assignment_number": "A-CH3-01",
+  "question_id": "Q12",
+  "part_id": "blank3",
+  "item_key": "Q12#blank3",
+  "student_answer": "增大，弹力先大于重力，后小于重力",
+  "grading_mark": {
+   "kind": "correct",
+   "score": null,
+   "comment": null
+  },
+  "source": "ocr",
+  "reliability": 0.92,
+  "page_ref": "papers/S-003/page-2.png"
+ }
+]
