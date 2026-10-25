@@ -7,9 +7,11 @@ switcher are small vanilla-JS interactions inside the file; action
 buttons are demo placeholders (a click stamps the card as handled,
 client-side only) until the console is wired to the pipeline.
 
-Design language: the Muse desktop app -- warm ivory paper, white
-cards, one clay accent (#D97757), serif display headings + clean sans
-body, fixed left sidebar. Tokens are documented in ``webui/README.md``.
+Design language: the Muse desktop app -- neutral grey paper, white
+cards, one charcoal accent (#262626), serif display headings + clean
+sans body, fixed left sidebar. Tokens are documented in
+``webui/README.md``. (Palette revised 2026-10-21 per Daniel: grey +
+white, superseding the original warm ivory / clay scheme.)
 
 Data flows in through the view-model builders below
 (``recognition_vm`` / ``hypothesis_vm`` / ``review_vm`` / ...), which
@@ -82,28 +84,28 @@ _CATEGORY_CLASSES = {
 
 CSS = """
 :root {
-  --paper: #F9F8F6;
-  --paper-deep: #F1EEE6;
+  --paper: #F7F7F7;
+  --paper-deep: #EFEFEF;
   --card: #FFFFFF;
-  --border: #E7E3D9;
-  --border-strong: #D9D4C7;
-  --ink: #1F1E1C;
-  --ink-2: #6B675F;
-  --ink-3: #9A958A;
-  --clay: #D97757;
-  --clay-dark: #BC5A3C;
-  --clay-soft: #F8E9E2;
-  --sage: #4C6B45;
-  --sage-soft: #E7EFE3;
-  --amber: #8A5E14;
-  --amber-soft: #F6ECD4;
-  --red: #A34A3A;
-  --red-soft: #F6E3DC;
+  --border: #E5E5E5;
+  --border-strong: #D4D4D4;
+  --ink: #1A1A1A;
+  --ink-2: #737373;
+  --ink-3: #A3A3A3;
+  --accent: #262626;
+  --accent-dark: #000000;
+  --accent-soft: #F0F0F0;
+  --sage: #5C6B58;
+  --sage-soft: #E9EDE7;
+  --amber: #7D6A2F;
+  --amber-soft: #F1EDDF;
+  --red: #9E4A3C;
+  --red-soft: #F5E7E2;
   --bluegray: #47617A;
   --bluegray-soft: #E3EAF0;
-  --gray-soft: #ECEAE3;
+  --gray-soft: #EDEDED;
   --radius: 14px;
-  --shadow: 0 1px 2px rgba(31, 30, 28, .04), 0 6px 20px rgba(31, 30, 28, .04);
+  --shadow: 0 1px 2px rgba(26, 26, 26, .04), 0 6px 20px rgba(26, 26, 26, .04);
   --serif: "Tiempos Text", "Source Serif 4", Georgia, "Songti SC",
            "Noto Serif SC", serif;
   --sans: "Söhne", -apple-system, BlinkMacSystemFont, "Segoe UI",
@@ -138,7 +140,7 @@ button { font-family: inherit; cursor: pointer; }
 /* ---- sidebar ---- */
 .brand { display: flex; align-items: center; gap: 11px; padding: 2px 6px; }
 .logo-mark {
-  width: 34px; height: 34px; border-radius: 9px; background: var(--clay);
+  width: 34px; height: 34px; border-radius: 9px; background: var(--accent);
   display: flex; align-items: center; justify-content: center; flex: none;
 }
 .brand-name { font-family: var(--serif); font-size: 17.5px; line-height: 1.25; }
@@ -166,11 +168,11 @@ button { font-family: inherit; cursor: pointer; }
 }
 .nav-item svg { flex: none; color: var(--ink-2); }
 .nav-item:hover { background: rgba(255, 255, 255, .65); }
-.nav-item.is-active { background: var(--clay-soft); color: var(--clay-dark); }
-.nav-item.is-active svg { color: var(--clay); }
+.nav-item.is-active { background: var(--accent-soft); color: var(--accent-dark); }
+.nav-item.is-active svg { color: var(--accent); }
 .nav-badge {
   margin-left: auto; min-width: 22px; text-align: center;
-  background: var(--clay); color: #fff; font-size: 12px; line-height: 1;
+  background: var(--accent); color: #fff; font-size: 12px; line-height: 1;
   padding: 4px 6px; border-radius: 999px;
 }
 .sidebar-foot { margin-top: auto; border-top: 1px solid var(--border);
@@ -178,7 +180,7 @@ button { font-family: inherit; cursor: pointer; }
 .teacher-row { display: flex; align-items: center; gap: 10px; padding: 0 6px; }
 .avatar {
   width: 34px; height: 34px; border-radius: 50%; flex: none;
-  background: var(--clay-soft); color: var(--clay-dark);
+  background: var(--accent-soft); color: var(--accent-dark);
   display: flex; align-items: center; justify-content: center;
   font-family: var(--serif); font-size: 15px;
 }
@@ -215,7 +217,7 @@ button { font-family: inherit; cursor: pointer; }
   border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px 22px;
 }
 .stat-num { font-family: var(--serif); font-size: 34px; line-height: 1.15;
-  color: var(--clay-dark); }
+  color: var(--accent-dark); }
 .stat-num.plain { color: var(--ink); font-size: 21px; padding-top: 8px; }
 .stat-label { font-size: 14.5px; margin-top: 2px; }
 .stat-hint { font-size: 12.5px; color: var(--ink-3); margin-top: 3px; }
@@ -230,11 +232,11 @@ button { font-family: inherit; cursor: pointer; }
   background: var(--border-strong); position: relative; top: -1px;
 }
 .flow-done .flow-dot { background: var(--sage); }
-.flow-active .flow-dot { background: var(--clay); }
+.flow-active .flow-dot { background: var(--accent); }
 .flow-name { min-width: 128px; }
 .flow-desc { color: var(--ink-2); font-size: 13.5px; }
 .flow-state { margin-left: auto; font-size: 12.5px; color: var(--ink-3); }
-.flow-active .flow-state { color: var(--clay-dark); }
+.flow-active .flow-state { color: var(--accent-dark); }
 
 /* ---- pills & chips ---- */
 .pill {
@@ -245,7 +247,7 @@ button { font-family: inherit; cursor: pointer; }
 .pill-neutral { background: var(--gray-soft); color: var(--ink-2); }
 .tier-reliable { background: var(--sage-soft); color: var(--sage); }
 .tier-doubtful { background: var(--amber-soft); color: var(--amber); }
-.tier-manual { background: var(--clay); color: #fff; }
+.tier-manual { background: var(--accent); color: #fff; }
 .grade-correct { background: var(--sage-soft); color: var(--sage); }
 .grade-wrong { background: var(--red-soft); color: var(--red); }
 .grade-partial { background: var(--amber-soft); color: var(--amber); }
@@ -255,7 +257,7 @@ button { font-family: inherit; cursor: pointer; }
 .state-improving { background: var(--bluegray-soft); color: var(--bluegray); }
 .state-mastered { background: var(--sage-soft); color: var(--sage); }
 .state-review { background: #F3E6DE; color: #96604A; }
-.cat-common { background: var(--clay-soft); color: var(--clay-dark); }
+.cat-common { background: var(--accent-soft); color: var(--accent-dark); }
 .cat-current { background: var(--bluegray-soft); color: var(--bluegray); }
 .cat-weak { background: var(--amber-soft); color: var(--amber); }
 .cat-review { background: var(--gray-soft); color: var(--ink-2); }
@@ -279,9 +281,9 @@ button { font-family: inherit; cursor: pointer; }
   font-size: 14px; padding: 9px 18px; border-radius: 10px; min-height: 40px;
 }
 .btn:hover { background: var(--paper); }
-.btn-primary { background: var(--clay); border-color: var(--clay);
+.btn-primary { background: var(--accent); border-color: var(--accent);
   color: #fff; }
-.btn-primary:hover { background: var(--clay-dark); }
+.btn-primary:hover { background: var(--accent-dark); }
 .btn-small { padding: 5px 12px; min-height: 32px; font-size: 13px; }
 
 /* ---- recognition view ---- */
