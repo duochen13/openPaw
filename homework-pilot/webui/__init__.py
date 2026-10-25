@@ -1,14 +1,16 @@
-"""Teacher console UI for homework-pilot (issue #167).
+"""Student-side MVP UI for homework-pilot (issue #176).
 
-The first teacher-facing frontend: a self-contained HTML console in the
-Muse desktop design language (warm ivory paper, white cards, one clay
-accent), rendered from view models that mirror the upstream package
-shapes. Five views -- 工作台 / 识别确认 / 薄弱点确认 / 作业审核 / 导出 --
-bound to synthetic demo fixtures until real field materials land (#108).
+The product pivoted from the #167 teacher console to a student-side
+MVP: a student uploads a scanned PDF of a completed paper and gets one
+verdict per question （对 / 错 / 待确认）, with a confirmation queue for
+the questions the system could not settle. One self-contained HTML
+file in the Muse desktop design language, rendered from view models
+over synthetic demo fixtures.
 
-* :mod:`webui.models` -- view dataclasses + the five teaching-judgment
-  states, OCR reliability tiers, and the privacy rules they encode.
-* :mod:`webui.fixtures` -- invented demo data (S-0xx IDs, SYN- questions).
+* :mod:`webui.models` -- view dataclasses + the verdict vocabulary,
+  verdict sources, OCR reliability tiers, and the privacy rules they
+  encode (ID-only students; reliability kept separate from verdicts).
+* :mod:`webui.fixtures` -- invented demo data (one student, S-023).
 * :mod:`webui.render` -- view-model builders + the single-file renderer.
 
 Render with ``python3 -m webui [output.html]`` from ``homework-pilot/``.
@@ -16,36 +18,26 @@ Render with ``python3 -m webui [output.html]`` from ``homework-pilot/``.
 
 from .fixtures import build_demo_data
 from .models import (
-    GRADING_RESULTS,
-    MASTERY_STATES,
-    MIX_CATEGORIES,
-    ClassData,
-    ConsoleData,
-    EvidenceSnippet,
-    ExportInfo,
-    RecognitionItem,
+    PAPER_STATUSES,
+    VERDICTS,
+    VERDICT_SOURCES,
+    PaperResult,
+    QuestionResult,
     ReliabilityTier,
-    ReviewQuestionView,
-    SkillHypothesisView,
-    StudentMix,
+    StudentData,
     reliability_tier,
 )
-from .render import render_console
+from .render import render_demo
 
 __all__ = [
-    "GRADING_RESULTS",
-    "MASTERY_STATES",
-    "MIX_CATEGORIES",
-    "ClassData",
-    "ConsoleData",
-    "EvidenceSnippet",
-    "ExportInfo",
-    "RecognitionItem",
+    "PAPER_STATUSES",
+    "VERDICTS",
+    "VERDICT_SOURCES",
+    "PaperResult",
+    "QuestionResult",
     "ReliabilityTier",
-    "ReviewQuestionView",
-    "SkillHypothesisView",
-    "StudentMix",
+    "StudentData",
     "build_demo_data",
     "reliability_tier",
-    "render_console",
+    "render_demo",
 ]
