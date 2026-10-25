@@ -59,15 +59,73 @@ so the design doc still lives under the misspelled folder.
 | [#167](https://github.com/duochen13/openPaw/issues/167) teacher console UI | this PR — built as a teacher console, then **pivoted to the student-side MVP (#176)** on the same branch; see the #176 row. |
 | [#176](https://github.com/duochen13/openPaw/issues/176) student-side MVP | this PR — student uploads a completed paper scan (PDF) and gets per-question 对 / 错 / 待确认 verdicts with a confirmation queue. Demo fixtures only; live pipeline wiring and any real student data still gated on #108 Phase 2 (school stance / privacy). |
 
-## Running tests
+## How to run
 
-Each PR branch is self-contained: run its package tests from `homework-pilot/` with
+Everything below works from a fresh clone with no build step. All commands were verified on the current `main` (2026-10-25).
+
+### Prerequisites
+
+- **Python 3.10+** (verified on 3.12). The packages, the demo, and the end-to-end run are **Python standard library only** — there is no `requirements.txt` and nothing to pip-install for them.
+- Two corners need extras:
+  - `review/` tests are pytest-style: `pip install pytest`. (stdlib `unittest` discovery finds 0 tests there — that is expected, not a failure.) A few export tests also call poppler's `pdftotext` / `pdfinfo` when available and skip otherwise.
+  - Regenerating the synthetic pilot papers (`pilot-kit/tools/build_papers.py`) needs Pillow (`pip install pillow`) and Noto CJK fonts.
+
+### Student web UI demo (`webui/`)
+
+Run from `homework-pilot/`:
 
 ```bash
-python3 -m unittest discover -s <pkg>/tests -t .
+python3 -m webui                 # writes ./student-mvp.html
+python3 -m webui /path/out.html  # or choose the output path
 ```
 
-Cross-PR wiring (e.g. how `review` consumes `assembly` shapes, how `taxonomy` reads the `evidence` ledger) is documented in each package's README on its PR branch — read there before wiring. Intended merge order: #122 (evidence) → #124 (taxonomy) → #125 (assembly) → #127 (review); #123 (ingestion), #121 (privacy), #119/#120 (docs) are independent. (As of writing, no homework-pilot module has merged to `main`.)
+Expected output: `wrote student-mvp.html (34084 chars)`. Open the file in any browser — it is one self-contained HTML file (no server, no external assets) showing the 试卷 / 结果 / 待确认 views over synthetic demo fixtures (student ID S-023). Deep links: `?view=papers|result|confirm`, plus `&paper=<id>`.
+
+### Tests
+
+Per package, from `homework-pilot/`:
+
+```bash
+python3 -m unittest discover -s evidence/tests -t .    # 22 tests
+python3 -m unittest discover -s ingestion/tests -t .   # 14 tests
+python3 -m unittest discover -s taxonomy/tests -t .    # 26 tests
+python3 -m unittest discover -s assembly/tests -t .    # 33 tests
+python3 -m unittest discover -s privacy/tests -t .     # 25 tests
+python3 -m unittest discover -s webui/tests -t .       # 24 tests
+python3 -m pytest review/tests                         # 32 tests (pytest required, see above)
+```
+
+The `pilot-kit/` tests run from inside `pilot-kit/`:
+
+```bash
+cd pilot-kit
+python3 -m unittest discover -s tests                  # 13 tests
+```
+
+Or the whole suite at once, from `homework-pilot/` (needs pytest):
+
+```bash
+python3 -m pytest                                      # 189 passed
+```
+
+### End-to-end smoke run (pilot-kit)
+
+Proves the starter kit drives the real pipeline stages (ingestion → OCR evaluation → taxonomy diagnosis) end-to-end on synthetic data. Runnable from anywhere:
+
+```bash
+python3 homework-pilot/pilot-kit/tools/run_end_to_end.py
+```
+
+Expected: a series of `ok` lines ending in `ALL CHECKS PASSED`, exit code 0.
+
+To regenerate the kit's synthetic papers (PDFs, page PNGs, manifest):
+
+```bash
+cd homework-pilot/pilot-kit
+python3 tools/build_papers.py    # needs Pillow + Noto CJK fonts
+```
+
+Cross-package wiring (e.g. how `review` consumes `assembly` shapes, how `taxonomy` reads the `evidence` ledger) is documented in each package's own README — read there before wiring.
 
 ## Privacy
 
