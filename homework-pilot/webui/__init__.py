@@ -12,8 +12,12 @@ over synthetic demo fixtures.
   encode (ID-only students; reliability kept separate from verdicts).
 * :mod:`webui.fixtures` -- invented demo data (one student, S-023).
 * :mod:`webui.render` -- view-model builders + the single-file renderer.
+* :mod:`webui.serve` -- the local web server (issue #179): the same
+  views over the live ``grading`` pipeline, with uploads and a
+  persistent confirmation store.
 
-Render with ``python3 -m webui [output.html]`` from ``homework-pilot/``.
+Render with ``python3 -m webui [output.html]`` from ``homework-pilot/``;
+serve with ``python3 -m webui --serve [--port 8000]``.
 """
 
 from .fixtures import build_demo_data

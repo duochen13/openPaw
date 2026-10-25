@@ -122,11 +122,14 @@ webfonts are loaded.
 
 ## Scope limits
 
-* Demo fixtures only; no live pipeline wiring, no persistence, no
-  backend behavior changes. The other homework-pilot packages are
-  untouched by this package.
+* The static demo renders fixtures only. The **local server** (`serve.py`,
+  #179: `python3 -m webui --serve`) wires the same views to the live
+  `grading/` pipeline and persists confirmations to
+  `homework-pilot/.local-data/` — but its v1 backends are the synthetic
+  kit's test doubles (uploads are graded by student ID through the kit
+  path; non-kit uploads are stored as 未识别 and never judged). See the
+  homework-pilot README's "Local web server" section.
 * The question-crop region is a placeholder until scanned pages are
   plumbed through from `ingestion`.
-* Wiring the UI to the real upload → segmentation → transcription →
-  verdict pipeline, and using real student papers at all, is follow-up
-  work gated on the #108 Phase 2 school-stance / privacy question.
+* Using real student papers at all remains gated on the #108 Phase 2
+  school-stance / privacy question.

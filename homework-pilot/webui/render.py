@@ -709,10 +709,18 @@ def main(argv: list[str] | None = None) -> int:
 
     Usage (from ``homework-pilot/``): ``python3 -m webui [output.html]``
     -- defaults to ``student-mvp.html`` in the current directory.
+
+    ``python3 -m webui --serve [--port 8000]`` instead starts the
+    local web server (issue #179; see :mod:`webui.serve`): the same
+    views over the live grading pipeline and a persistent store.
     """
     from .fixtures import build_demo_data
 
     args = sys.argv[1:] if argv is None else argv
+    if "--serve" in args:
+        from .serve import serve_main
+
+        return serve_main([a for a in args if a != "--serve"])
     out = args[0] if args else "student-mvp.html"
     document = render_demo(build_demo_data())
     with open(out, "w", encoding="utf-8") as fh:
