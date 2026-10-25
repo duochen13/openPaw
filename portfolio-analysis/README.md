@@ -332,8 +332,9 @@ Factor trajectories (beta/alpha over time) remain available per stock in the
 ## AI trade dashboard (issue #163)
 
 The dashboard index links a second tab next to Insight: `ai-trade.html`, the
-AI slowdown watch's 7-panel chart (inflation, rates, Big-3 capex, credit
-stress, CoreWeave equity vs debt cost, compute economics, and 5Y CDS)
+AI slowdown watch's 8-panel chart (inflation, rates, Big-3 capex, credit
+stress, CoreWeave equity vs debt cost, compute economics, 5Y CDS, and
+hyperscaler cloud revenue & growth)
 rendered natively as line charts — no embedded image, no fetching at build
 or view time.
 
@@ -352,8 +353,17 @@ press-reported 5Y CDS prints only — the format has no room for an estimate
 or a projection, and Panel 7 never draws one), and `series_notes.csv`
 (per-series source + as-of date; every plotted series must have one).
 
+Panel 8 (hyperscaler cloud, issue #174) is the exception to the vendoring
+rule: it reads the Insight page's `data/insight/cloud_revenue.csv` through
+that module's own loader — one source of truth shared with Section D — and
+appears only when that CSV is present. It plots quarterly segment revenue
+and YoY growth (2020 quarters are the YoY base year) for Google Cloud, AWS
+and Microsoft Intelligent Cloud, plus the full quarterly YoY table;
+Microsoft's Azure dollar revenue is not disclosed and is never plotted.
+
 Refresh: re-run the watcher's `make_combined_chart.py`, re-extract
 `combined-monthly.csv` into `monthly.csv`, update `snapshots.csv` /
 `cds_snapshots.csv` from the watch logs (`anthropic-arr.log`,
 `spread-tracker/`) and the script's dated CDS block, and bump the `as_of`
-dates in `series_notes.csv`.
+dates in `series_notes.csv`. Panel 8 refreshes with the Insight page:
+append quarters to `data/insight/cloud_revenue.csv`.
