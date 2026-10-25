@@ -4,8 +4,12 @@ Renders :class:`~webui.models.ConsoleData` into ONE self-contained HTML
 file -- no external stylesheets, scripts, fonts or images (the same
 philosophy as the portfolio dashboard). View switching and the class
 switcher are small vanilla-JS interactions inside the file; action
-buttons are demo placeholders (a click stamps the card as handled,
-client-side only) until the console is wired to the pipeline.
+buttons are inline-SVG icon buttons (the Chinese action word lives in
+``title`` / ``aria-label`` only) and demo placeholders (a click stamps
+the card as handled, client-side only) until the console is wired to
+the pipeline. Views show only their key elements; secondary detail is
+shortened or folded away (2026-10-24 simplification pass per Daniel:
+key features first, icons over text, calmer like the Muse app).
 
 Design language: the Muse desktop app -- neutral grey paper, white
 cards, one charcoal accent (#262626), serif display headings + clean
@@ -135,7 +139,7 @@ button { font-family: inherit; cursor: pointer; }
   overflow-y: auto;
 }
 .main { margin-left: 252px; }
-.content { max-width: 1020px; margin: 0 auto; padding: 42px 48px 72px; }
+.content { max-width: 1020px; margin: 0 auto; padding: 48px 48px 84px; }
 
 /* ---- sidebar ---- */
 .brand { display: flex; align-items: center; gap: 11px; padding: 2px 6px; }
@@ -189,28 +193,41 @@ button { font-family: inherit; cursor: pointer; }
 .privacy-note { font-size: 12px; color: var(--ink-3); padding: 10px 6px 0; }
 
 /* ---- view scaffolding ---- */
-.view-head { margin-bottom: 26px; }
+.view-head { margin-bottom: 28px; }
 .view-head h1 { font-size: 30px; margin: 0 0 6px; letter-spacing: .01em; }
 .view-sub { color: var(--ink-2); margin: 0; font-size: 14.5px; }
 .card {
   background: var(--card); border: 1px solid var(--border);
   border-radius: var(--radius); box-shadow: var(--shadow);
-  padding: 22px 24px; margin-bottom: 18px;
-  transition: transform .15s ease, box-shadow .15s ease;
+  padding: 24px 26px; margin-bottom: 22px;
 }
-.card:hover { transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(31,30,28,.05), 0 10px 26px rgba(31,30,28,.06); }
 .card.is-done { opacity: .72; }
-.card h3 { margin: 0 0 8px; font-size: 18px; }
+.card h3 { margin: 0 0 10px; font-size: 18px; }
 .muted { color: var(--ink-2); }
 .small { font-size: 13px; }
-.note-card { background: #FBFAF6; }
+.view-note { margin: 0 0 16px; }
 .demo-status { font-size: 13px; color: var(--sage); margin-left: 6px; }
 
+/* ---- collapsed secondary detail (<details>) ---- */
+details.more { margin-top: 12px; }
+details.more > summary {
+  cursor: pointer; color: var(--ink-2); font-size: 13.5px;
+  list-style: none; display: inline-flex; align-items: center; gap: 6px;
+}
+details.more > summary::-webkit-details-marker { display: none; }
+details.more > summary::before { content: "+"; color: var(--ink-3);
+  font-size: 15px; line-height: 1; }
+details.more[open ] > summary::before { content: "−"; }
+details.more > summary:hover { color: var(--ink); }
+details.more.block { margin: 0 0 18px; }
+
 /* ---- dashboard ---- */
+.todo-line { font-size: 15px; color: var(--ink-2); margin: 0 0 16px; }
+.todo-line strong { color: var(--ink); font-family: var(--serif);
+  font-size: 17px; }
 .stat-grid {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-  gap: 16px; margin-bottom: 18px;
+  gap: 16px; margin-bottom: 22px;
 }
 .stat-card {
   background: var(--card); border: 1px solid var(--border);
@@ -218,25 +235,7 @@ button { font-family: inherit; cursor: pointer; }
 }
 .stat-num { font-family: var(--serif); font-size: 34px; line-height: 1.15;
   color: var(--accent-dark); }
-.stat-num.plain { color: var(--ink); font-size: 21px; padding-top: 8px; }
 .stat-label { font-size: 14.5px; margin-top: 2px; }
-.stat-hint { font-size: 12.5px; color: var(--ink-3); margin-top: 3px; }
-.flow-list { list-style: none; margin: 6px 0 0; padding: 0; }
-.flow-list li {
-  display: flex; gap: 12px; align-items: baseline;
-  padding: 8px 0; border-bottom: 1px solid var(--border);
-}
-.flow-list li:last-child { border-bottom: none; }
-.flow-dot {
-  width: 9px; height: 9px; border-radius: 50%; flex: none;
-  background: var(--border-strong); position: relative; top: -1px;
-}
-.flow-done .flow-dot { background: var(--sage); }
-.flow-active .flow-dot { background: var(--accent); }
-.flow-name { min-width: 128px; }
-.flow-desc { color: var(--ink-2); font-size: 13.5px; }
-.flow-state { margin-left: auto; font-size: 12.5px; color: var(--ink-3); }
-.flow-active .flow-state { color: var(--accent-dark); }
 
 /* ---- pills & chips ---- */
 .pill {
@@ -244,7 +243,6 @@ button { font-family: inherit; cursor: pointer; }
   font-size: 12.5px; line-height: 1; padding: 5px 10px;
   border-radius: 999px; white-space: nowrap;
 }
-.pill-neutral { background: var(--gray-soft); color: var(--ink-2); }
 .tier-reliable { background: var(--sage-soft); color: var(--sage); }
 .tier-doubtful { background: var(--amber-soft); color: var(--amber); }
 .tier-manual { background: var(--accent); color: #fff; }
@@ -274,45 +272,52 @@ button { font-family: inherit; cursor: pointer; }
   margin-bottom: 12px; }
 .card-head .spacer { flex: 1; }
 .assigned { color: var(--ink-3); font-size: 13px; }
-.actions { display: flex; align-items: center; gap: 9px; margin-top: 16px;
+.actions { display: flex; align-items: center; gap: 6px; margin-top: 16px;
   flex-wrap: wrap; }
-.btn {
-  border: 1px solid var(--border-strong); background: #fff; color: var(--ink);
-  font-size: 14px; padding: 9px 18px; border-radius: 10px; min-height: 40px;
+/* Icon buttons: the action word lives in title / aria-label only. */
+.icon-btn {
+  width: 38px; height: 38px; padding: 0; flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--border-strong); border-radius: 10px;
+  background: #fff; color: var(--ink-2);
 }
-.btn:hover { background: var(--paper); }
-.btn-primary { background: var(--accent); border-color: var(--accent);
+.icon-btn:hover { background: var(--paper); color: var(--ink); }
+.icon-btn.primary { background: var(--accent); border-color: var(--accent);
   color: #fff; }
-.btn-primary:hover { background: var(--accent-dark); }
-.btn-small { padding: 5px 12px; min-height: 32px; font-size: 13px; }
+.icon-btn.primary:hover { background: var(--accent-dark); }
+.icon-btn.danger:hover { color: var(--red); border-color: var(--red); }
+/* The one text button left: the whole-class batch export, whose scope
+   (everything, not this row) an icon alone cannot say. */
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  border: 1px solid var(--accent); background: var(--accent); color: #fff;
+  font-size: 14px; padding: 10px 18px; border-radius: 10px; min-height: 40px;
+}
+.btn:hover { background: var(--accent-dark); }
 
 /* ---- recognition view ---- */
-.recog-grid { display: grid; grid-template-columns: 218px 1fr; gap: 22px; }
+.recog-grid { display: grid; grid-template-columns: 132px 1fr; gap: 20px; }
 .img-ph {
   border: 1.5px dashed var(--border-strong); border-radius: 12px;
-  background: #FBFAF6; min-height: 168px; padding: 16px;
-  display: flex; flex-direction: column; gap: 5px;
+  background: #FAFAFA; min-height: 108px; padding: 12px 8px;
+  display: flex; flex-direction: column; gap: 4px; color: var(--ink-3);
   align-items: center; justify-content: center; text-align: center;
 }
-.img-ph-title { font-family: var(--serif); font-size: 15.5px; }
-.img-ph-loc { font-size: 12px; color: var(--ink-2); word-break: break-all; }
+.img-ph-loc { font-size: 12px; color: var(--ink-2); }
 .img-ph-note { font-size: 12px; color: var(--ink-3); }
-.field-label { font-size: 12.5px; color: var(--ink-3);
-  letter-spacing: .04em; display: block; margin-bottom: 4px; }
 .answer-text {
-  background: #FBFAF7; border: 1px solid var(--border); border-radius: 10px;
+  background: #FAFAFA; border: 1px solid var(--border); border-radius: 10px;
   padding: 11px 14px; margin: 0 0 12px; font-size: 15px;
 }
 .answer-empty { color: var(--ink-3); }
-.field-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.field-row .field-label { margin: 0; }
+.meta-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 
 /* ---- hypothesis view ---- */
-.legend-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
-.evidence-list { list-style: none; margin: 8px 0 0; padding: 0; }
+.legend-row { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 20px; }
+.evidence-list { list-style: none; margin: 10px 0 0; padding: 0; }
 .evidence-list li {
   display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap;
-  padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 14px;
+  padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 13.5px;
 }
 .evidence-list li:last-child { border-bottom: none; }
 .ev-q { font-weight: 600; }
@@ -341,15 +346,22 @@ button { font-family: inherit; cursor: pointer; }
   padding: 6px 12px; display: inline-block; }
 .figure-ph {
   border: 1.5px dashed var(--border-strong); border-radius: 10px;
-  background: #FBFAF6; color: var(--ink-2); font-size: 13.5px;
+  background: #FAFAFA; color: var(--ink-2); font-size: 13.5px;
   padding: 12px 16px; margin-bottom: 14px;
 }
+.answer-row { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+.q-more { margin-top: 14px; }
+.q-more summary { cursor: pointer; color: var(--ink-2); font-size: 13.5px;
+  list-style: none; }
+.q-more summary::-webkit-details-marker { display: none; }
+.q-more summary:hover { color: var(--ink); }
+.q-more .q-fields { margin-top: 4px; }
 
 /* ---- export view ---- */
 .export-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 18px;
   align-items: start; }
 .export-grid .card { margin-bottom: 0; }
-.teacher-key-card { background: #FBFAF6; }
+.teacher-key-card { background: #FAFAFA; }
 @media (max-width: 900px) {
   .recog-grid, .export-grid { grid-template-columns: 1fr; }
   .content { padding: 28px 20px 56px; }
@@ -483,6 +495,88 @@ _VIEWS = (
     ("export", "导出", None),
 )
 
+# ---------------------------------------------------------------------------
+# Action icons: inline SVG paths (24x24, stroke style matching the nav
+# icons). Per Daniel's direction the buttons show the icon only; the
+# Chinese action word is carried by title / aria-label.
+# ---------------------------------------------------------------------------
+
+_ACTION_ICONS = {
+    "check": '<path d="M20 6L9 17l-5-5"/>',
+    "pencil": (
+        '<path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>'
+    ),
+    "keyboard": (
+        '<rect x="3" y="6.5" width="18" height="11" rx="2"/>'
+        '<path d="M7 10.3h.01M10.3 10.3h.01M13.6 10.3h.01M17 10.3h.01'
+        'M7.5 14h9"/>'
+    ),
+    "x": '<path d="M18 6L6 18M6 6l12 12"/>',
+    "swap": (
+        '<path d="M4 7h13"/><path d="M13.5 3.5L17 7l-3.5 3.5"/>'
+        '<path d="M20 17H7"/><path d="M10.5 13.5L7 17l3.5 3.5"/>'
+    ),
+    "trash": (
+        '<path d="M5 7h14M10 7V5a1.5 1.5 0 0 1 1.5-1.5h1A1.5 1.5 0 0 1 '
+        '14 5v2M8 7l.7 11.2a1.5 1.5 0 0 0 1.5 1.3h3.6a1.5 1.5 0 0 0 '
+        '1.5-1.3L16 7M10.3 11v4.5M13.7 11v4.5"/>'
+    ),
+    "download": (
+        '<path d="M12 3v12"/><path d="M7 10l5 5 5-5"/>'
+        '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>'
+    ),
+    "arrow": '<path d="M5 12h14"/><path d="M12 5l7 7-7 7"/>',
+    "image": (
+        '<rect x="3" y="3" width="18" height="18" rx="2"/>'
+        '<circle cx="8.5" cy="8.5" r="1.5"/>'
+        '<path d="M21 15l-5-5L5 21"/>'
+    ),
+}
+
+
+def _svg(paths: str, size: int = 18) -> str:
+    return (
+        f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" '
+        f'fill="none" stroke="currentColor" stroke-width="1.8" '
+        f'stroke-linecap="round" stroke-linejoin="round" '
+        f'aria-hidden="true">{paths}</svg>'
+    )
+
+
+def _icon_btn(
+    icon: str,
+    label: str,
+    *,
+    demo: str | None = None,
+    primary: bool = False,
+    danger: bool = False,
+    export_fn: str | None = None,
+    export_note: str = "",
+) -> str:
+    """One icon-only action button.
+
+    ``label`` is the Chinese action word; it appears only in ``title``
+    (tooltip) and ``aria-label``. Demo buttons stamp their card via
+    ``data-demo``; export buttons stay inert and name their backend
+    function in the title, per the export placeholder convention.
+    """
+    cls = "icon-btn"
+    if primary:
+        cls += " primary"
+    if danger:
+        cls += " danger"
+    if export_fn:
+        title = f"{label} · 将调用 review.export.{export_fn}（{export_note}）"
+        action = f'data-export-fn="{export_fn}"'
+    else:
+        title = label
+        action = f'data-demo="{_esc(demo or "")}"'
+    return (
+        f'<button type="button" class="{cls}" {action} '
+        f'title="{_esc(title)}" aria-label="{_esc(label)}">'
+        f"{_svg(_ACTION_ICONS[icon])}</button>"
+    )
+
 
 def _head(title: str, sub: str) -> str:
     return (
@@ -493,55 +587,45 @@ def _head(title: str, sub: str) -> str:
 
 def _dashboard_section(cls: ClassData) -> str:
     vm = dashboard_vm(cls)
-    flow = [
-        ("上传批改作业", "纸质作业照片 / 扫描件", "done", "已完成"),
-        ("识别与匹配", "关联学生、页码与小题，识别作答与批改痕迹", "done", "已完成"),
-        ("确认识别结果", f"还有 {vm['recognition_count']} 条识别结果待确认",
-         "active" if vm["recognition_count"] else "done",
-         "待处理" if vm["recognition_count"] else "已完成"),
-        ("确认薄弱点", f"{vm['hypothesis_count']} 人次技能判断待确认",
-         "active" if vm["hypothesis_count"] else "done",
-         "待处理" if vm["hypothesis_count"] else "已完成"),
-        ("按证据组卷", "当前学习 / 薄弱点练习 / 旧知识复习 动态混合", "done", "已完成"),
-        ("审核题目", f"{vm['review_count']} 道共享题目待审核",
-         "active" if vm["review_count"] else "done",
-         "待处理" if vm["review_count"] else "已完成"),
-        ("导出打印", "学生卷 PDF 与教师版分别导出", "todo", "未开始"),
-    ]
-    flow_html = "".join(
-        f'<li class="flow-{status}"><span class="flow-dot"></span>'
-        f'<span class="flow-name">{_esc(name)}</span>'
-        f'<span class="flow-desc">{_esc(desc)}</span>'
-        f'<span class="flow-state">{_esc(state)}</span></li>'
-        for name, desc, status, state in flow
-    )
+    # The single next action: the earliest stage of the loop that still
+    # has pending work; when everything is confirmed, exporting is next.
+    if vm["recognition_count"]:
+        next_label = "确认识别结果"
+        next_detail = f"还有 {vm['recognition_count']} 条待确认"
+        next_view = "recognition"
+    elif vm["hypothesis_count"]:
+        next_label = "确认薄弱点"
+        next_detail = f"还有 {vm['hypothesis_count']} 人次待确认"
+        next_view = "hypotheses"
+    elif vm["review_count"]:
+        next_label = "审核题目"
+        next_detail = f"还有 {vm['review_count']} 道待审核"
+        next_view = "review"
+    else:
+        next_label = "导出打印"
+        next_detail = "待办已清零，可以导出本轮作业"
+        next_view = "export"
     return f"""
 <section class="view" data-cls="{_esc(cls.key)}" data-view="dashboard">
   {_head("工作台", f"{cls.label} · {cls.chapter_label} · 本次作业 {cls.assignment_number}")}
+  <button type="button" class="next-card" data-nav-view="{next_view}">
+    <span class="next-text">
+      <span class="next-kicker">下一步</span>
+      <span class="next-label">{_esc(next_label)}</span>
+      <span class="next-detail">{_esc(next_detail)}</span>
+    </span>
+    <span class="next-arrow">{_svg(_ACTION_ICONS["arrow"], 20)}</span>
+  </button>
   <div class="stat-grid">
     <div class="stat-card"><div class="stat-num">{vm['recognition_count']}</div>
-      <div class="stat-label">待确认识别（条）</div>
-      <div class="stat-hint">含需手录与存疑条目</div></div>
+      <div class="stat-label">待确认识别（条）</div></div>
     <div class="stat-card"><div class="stat-num">{vm['hypothesis_count']}</div>
       <div class="stat-label">待确认薄弱点（人次）</div>
       <div class="stat-hint">涉及 {vm['hypothesis_students']} 位学生</div></div>
     <div class="stat-card"><div class="stat-num">{vm['review_count']}</div>
-      <div class="stat-label">待审核题目（道）</div>
-      <div class="stat-hint">按共享题目审核，一次覆盖全班</div></div>
-    <div class="stat-card"><div class="stat-num plain">{_esc(vm['last_export'])}</div>
-      <div class="stat-label">最近一次导出</div>
-      <div class="stat-hint">学生卷与教师版分开导出</div></div>
+      <div class="stat-label">待审核题目（道）</div></div>
   </div>
-  <div class="card">
-    <h3>本次作业流程</h3>
-    <ul class="flow-list">{flow_html}</ul>
-  </div>
-  <div class="card note-card">
-    <h3>使用说明</h3>
-    <p class="muted">学生仅以编号（如 S-023）显示，系统不保存姓名。技能状态是可修正的
-    教学判断，不是学生的固定标签；识别可靠度只表示系统读得准不准，与学生是否掌握无关，
-    两者分开呈现。</p>
-  </div>
+  <p class="muted small">学生仅以编号显示，系统不保存姓名；识别可靠度与掌握判断分开呈现。</p>
 </section>"""
 
 
@@ -553,44 +637,40 @@ def _recognition_section(cls: ClassData) -> str:
             _esc(vm["answer"]) if vm["answer"]
             else '<span class="answer-empty">（未能读出内容，请对照原图手录）</span>'
         )
+        actions = "".join([
+            _icon_btn("check", "确认", demo="已确认", primary=True),
+            _icon_btn("pencil", "修改", demo="已打开修改"),
+            _icon_btn("keyboard", "手录", demo="已切换到手录"),
+            '<span class="demo-status"></span>',
+        ])
         cards.append(f"""
     <article class="card" data-card>
       <div class="recog-grid">
         <div class="img-ph">
-          <div class="img-ph-title">原图区域</div>
-          <div class="img-ph-loc">{_esc(vm['page_label'])} · {_esc(vm['image_location'])}</div>
-          <div class="img-ph-note">接入扫描件后在此显示原图</div>
+          {_svg(_ACTION_ICONS["image"], 22)}
+          <div class="img-ph-loc">{_esc(vm['page_label'])}</div>
+          <div class="img-ph-note">原图待接入</div>
         </div>
         <div>
           <div class="card-head">
             <span class="id-chip">{_esc(vm['student_id'])}</span>
             <strong>{_esc(vm['question_label'])}</strong>
-            <span class="skill-tag">{_esc(vm['skill_name'])}</span>
             <span class="spacer"></span>
             <span class="pill {vm['tier_class']}">识别{vm['tier_label']}</span>
           </div>
-          <span class="field-label">识别到的作答</span>
           <p class="answer-text">{answer}</p>
-          <div class="field-row">
-            <span class="field-label">批改结果（识别）</span>
+          <div class="meta-row">
+            <span class="skill-tag">{_esc(vm['skill_name'])}</span>
             <span class="pill {vm['grading_class']}">{_esc(vm['grading_result'])}</span>
-            <span class="field-label">作答日期</span>
-            <span>{_esc(vm['observed_date'])}</span>
+            <span class="muted small">{_esc(vm['observed_date'])}</span>
           </div>
-          <div class="actions">
-            <button type="button" class="btn btn-primary" data-demo="已确认">确认</button>
-            <button type="button" class="btn" data-demo="已打开修改">修改</button>
-            <button type="button" class="btn" data-demo="已切换到手录">手录</button>
-            <span class="demo-status"></span>
-          </div>
+          <div class="actions">{actions}</div>
         </div>
       </div>
     </article>""")
     intro = (
-        '<div class="card note-card"><p class="muted" style="margin:0">'
-        '这里确认的是<strong>系统读得对不对</strong>：可靠 = 识别把握较高；存疑 = 读出但'
-        '把握不足，请对照原图核对；需手录 = 基本读不出，请照原图录入。识别可靠度与学生'
-        '是否掌握是两件不同的事，不要混在一起判断。</p></div>'
+        '<p class="muted small view-note">'
+        '确认的是系统读得对不对；识别可靠度与学生是否掌握无关。</p>'
     )
     body = "\n".join(cards) if cards else '<div class="card"><p class="muted">没有待确认的识别条目。</p></div>'
     return f"""
@@ -619,33 +699,31 @@ def _hypotheses_section(cls: ClassData) -> str:
         provisional = (
             '<span class="pill hypo-badge">待验证假设</span>' if vm["provisional"] else ""
         )
+        actions = "".join([
+            _icon_btn("check", "确认", demo="已确认", primary=True),
+            _icon_btn("pencil", "修改状态", demo="已打开修改状态"),
+            _icon_btn("x", "驳回", demo="已驳回", danger=True),
+            '<span class="demo-status"></span>',
+        ])
         cards.append(f"""
     <article class="card" data-card>
       <div class="card-head">
         <span class="id-chip">{_esc(vm['student_id'])}</span>
         <strong>{_esc(vm['skill_name'])}</strong>
-        <span class="skill-tag">{_esc(vm['skill_id'])}</span>
         <span class="spacer"></span>
         {provisional}
         <span class="pill {vm['state_class']}">{_esc(vm['state'])}</span>
       </div>
       <p style="margin:0">{_esc(vm['hypothesis_note'])}</p>
-      <p class="muted small" style="margin:6px 0 0">判断把握：{_esc(vm['confidence'])}（定性判断，不是百分比）</p>
-      <span class="field-label" style="margin-top:12px">判断依据</span>
+      <p class="muted small" style="margin:4px 0 0">判断把握：{_esc(vm['confidence'])}</p>
       <ul class="evidence-list">{evidence}</ul>
-      <div class="actions">
-        <button type="button" class="btn btn-primary" data-demo="已确认">确认</button>
-        <button type="button" class="btn" data-demo="已打开修改状态">修改状态</button>
-        <button type="button" class="btn" data-demo="已驳回">驳回</button>
-        <span class="demo-status"></span>
-      </div>
+      <div class="actions">{actions}</div>
     </article>""")
     intro = (
-        '<div class="card note-card"><h3>技能状态（五种教学判断）</h3>'
-        '<p class="muted" style="margin:0">一次答错只能支持一个待验证的薄弱点假设，'
-        '一次答对也不能证明长期掌握。状态可以随时修正，系统不显示缺乏校准依据的'
-        '精确掌握百分比。</p>'
-        f'<div class="legend-row">{legend}</div></div>'
+        '<p class="muted small view-note">'
+        '一次对错只支持待验证假设，状态可随时修正；这里判断的是掌握，'
+        '与识别可靠度无关。</p>'
+        f'<div class="legend-row">{legend}</div>'
     )
     body = "\n".join(cards) if cards else '<div class="card"><p class="muted">没有待确认的薄弱点。</p></div>'
     return f"""
@@ -670,8 +748,7 @@ def _mix_summary_card(cls: ClassData) -> str:
     return f"""
   <div class="card">
     <h3>每位学生的题目构成</h3>
-    <p class="muted small" style="margin-top:0">共同题便于统一讲评；其余按每位学生的
-    证据动态混合，不预设全班固定比例。（演示夹具仅列出部分学生）</p>
+    <p class="muted small" style="margin-top:0">共同题统一讲评，其余按各自证据混合。（演示夹具仅列出部分学生）</p>
     <table class="mix-table">
       <thead><tr><th>学生</th>{header}<th class="num">合计</th></tr></thead>
       <tbody>{''.join(rows)}</tbody>
@@ -689,30 +766,37 @@ def _review_section(cls: ClassData) -> str:
             f'<div class="figure-ph">图待补充：{_esc(vm["figure_note"])}</div>'
             if vm["figure_note"] else ""
         )
+        actions = "".join([
+            _icon_btn("check", "通过", demo="已通过", primary=True),
+            _icon_btn("swap", "替换", demo="已打开替换"),
+            _icon_btn("trash", "移除", demo="已移除", danger=True),
+            '<span class="demo-status"></span>',
+        ])
         cards.append(f"""
     <article class="card" data-card>
       <div class="card-head">
         <strong class="serif">{_esc(vm['id'])}</strong>
         <span class="pill {vm['category_class']}">{_esc(vm['category'])}</span>
-        <span class="pill pill-neutral">预期难度：{_esc(vm['difficulty_label'])}</span>
         <span class="spacer"></span>
         <span class="assigned">布置给 {vm['assigned_count']} 位学生</span>
       </div>
       <p class="stem">{_esc(vm['stem'])}</p>
       {figure}
-      <dl class="q-fields">
-        <div><dt>目标技能</dt><dd>{skills}</dd></div>
-        <div><dt>推荐原因</dt><dd>{_esc(vm['recommendation_reason'])}</dd></div>
-        <div><dt>参考答案</dt><dd><span class="answer-box">{_esc(vm['answer'])}</span></dd></div>
-        <div><dt>解题过程</dt><dd><ol>{steps}</ol></dd></div>
-        <div><dt>评分说明</dt><dd>{_esc(vm['scoring_notes'])}</dd></div>
-      </dl>
-      <div class="actions">
-        <button type="button" class="btn btn-primary" data-demo="已通过">通过</button>
-        <button type="button" class="btn" data-demo="已打开替换">替换</button>
-        <button type="button" class="btn" data-demo="已移除">移除</button>
-        <span class="demo-status"></span>
+      <div class="answer-row">
+        <span class="muted small">参考答案</span>
+        <span class="answer-box">{_esc(vm['answer'])}</span>
       </div>
+      <details class="q-more">
+        <summary>详情 · 目标技能 / 推荐原因 / 解题过程 / 评分说明</summary>
+        <dl class="q-fields">
+          <div><dt>目标技能</dt><dd>{skills}</dd></div>
+          <div><dt>推荐原因</dt><dd>{_esc(vm['recommendation_reason'])}</dd></div>
+          <div><dt>预期难度</dt><dd>{_esc(vm['difficulty_label'])}</dd></div>
+          <div><dt>解题过程</dt><dd><ol>{steps}</ol></dd></div>
+          <div><dt>评分说明</dt><dd>{_esc(vm['scoring_notes'])}</dd></div>
+        </dl>
+      </details>
+      <div class="actions">{actions}</div>
     </article>""")
     body = "\n".join(cards) if cards else '<div class="card"><p class="muted">没有待审核的题目。</p></div>'
     return f"""
@@ -727,10 +811,10 @@ def _export_section(cls: ClassData) -> str:
     vm = export_vm(cls)
     rows = "".join(
         f'<tr><td><span class="id-chip">{_esc(sid)}</span></td>'
-        f"<td>{pages} 页</td><td>已生成</td>"
-        f'<td><button type="button" class="btn btn-small" '
-        f'data-export-fn="export_student_sheet" '
-        f'title="将调用 review.export.export_student_sheet（单个学生）">下载</button></td></tr>'
+        f"<td>{pages} 页</td>"
+        f'<td style="text-align:right">'
+        f'{_icon_btn("download", "下载", export_fn="export_student_sheet", export_note="单个学生")}'
+        f"</td></tr>"
         for sid, pages in vm["students"]
     )
     # Export buttons are inert placeholders in this static demo; each one
@@ -738,32 +822,35 @@ def _export_section(cls: ClassData) -> str:
     #   export_class        -> whole-class batch + teacher key + manifest
     #   export_student_sheet-> one student's sheet
     #   export_teacher_key  -> the separate teacher key (answers + 评分说明)
+    # The batch export keeps a visible text label next to its icon: it is
+    # the one action whose scope (the whole class, not a row) an icon
+    # alone cannot express.
+    batch_btn = (
+        '<button type="button" class="btn" data-export-fn="export_class" '
+        'title="将调用 review.export.export_class（全班批量导出）">'
+        f'{_svg(_ACTION_ICONS["download"])}全班批量导出</button>'
+    )
+    key_btn = _icon_btn(
+        "download", "下载教师版",
+        export_fn="export_teacher_key", export_note="教师版",
+    )
     return f"""
 <section class="view" data-cls="{_esc(cls.key)}" data-view="export">
   {_head("导出", f"{cls.label} · 作业 {vm['assignment_number']} · 学生卷与教师版分开导出")}
   <div class="export-grid">
     <article class="card">
       <h3>学生作业 PDF</h3>
-      <p class="muted">每位学生一份，只含题目与答题区，不含答案。
-      （演示夹具仅列出部分学生）</p>
+      <p class="muted small" style="margin-top:0">每位学生一份，只含题目与答题区。（演示夹具仅列出部分学生）</p>
       <table class="export-table">
-        <thead><tr><th>学生</th><th>页数</th><th>状态</th><th></th></tr></thead>
+        <thead><tr><th>学生</th><th>页数</th><th></th></tr></thead>
         <tbody>{rows}</tbody>
       </table>
-      <div class="actions">
-        <button type="button" class="btn btn-primary" data-export-fn="export_class"
-          title="将调用 review.export.export_class（全班批量导出）">全班批量导出</button>
-      </div>
+      <div class="actions">{batch_btn}</div>
     </article>
     <article class="card teacher-key-card">
       <h3>教师版（答案与评分说明）</h3>
-      <p class="muted">独立文件，含全部题目的参考答案、解题过程与评分说明，
-      与学生卷分开发放，请勿发给学生。</p>
-      <p class="muted">共 {vm['teacher_key_pages']} 页 · 作业 {vm['assignment_number']}</p>
-      <div class="actions">
-        <button type="button" class="btn" data-export-fn="export_teacher_key"
-          title="将调用 review.export.export_teacher_key（教师版）">下载教师版</button>
-      </div>
+      <p class="muted">共 {vm['teacher_key_pages']} 页 · 与学生卷分开导出，请勿发给学生。</p>
+      <div class="actions">{key_btn}</div>
     </article>
   </div>
   <p class="muted" style="margin-top:18px">最近一次导出：{_esc(vm['last_export'])}</p>
