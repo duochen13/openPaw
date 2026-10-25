@@ -1287,10 +1287,11 @@ def _svg_cloud_lines(
 ) -> str:
     """Multi-vendor quarterly line chart shared by the Section D panels.
 
-    Points sit at quarter starts on a calendar axis from 2021 (#169).
-    A point with no value (YoY for a vendor's first four quarters) is
-    simply not drawn - the line starts when the chained data does,
-    never at an interpolated value.
+    Points sit at quarter starts on a calendar axis spanning the
+    chained data: revenue from 2020 (the YoY base year), growth from
+    2021. A point with no value (YoY for a vendor's first four
+    quarters) is simply not drawn - the line starts when the chained
+    data does, never at an interpolated value.
     """
     W, H = 1000, 380
     pad_l, pad_r, pad_t, pad_b = 70, 30, 42, 54
@@ -1439,6 +1440,58 @@ def _svg_cloud_growth_chart(series: list[dict[str, Any]]) -> str:
     )
 
 
+#: Microsoft chained YoY cells that straddle the FY2025 segment
+#: redefinition (new-basis quarters against old-basis year-ago
+#: quarters) - asterisked in the Section D table, explained in the
+#: note under it.
+_CLOUD_TABLE_STAR_MSFT = {"2024-Q3", "2024-Q4", "2025-Q1", "2025-Q2"}
+
+
+def _cloud_yoy_table(series: list[dict[str, Any]]) -> str:
+    """The growth chart as a table: one row per quarter from each
+    vendor's first YoY, segment YoY % to one decimal. The same table
+    renders on the AI trade tab's Panel 8 from the same CSV."""
+    if not series:
+        return ""
+    by_vendor = {
+        s["vendor"]: {p["quarter"]: p["yoy_pct"] for p in s["points"]}
+        for s in series
+    }
+    quarters = sorted(
+        {
+            q
+            for by_q in by_vendor.values()
+            for q, v in by_q.items()
+            if v is not None
+        }
+    )
+    head = "".join(
+        f"<th>{html.escape(s['segment'])} YoY %</th>" for s in series
+    )
+    trs = []
+    for q in quarters:
+        tds = []
+        for s in series:
+            v = by_vendor[s["vendor"]].get(q)
+            if v is None:
+                tds.append("<td>\u2014</td>")
+            else:
+                star = (
+                    "*"
+                    if s["vendor"] == "MSFT" and q in _CLOUD_TABLE_STAR_MSFT
+                    else ""
+                )
+                tds.append(f"<td>{v:+.1f}{star}</td>")
+        trs.append(f"<tr><td>{html.escape(q)}</td>" + "".join(tds) + "</tr>")
+    return (
+        '<p class="cap">The growth chart as a table - quarterly YoY % of '
+        "segment revenue, one decimal. * Microsoft cells chained across "
+        "the FY2025 segment redefinition (see the note below).</p>"
+        '<table class="src"><tr><th>Quarter</th>' + head + "</tr>"
+        + "".join(trs) + "</table>"
+    )
+
+
 def _cloud_notes(series: list[dict[str, Any]]) -> str:
     if not series:
         return ""
@@ -1518,6 +1571,7 @@ __CDS_CHART__
 <p class="cap">The franchises funding the capex above: quarterly cloud segment revenue and its year-over-year growth for Google Cloud, AWS and Microsoft Intelligent Cloud, calendar quarters. Points only, from reported segment revenue - no projections, no interpolation.</p>
 <div class="chart">__CLOUD_REV_SVG__</div>
 <div class="chart">__CLOUD_GROWTH_SVG__</div>
+__CLOUD_TABLE__
 __CLOUD_NOTES__</div>
 <div class="chart-block"><h2>Section C — Macro early-warning: housing &amp; the Fed path</h2>
 <p class="cap">The figures that turn before credit does: contract signings, the mortgage rate that drives them, and what futures markets charge for the Fed's next moves.</p>
@@ -1577,6 +1631,7 @@ def render_insight_dashboard(data: dict[str, Any], out_dir: Path) -> Path:
         .replace(
             "__CLOUD_GROWTH_SVG__", _svg_cloud_growth_chart(data.get("cloud", []))
         )
+        .replace("__CLOUD_TABLE__", _cloud_yoy_table(data.get("cloud", [])))
         .replace("__CLOUD_NOTES__", _cloud_notes(data.get("cloud", [])))
     )
     target.write_text(page)
