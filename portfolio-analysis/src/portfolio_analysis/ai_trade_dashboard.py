@@ -11,7 +11,8 @@ chart natively (no embedded PNG, no build/view-time fetching):
 5. CoreWeave - equity (left) vs its cost of debt (right)
 6. Compute economics - H100 spot rent (left) vs lab revenue scale (right)
 7. CDS - 5Y spreads (bp), reported snapshots only
-8. Hyperscaler cloud - segment revenue & y/y growth (issue #174)
+8. Hyperscaler cloud - Chart C (indexed inference fit vs actual
+   segment revenue) & reported y/y growth (issue #174)
 
 Data discipline (mirrors the Insight page, PR #38): every series is a
 dated snapshot vendored into ``data/ai_trade/`` from the watcher
@@ -25,12 +26,17 @@ segments anywhere are the source chart's own: mechanical trend dashes
 expectations, which live in ``snapshots.csv`` as ``kind=expectation``
 rows, restricted to Panel 6, and render dashed only.
 
-Panel 8 is the one exception to the vendoring rule: it reads the
-Insight page's ``data/insight/cloud_revenue.csv`` (Section D, issue
-#174) through that module's own validated loader, so the two
-dashboards share one source of truth. The panel appears only when
-that CSV sits in the sibling data dir, and - like Panel 7 - it never
-draws a projection: reported segment points only.
+Panel 8 is the one exception to the vendoring rule: its revenue
+indices and growth chart read the Insight page's
+``data/insight/cloud_revenue.csv`` (Section D, issue #174) through
+that module's own validated loader, so the two dashboards share one
+source of truth. The panel appears only when that CSV sits in the
+sibling data dir. Its growth chart - like Panel 7 - draws reported
+points only. Its lead chart (Chart C) carries the page's one modeled
+view: a fitted inference net index with a decaying-growth scenario
+extension and the Q3 2026 Wall Street bars, vendored in
+``data/ai_trade/cloud_fit_index.csv``; because Chart C is now part
+of Panel 8, a missing or malformed fit CSV fails the build.
 """
 
 # The embedded HTML/SVG is intentionally kept in one readable template
@@ -65,6 +71,34 @@ CLOUD_NOTE_KEYS = {
     "AMZN": "cloud_amzn",
     "MSFT": "cloud_msft",
 }
+
+#: Chart C (Panel 8's lead chart): every series is indexed to this base
+#: quarter, and the fit / scenario / bar points are vendored in
+#: ``data/ai_trade/cloud_fit_index.csv`` under these series keys.
+CHART_C_BASE_QUARTER = "2025-Q3"
+CHART_C_LAST_ACTUAL_QUARTER = "2026-Q2"
+CHART_C_BAR_QUARTER = "2026-Q3"
+FIT_QUARTERS = ("2025-Q3", "2025-Q4", "2026-Q1", "2026-Q2")
+SCENARIO_QUARTERS = ("2026-Q3", "2026-Q4", "2027-Q1", "2027-Q2")
+#: Chart C colors: the fit is the dashboard's projection blue; the
+#: revenue indices keep Panel 8's vendor colors, with Google Cloud in
+#: black (heavier) - it is the fit's own subject and the panel's lead
+#: actual. (Insight Section D keeps the vendor colors for its levels.)
+CHART_C_FIT_COLOR = "#2471a3"
+CHART_C_REV_COLORS = {"GOOGL": "#111111", "AMZN": "#d97706", "MSFT": "#16a34a"}
+#: The scenario's documented assumptions: volume QoQ growth decays
+#: through these rates while price falls 5% per quarter. The loader
+#: checks the vendored scenario points against this recursion.
+SCENARIO_VOLUME_GROWTH = (0.30, 0.24, 0.19, 0.15)
+SCENARIO_PRICE_FACTOR = 0.95
+#: series_notes.csv keys for Chart C's vendored series.
+CLOUD_FIT_NOTE_KEYS = {"cloud_fit_index", "cloud_fit_scenario", "cloud_q3_bars"}
+_FIT_REQUIRED = {"series", "vendor", "quarter", "value"}
+_QUARTER_RE = re.compile(r"^\d{4}-Q[1-4]$")
+#: Fitted-index quarters whose QoQ label carries the mix-shift asterisk
+#: (2026-Q1's jump includes the GPT-5.4 list-price hike - see Chart C's
+#: first footnote).
+FIT_STAR_QUARTERS = {"2026-Q1"}
 
 MONTHLY_COLUMNS = [
     "cpi_yoy",
@@ -358,6 +392,82 @@ def load_cloud_panel(data_dir: Path | None = None) -> list[dict[str, Any]]:
     return out
 
 
+def load_cloud_fit(data_dir: Path | None = None) -> dict[str, Any]:
+    """Chart C's vendored points: the fitted inference net index, its
+    scenario extension, and the Q3 2026 Wall Street bars, from
+    ``data/ai_trade/cloud_fit_index.csv``.
+
+    Unlike the cloud panel itself (additive - absent CSV, no panel),
+    Chart C is a fixed part of Panel 8: a missing or malformed fit
+    CSV raises TradeDataError. The scenario points are checked
+    against their documented recursion (volume QoQ growth decaying
+    +30% -> +24% -> +19% -> +15%, price x0.95 per quarter, chained
+    from the fitted index's last point) so the file cannot quietly
+    drift from the method its footnote states.
+    """
+    path = (data_dir or DATA_DIR) / "cloud_fit_index.csv"
+    fit: dict[str, float] = {}
+    scenario: dict[str, float] = {}
+    bars: dict[str, float] = {}
+    seen: set[tuple[str, str, str]] = set()
+    for i, r in enumerate(_read_csv(path, _FIT_REQUIRED), 1):
+        where = f"{path}:{i}"
+        series = r["series"].strip()
+        if series not in CLOUD_FIT_NOTE_KEYS:
+            raise TradeDataError(f"{where}: unknown fit series {series!r}")
+        vendor = r["vendor"].strip().upper()
+        quarter = r["quarter"].strip()
+        if not _QUARTER_RE.match(quarter):
+            raise TradeDataError(f"{where}: quarter {quarter!r} must look like 2026-Q3")
+        value = _parse_amount(r["value"], where=where)
+        if value <= 0:
+            raise TradeDataError(f"{where}: index values must be positive")
+        key = (series, vendor, quarter)
+        if key in seen:
+            raise TradeDataError(f"{where}: duplicate row for {key}")
+        seen.add(key)
+        if series == "cloud_q3_bars":
+            if vendor not in dict(CLOUD_VENDORS):
+                raise TradeDataError(f"{where}: bar vendor {vendor!r} is not a cloud vendor")
+            if quarter != CHART_C_BAR_QUARTER:
+                raise TradeDataError(f"{where}: bars sit at {CHART_C_BAR_QUARTER}, not {quarter}")
+            bars[vendor] = value
+        else:
+            if vendor:
+                raise TradeDataError(f"{where}: {series} rows carry no vendor")
+            (fit if series == "cloud_fit_index" else scenario)[quarter] = value
+    if tuple(sorted(fit)) != FIT_QUARTERS:
+        raise TradeDataError(
+            f"{path}: cloud_fit_index must cover exactly {list(FIT_QUARTERS)}"
+        )
+    if tuple(sorted(scenario)) != SCENARIO_QUARTERS:
+        raise TradeDataError(
+            f"{path}: cloud_fit_scenario must cover exactly {list(SCENARIO_QUARTERS)}"
+        )
+    if set(bars) != set(dict(CLOUD_VENDORS)):
+        raise TradeDataError(
+            f"{path}: cloud_q3_bars must carry one bar per cloud vendor"
+        )
+    anchor = fit[CHART_C_LAST_ACTUAL_QUARTER]
+    expect = anchor
+    for quarter, growth in zip(SCENARIO_QUARTERS, SCENARIO_VOLUME_GROWTH, strict=True):
+        expect *= (1 + growth) * SCENARIO_PRICE_FACTOR
+        if abs(scenario[quarter] - expect) > 0.01:
+            raise TradeDataError(
+                f"{path}: scenario {quarter} = {scenario[quarter]} breaks the "
+                f"documented decay recursion (expected ~{expect:.2f})"
+            )
+    return {
+        "fit": [(_quarter_start(q), fit[q]) for q in FIT_QUARTERS],
+        "scenario": [(_quarter_start(q), scenario[q]) for q in SCENARIO_QUARTERS],
+        "bars": {
+            vendor: (_quarter_start(CHART_C_BAR_QUARTER), bars[vendor])
+            for vendor, _color in CLOUD_VENDORS
+            if vendor in bars
+        },
+    }
+
+
 #: Microsoft chained y/y cells that straddle the FY2025 segment
 #: redefinition (new-basis quarters against old-basis year-ago
 #: quarters) - asterisked in the Panel 8 table, explained in its note.
@@ -369,24 +479,151 @@ def _date_quarter(day: str) -> str:
     return f"{day[:4]}-Q{(int(day[5:7]) - 1) // 3 + 1}"
 
 
-def _cloud_panel(cloud: list[dict[str, Any]]) -> dict[str, Any]:
-    """Panel 8 assembled: two quarter-axis line charts in one block -
-    quarterly segment revenue, then its y/y growth - plus the full
-    quarterly y/y table (the growth series as numbers, not just a line)."""
+def _above(text: str, dy: float = -10) -> dict[str, Any]:
+    return {"text": text, "dx": 0, "dy": dy, "anchor": "middle"}
+
+
+def _below(text: str, dy: float = 16) -> dict[str, Any]:
+    return {"text": text, "dx": 0, "dy": dy, "anchor": "middle"}
+
+
+def _chart_c(cloud: list[dict[str, Any]], fit: dict[str, Any]) -> dict[str, Any]:
+    """Chart C: every series indexed to 2025-Q3 = 1 on a log axis -
+    the fitted inference net index (blue) and its decaying-growth
+    scenario, the three clouds' actual segment-revenue indices
+    computed from the shared cloud_revenue.csv, and the dashed
+    Q3 2026 Wall Street bars drawn from each 2026-Q2 actual point."""
+    base_day = _quarter_start(CHART_C_BASE_QUARTER)
+    last_day = _quarter_start(CHART_C_LAST_ACTUAL_QUARTER)
+    rev_by_vendor = {s["vendor"]: dict(s["revenue"]) for s in cloud}
+
+    fit_labels: dict[str, dict[str, Any]] = {}
+    fit_pts = fit["fit"]
+    for (d, v), (_pd, prev) in zip(fit_pts[1:], fit_pts[:-1], strict=True):
+        star = "*" if _date_quarter(d) in FIT_STAR_QUARTERS else ""
+        fit_labels[d] = _above(f"{100.0 * (v / prev - 1):+.0f}%{star}")
+    series = [
+        _series(
+            "Fitted inference net index (Google API volume \u00d7 frontier blended list price)",
+            CHART_C_FIT_COLOR,
+            "l",
+            fit_pts,
+            point_labels=fit_labels,
+        )
+    ]
+    scen_labels = {
+        # Round via one decimal first: the assumptions are exact
+        # decimals (1.30 x 0.95 = +23.5% net) that binary float
+        # understates by ~1e-14, which would mislabel the point +23%.
+        d: _above(f"{round(100.0 * ((1 + g) * SCENARIO_PRICE_FACTOR - 1), 1):+.0f}%")
+        for (d, _v), g in zip(fit["scenario"], SCENARIO_VOLUME_GROWTH, strict=True)
+    }
+    series.append(
+        _series(
+            "Scenario extension (dashed): volume growth decays, price \u22125%/qtr",
+            CHART_C_FIT_COLOR,
+            "l",
+            [fit_pts[-1], *fit["scenario"]],
+            style="dash",
+            point_labels=scen_labels,
+        )
+    )
+    bar_names = {"GOOGL": "Q3 bar", "AMZN": "AWS bar", "MSFT": "MSFT bar"}
+    for vendor, _color in CLOUD_VENDORS:
+        by_day = rev_by_vendor.get(vendor) or {}
+        if base_day not in by_day or last_day not in by_day:
+            continue
+        base = by_day[base_day]
+        window = sorted(d for d in by_day if base_day <= d <= last_day)
+        idx_pts = [(d, by_day[d] / base) for d in window]
+        color = CHART_C_REV_COLORS[vendor]
+        segment = next(s["segment"] for s in cloud if s["vendor"] == vendor)
+        labels: dict[str, dict[str, Any]] = {}
+        if vendor == "GOOGL":
+            for (d, v), (_pd, prev) in zip(idx_pts[1:], idx_pts[:-1], strict=True):
+                labels[d] = _above(f"{100.0 * (v / prev - 1):+.0f}%")
+        else:
+            d, v = idx_pts[-1]
+            prev = idx_pts[-2][1]
+            place = _above if vendor == "MSFT" else _below
+            labels[d] = place(f"Q2 QoQ {100.0 * (v / prev - 1):+.0f}%")
+        series.append(
+            _series(
+                f"{segment} revenue index, actual (2025-Q3 = 1)",
+                color,
+                "l",
+                idx_pts,
+                width=2.6 if vendor == "GOOGL" else 2.2,
+                point_labels=labels,
+            )
+        )
+        bar_day, bar_idx = fit["bars"][vendor]
+        last_idx = idx_pts[-1][1]
+        bar_label = (
+            f"{bar_names[vendor]}: ${bar_idx * base:.1f}B, "
+            f"QoQ {100.0 * (bar_idx / last_idx - 1):+.1f}%"
+        )
+        series.append(
+            _series(
+                f"{segment} Q3 2026 Wall Street bar (dashed)",
+                color,
+                "l",
+                [(last_day, last_idx), (bar_day, bar_idx)],
+                style="dash",
+                point_labels={
+                    bar_day: _below(bar_label) if vendor == "MSFT" else _above(bar_label)
+                },
+            )
+        )
+    return {
+        "y_left": "index, 2025-Q3 = 1 (log scale)",
+        "aria": "Chart C: fitted inference net index versus hyperscaler cloud revenue indices",
+        "caption": (
+            "Chart C \u2014 the fitted inference net index (blue) against the three clouds' "
+            "actual segment-revenue indices, 2025-Q3 = 1, log scale. Dashed segments into "
+            "2026-Q3 are the quarter's Wall Street bars (stated expectations, not data); "
+            "the blue dashed tail is the fit's scenario extension."
+        ),
+        "log": True,
+        "notes": [
+            (
+                "Fitted index = Google first-party API volume (tokens/min: 7 \u2192 10 \u2192 16 \u2192 22B) "
+                "\u00d7 frontier flagship blended list price ((in+out)/2). *2026-Q1's +149% includes a "
+                "price HIKE from the GPT-5.4 mix shift \u2014 it is mix-inflated, not pure volume."
+            ),
+            (
+                "Scenario (dashed): volume QoQ growth decays +30% \u2192 +24% \u2192 +19% \u2192 +15%; price "
+                "\u22125%/quarter. Under this fit, quarterly net growth falls below +10% by 2027-Q2 "
+                "(\u2248 +41% y/y) \u2014 this is the inference slice only, NOT total cloud revenue."
+            ),
+            (
+                "Bars: GOOGL +89% y/y is the published Q3 consensus; AWS +35% y/y is the top of "
+                "the published +30\u201335% consensus range (bullish bank models / whisper: 38\u201341%); "
+                "MSFT $41.1B is the midpoint of the company's own Intelligent Cloud guidance "
+                "($40.95\u201341.25B, +33\u201334% y/y); the Street's Azure bar is +44.9% in constant "
+                "currency vs ~+45% guided."
+            ),
+            (
+                "Index base 2025-Q3 = 1; log scale. Revenue indices are computed from "
+                "data/insight/cloud_revenue.csv; the fit, scenario and bar points are vendored "
+                "in data/ai_trade/cloud_fit_index.csv."
+            ),
+        ],
+        "series": series,
+    }
+
+
+def _cloud_panel(cloud: list[dict[str, Any]], fit: dict[str, Any]) -> dict[str, Any]:
+    """Panel 8 assembled: Chart C (indexed fit vs actual revenue,
+    log axis) on top, then the reported y/y growth chart, plus the
+    full quarterly y/y table (the growth series as numbers, not
+    just a line). The revenue-level chart Chart C replaces is gone:
+    the levels live on the Insight page's Section D."""
     colors = dict(CLOUD_VENDORS)
-    rev_series, growth_series = [], []
+    growth_series = []
     growth_by_vendor: dict[str, dict[str, float]] = {}
     for s in cloud:
         color = colors[s["vendor"]]
-        rev_series.append(
-            _series(
-                f"{s['segment']} segment revenue, $B (company earnings releases)",
-                color,
-                "l",
-                s["revenue"],
-                end_label=f"${s['revenue'][-1][1]:.1f}B",
-            )
-        )
         growth_series.append(
             _series(
                 f"{s['segment']} revenue y/y % (computed from the chained quarterly revenue)",
@@ -411,27 +648,27 @@ def _cloud_panel(cloud: list[dict[str, Any]]) -> dict[str, Any]:
         table_rows.append({"quarter": q, "cells": cells})
     return {
         "kind": "cloud",
-        "title": "8 \u00b7 Hyperscaler cloud \u2014 segment revenue & y/y growth (reported points only; no projection)",
+        "title": "8 \u00b7 Hyperscaler cloud \u2014 Chart C: indexed fit vs actual revenue; reported y/y growth",
         "caption": (
-            "Points only - reported segment revenue, no projection, no interpolation. "
-            "Microsoft is plotted on its Intelligent Cloud segment in both charts: Microsoft "
-            "does not disclose Azure revenue in dollars, so Azure is never a plotted series "
-            "(Azure and other cloud services grew +43% y/y in Q2 2026, Microsoft FY26 Q4 - a "
-            "growth rate, given here as text only). Microsoft quarters are calendar-aligned "
-            "(fiscal Q3 = calendar Q1). Microsoft redefined the Intelligent Cloud segment in "
-            "FY2025: quarters from Sep 2024 are as reported under the new composition, so the "
-            "near-zero chained y/y prints that follow in 2025 H1 are definitional, not a "
-            "revenue decline (the affected table cells, 2024-Q3 to 2025-Q2, are asterisked). "
-            "Data: data/insight/cloud_revenue.csv, shared with the Insight "
-            "page's Section D - one source of truth for both dashboards."
+            "Chart C (top) indexes every series to 2025-Q3 = 1 on a log axis: the fitted "
+            "inference net index and its decaying-growth scenario (blue; vendored in "
+            "data/ai_trade/cloud_fit_index.csv - a fit and a scenario, not reported data), "
+            "the three clouds' actual segment-revenue indices, and the dashed Q3 2026 Wall "
+            "Street bars. Below it, the growth chart plots reported points only - no "
+            "projection, no interpolation. Microsoft is plotted on its Intelligent Cloud "
+            "segment throughout: Microsoft does not disclose Azure revenue in dollars, so "
+            "Azure is never a plotted series (Azure and other cloud services grew +43% y/y "
+            "in Q2 2026, Microsoft FY26 Q4 - a growth rate, given here as text only). "
+            "Microsoft quarters are calendar-aligned (fiscal Q3 = calendar Q1). Microsoft "
+            "redefined the Intelligent Cloud segment in FY2025: quarters from Sep 2024 are "
+            "as reported under the new composition, so the near-zero chained y/y prints "
+            "that follow in 2025 H1 are definitional, not a revenue decline (the affected "
+            "table cells, 2024-Q3 to 2025-Q2, are asterisked). Revenue data: "
+            "data/insight/cloud_revenue.csv, shared with the Insight page's Section D - "
+            "one source of truth for both dashboards."
         ),
         "charts": [
-            {
-                "y_left": "USD B per quarter",
-                "aria": "Hyperscaler cloud segment revenue by quarter",
-                "caption": "Quarterly cloud segment revenue, USD billions, calendar quarters; points sit at quarter starts.",
-                "series": rev_series,
-            },
+            _chart_c(cloud, fit),
             {
                 "y_left": "y/y %",
                 "aria": "Hyperscaler cloud segment revenue growth, year over year",
@@ -504,6 +741,8 @@ def _series(
     marker: str = "circle",
     proj: list[tuple[str, float]] | None = None,
     end_label: str | None = None,
+    width: float = 2.2,
+    point_labels: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     return {
         "label": label,
@@ -514,6 +753,10 @@ def _series(
         "marker": marker,  # circle | square | triangle | diamond
         "proj": proj,
         "end_label": end_label,
+        "width": width,
+        # {date: {"text", "dx", "dy", "anchor"}} - per-point callouts,
+        # used by Panel 8's quarter charts (Chart C).
+        "point_labels": point_labels or {},
     }
 
 
@@ -672,7 +915,15 @@ def ai_trade_data(data_dir: Path | None = None) -> dict[str, Any]:
             raise TradeDataError(
                 f"series_notes.csv: no source note for {sorted(missing_cloud)}"
             )
-        panels.append(_cloud_panel(cloud))
+        # Chart C is part of Panel 8: its vendored fit CSV must load
+        # (missing/malformed fails the build) and carry source notes.
+        fit = load_cloud_fit(data_dir)
+        missing_fit = CLOUD_FIT_NOTE_KEYS - set(notes)
+        if missing_fit:
+            raise TradeDataError(
+                f"series_notes.csv: no source note for {sorted(missing_fit)}"
+            )
+        panels.append(_cloud_panel(cloud, fit))
 
     return {
         "panels": panels,
@@ -856,12 +1107,15 @@ def _legend_html(panel: dict[str, Any]) -> str:
 
 def _svg_quarter_chart(chart: dict[str, Any]) -> str:
     """One Panel 8 chart: quarterly points on a calendar axis spanning
-    exactly the plotted data (revenue from 2020, growth from 2021).
+    exactly the plotted data (growth from 2021; Chart C 2025-Q3 to
+    2027-Q2, the scenario's horizon).
 
     Panels 1-7 share the 2022-to-projection-horizon axis of the source
-    chart; Panel 8 has no projection and no shared axis to inherit, so
-    its axis is the data's own span - nothing is extrapolated into the
-    empty space a shared axis would leave.
+    chart; Panel 8 has no shared axis to inherit, so its axis is the
+    data's own span - nothing is extrapolated into the empty space a
+    shared axis would leave. A chart may set ``log`` for a log y-axis
+    (Chart C), and series may carry per-point callouts
+    (``point_labels``) and a custom stroke ``width``.
     """
     W, H = 1000, 300
     pad_l, pad_r, pad_t, pad_b = 58, 30, 18, 28
@@ -873,17 +1127,34 @@ def _svg_quarter_chart(chart: dict[str, Any]) -> str:
     def x(d: str) -> float:
         return pad_l + (W - pad_l - pad_r) * (date.fromisoformat(d).toordinal() - x0) / span
 
-    ticks, lo, hi = _domain([v for _, v in all_points], None)
+    values = [v for _, v in all_points]
+    if chart.get("log"):
+        lo_l = math.log10(min(values)) - 0.04
+        hi_l = math.log10(max(values)) + 0.04
+        ticks = [
+            (t, f"{t:g}")
+            for t in (1, 1.5, 2, 3, 5, 7, 10)
+            if lo_l <= math.log10(t) <= hi_l
+        ]
 
-    def y(v: float) -> float:
-        return pad_t + (H - pad_t - pad_b) * (1 - (v - lo) / (hi - lo))
+        def y(v: float) -> float:
+            return pad_t + (H - pad_t - pad_b) * (
+                1 - (math.log10(v) - lo_l) / (hi_l - lo_l)
+            )
+
+    else:
+        raw_ticks, lo, hi = _domain(values, None)
+        ticks = [(t, f"{t:,.1f}") for t in raw_ticks]
+
+        def y(v: float) -> float:
+            return pad_t + (H - pad_t - pad_b) * (1 - (v - lo) / (hi - lo))
 
     esc = html.escape
     parts = [f'<svg viewBox="0 0 {W} {H}" role="img" aria-label="{esc(chart["aria"])}">']
-    for t in ticks:
+    for t, tlabel in ticks:
         parts.append(
             f'<line x1="{pad_l}" y1="{y(t):.1f}" x2="{W - pad_r}" y2="{y(t):.1f}" stroke="#e5e4da" stroke-width="1"/>'
-            f'<text x="{pad_l - 8}" y="{y(t) + 4:.1f}" text-anchor="end" font-size="12" fill="#65685f">{t:,.1f}</text>'
+            f'<text x="{pad_l - 8}" y="{y(t) + 4:.1f}" text-anchor="end" font-size="12" fill="#65685f">{tlabel}</text>'
         )
     parts.append(
         f'<text x="{pad_l}" y="11" font-size="11" fill="#65685f">{esc(chart["y_left"] or "")}</text>'
@@ -902,10 +1173,23 @@ def _svg_quarter_chart(chart: dict[str, Any]) -> str:
             continue
         color = s["color"]
         pts = " ".join(f"{x(d):.1f},{y(v):.1f}" for d, v in s["points"])
-        parts.append(f'<polyline points="{pts}" fill="none" stroke="{color}" stroke-width="2.2"/>')
+        dash = ' stroke-dasharray="7,5"' if s["style"] == "dash" else ""
+        parts.append(
+            f'<polyline points="{pts}" fill="none" stroke="{color}" '
+            f'stroke-width="{s.get("width", 2.2)}"{dash}/>'
+        )
         r = 2.0 if len(s["points"]) > 24 else 3.4
         for d, v in s["points"]:
             parts.append(_marker(x(d), y(v), s["marker"], color, r, f"{s['label']} \u00b7 {d}: {v:,.2f}"))
+        by_date = dict(s["points"])
+        for d, spec in (s.get("point_labels") or {}).items():
+            if d not in by_date:
+                continue
+            parts.append(
+                f'<text x="{x(d) + spec["dx"]:.1f}" y="{y(by_date[d]) + spec["dy"]:.1f}" '
+                f'text-anchor="{spec["anchor"]}" font-size="11" font-weight="700" '
+                f'fill="{color}">{esc(spec["text"])}</text>'
+            )
         if s["end_label"]:
             d, v = s["points"][-1]
             end_labels.append((y(v) - 12, s["end_label"], color, x(d)))
@@ -953,6 +1237,8 @@ def _cloud_block_html(panel: dict[str, Any]) -> str:
         parts.append(_legend_html({"series": chart["series"]}))
         parts.append('<div class="chart">' + _svg_quarter_chart(chart) + "</div>")
         parts.append('<p class="cap">' + html.escape(chart["caption"]) + "</p>")
+        for note in chart.get("notes", []):
+            parts.append('<p class="cap">' + html.escape(note) + "</p>")
     parts.append(
         '<p class="cap">The growth chart as a table - quarterly y/y % of segment '
         "revenue, one decimal. * Microsoft cells chained across the FY2025 segment "
@@ -994,7 +1280,7 @@ table.src td,table.src th{border:1px solid var(--line);padding:4px 8px;text-alig
 </style></head><body><main>
 <div class="top"><span class="brand">OPENPAW / MARKET NOTES</span></div>
 <h1>AI trade dashboard.</h1>
-<p class="sub">The AI slowdown watch's eight panels, rendered natively from dated snapshots vendored into <code>data/ai_trade/</code> \u2014 no live fetching. Data as of __ASOF__. Dashed lines are projections, drawn faint on purpose: mechanical trend extrapolations of the recent segment \u2014 NOT forecasts or price targets \u2014 except Panel 6, where the dashed lines are stated expectations. Panel 7 (CDS) has no projection: only dated reported snapshots are plotted. Panel 8 (hyperscaler cloud) is the exception to the vendoring rule: it reads the Insight page's shared <code>data/insight/cloud_revenue.csv</code> and, like Panel 7, draws reported points only.</p>
+<p class="sub">The AI slowdown watch's eight panels, rendered natively from dated snapshots vendored into <code>data/ai_trade/</code> \u2014 no live fetching. Data as of __ASOF__. Dashed lines are projections, drawn faint on purpose: mechanical trend extrapolations of the recent segment \u2014 NOT forecasts or price targets \u2014 except Panel 6, where the dashed lines are stated expectations. Panel 7 (CDS) has no projection: only dated reported snapshots are plotted. Panel 8 (hyperscaler cloud) is the exception to the vendoring rule: it reads the Insight page's shared <code>data/insight/cloud_revenue.csv</code>; its y/y growth chart, like Panel 7, draws reported points only, while its lead Chart C adds a fitted inference net index, a decaying-growth scenario and the Q3 2026 Wall Street bars from <code>data/ai_trade/cloud_fit_index.csv</code>.</p>
 <a class="back" href="index.html">&larr; Back to the portfolio dashboard</a>
 __PANELS__
 <div class="chart-block"><h2>Panel 7 data \u2014 every CDS print</h2>
@@ -1003,7 +1289,7 @@ __CDS_TABLE__</div>
 <div class="chart-block"><h2>Series sources</h2>
 <p class="cap">Every plotted series, its source, and the snapshot date. Sparse series (Panels 4R, 5R, 6) carry a source on each individual point in <code>data/ai_trade/snapshots.csv</code>.</p>
 __NOTES_TABLE__</div>
-<p class="note">Method: this tab ports the AI slowdown watch's combined-metrics chart (make_combined_chart.py) to the dashboard's self-contained HTML. Monthly series are the watcher's monthly aggregates (FRED monthly means, Yahoo monthly last closes, BLS as-printed y/y, EDGAR YTD-differenced capex). Refresh: re-run the watcher's chart script, re-extract combined-monthly.csv into data/ai_trade/monthly.csv, update snapshots.csv and cds_snapshots.csv from the watch logs and the script's dated CDS block, and bump the as_of dates in series_notes.csv. Panel 8 refreshes with the Insight page: append quarters to data/insight/cloud_revenue.csv there (2020 is the y/y base year - never trim it) and add its series rows to series_notes.csv here. Overlap note: the Insight page covers reported-vs-true capex and an ORCL credit timeline in depth; this tab is the broader 8-panel watch. Panel 8 is the deliberate exception to the no-duplication rule - it mirrors the Insight page's Section D cloud panel while its final home is being chosen, and both render from the one CSV, so the two copies can never disagree.</p>
+<p class="note">Method: this tab ports the AI slowdown watch's combined-metrics chart (make_combined_chart.py) to the dashboard's self-contained HTML. Monthly series are the watcher's monthly aggregates (FRED monthly means, Yahoo monthly last closes, BLS as-printed y/y, EDGAR YTD-differenced capex). Refresh: re-run the watcher's chart script, re-extract combined-monthly.csv into data/ai_trade/monthly.csv, update snapshots.csv and cds_snapshots.csv from the watch logs and the script's dated CDS block, and bump the as_of dates in series_notes.csv. Panel 8 refreshes with the Insight page: append quarters to data/insight/cloud_revenue.csv there (2020 is the y/y base year - never trim it) and add its series rows to series_notes.csv here; Chart C refreshes from data/ai_trade/cloud_fit_index.csv - recompute the fit from the quarter's disclosed API volume and flagship list prices, roll the scenario recursion, and reset the bars to the new quarter's published consensus / guidance. Overlap note: the Insight page covers reported-vs-true capex and an ORCL credit timeline in depth; this tab is the broader 8-panel watch. Panel 8 is the deliberate exception to the no-duplication rule - it mirrors the Insight page's Section D cloud panel while its final home is being chosen, and both render from the one CSV, so the two copies can never disagree.</p>
 </main></body></html>"""
 
 
