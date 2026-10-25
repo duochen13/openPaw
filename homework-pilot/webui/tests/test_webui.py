@@ -1,47 +1,49 @@
-"""Tests for the teacher console UI (issue #167).
+"""Tests for the student-side MVP UI (issue #176).
 
-All fixture content is synthetic (``S-0xx`` student IDs, ``SYN-``
-questions) -- real teacher materials are pending #108 field work.
+All fixture content is synthetic (one invented student, ``S-023``) --
+real student materials must never be pasted into fixtures.
 
-The privacy tests here are the point of the package: they pin the
-design doc's hard rules so a future fixture or template edit cannot
-quietly break them -- ID-only students, the five teaching-judgment
-states, no precise mastery percentages, and OCR reliability kept
-separate from mastery judgment.
+The privacy / honesty tests here are the point of the package: they
+pin the rules the pivot kept -- ID-only students, the exact verdict
+vocabulary （对 / 错 / 待确认）, no skill-state or mastery UI anywhere
+on the student surface, and OCR reliability kept separate from the
+correctness verdict -- so a future fixture or template edit cannot
+quietly break them.
 """
 
-import json
 import re
 import unittest
-from dataclasses import asdict, fields
+from dataclasses import asdict
+from html import escape as html_escape
 
 from ..fixtures import build_demo_data
 from ..models import (
-    MASTERY_STATES,
-    MIX_CATEGORIES,
+    VERDICTS,
+    VERDICT_SOURCES,
+    PaperResult,
+    QuestionResult,
     ReliabilityTier,
+    StudentData,
     reliability_tier,
 )
-from ..render import (
-    dashboard_vm,
-    export_vm,
-    hypothesis_vm,
-    recognition_vm,
-    render_console,
-    review_vm,
-)
+from ..render import confirm_vm, paper_vm, question_vm, render_demo
 
 STUDENT_ID_RE = re.compile(r"^S-\d{3}$")
 
 #: Keys that would mean a student's name entered the data (mirrors the
-#: spirit of privacy.guard.NAME_FIELD_KEYS; "skill_name" is a *skill's*
-#: name and is legitimate, a bare "name" is not).
+#: spirit of privacy.guard.NAME_FIELD_KEYS).
 FORBIDDEN_KEYS = {
     "name", "names", "student_name", "studentname", "full_name",
     "fullname", "nickname", "姓名", "名字",
 }
 
-VIEWS = ("dashboard", "recognition", "hypotheses", "review", "export")
+#: The five teacher-side teaching judgments. They belong to the old
+#: teacher console (#167) and must never leak onto the student surface.
+FIVE_STATES = (
+    "证据不足", "需要练习", "正在改善", "已有较充分掌握证据", "待复习",
+)
+
+MAIN_PAPER_ID = "paper-ch3-test"
 
 
 def _walk(node, path=""):
@@ -57,52 +59,64 @@ def _walk(node, path=""):
         yield path, None, node
 
 
-def _all_student_ids(data):
-    ids = set()
-    for cls in data.classes:
-        ids.update(i.student_id for i in cls.recognition)
-        ids.update(h.student_id for h in cls.hypotheses)
-        ids.update(m.student_id for m in cls.mix)
-        ids.update(sid for sid, _pages in cls.export.students)
-    return ids
+def _main_paper(data):
+    return next(p for p in data.papers if p.id == MAIN_PAPER_ID)
 
 
 class TestRendering(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.data = build_demo_data()
-        cls.html = render_console(cls.data)
+        cls.html = render_demo(cls.data)
 
-    def test_all_five_views_render_for_each_class(self):
-        for cls in self.data.classes:
-            for view in VIEWS:
-                marker = f'data-cls="{cls.key}" data-view="{view}"'
-                self.assertIn(marker, self.html, marker)
-        for label in ("工作台", "识别确认", "薄弱点确认", "作业审核", "导出"):
+    def test_three_views_render(self):
+        self.assertIn('data-view="papers"', self.html)
+        self.assertIn('data-view="confirm"', self.html)
+        # One result section per processed paper, none for 处理中.
+        for paper in self.data.papers:
+            marker = f'data-view="result" data-paper="{paper.id}"'
+            if paper.questions:
+                self.assertIn(marker, self.html)
+            else:
+                self.assertNotIn(marker, self.html)
+        for label in ("试卷", "待确认"):
             self.assertIn(label, self.html)
 
-    def test_class_switcher_and_counts(self):
-        for cls in self.data.classes:
-            self.assertIn(f'data-cls-btn="{cls.key}"', self.html)
-            self.assertIn(cls.label, self.html)
-        match = re.search(r"var CLASS_COUNTS = (\{.*?\});", self.html, re.S)
-        self.assertIsNotNone(match)
-        counts = json.loads(match.group(1))
-        for cls in self.data.classes:
-            self.assertEqual(
-                counts[cls.key]["recognition"], len(cls.recognition))
-            self.assertEqual(
-                counts[cls.key]["hypotheses"], len(cls.hypotheses))
-            self.assertEqual(
-                counts[cls.key]["review"], len(cls.review_questions))
+    def test_teacher_console_is_gone(self):
+        for gone in ("工作台", "薄弱点确认", "作业审核", "识别确认",
+                     "班级", "教师版"):
+            self.assertNotIn(gone, self.html)
+        for state in FIVE_STATES:
+            self.assertNotIn(state, self.html)
 
-    def test_dashboard_counts_match_fixtures(self):
-        for cls in self.data.classes:
-            vm = dashboard_vm(cls)
-            self.assertEqual(vm["recognition_count"], len(cls.recognition))
-            self.assertEqual(vm["hypothesis_count"], len(cls.hypotheses))
-            self.assertEqual(vm["review_count"], len(cls.review_questions))
-            self.assertIn(cls.export.last_export, self.html)
+    def test_upload_card_and_paper_list(self):
+        self.assertIn("上传已完成试卷（扫描 PDF）", self.html)
+        for paper in self.data.papers:
+            self.assertIn(paper.title, self.html)
+            self.assertIn(paper.date_label, self.html)
+        # Processed papers open their result; the processing one cannot.
+        self.assertIn(f'data-open-paper="{MAIN_PAPER_ID}"', self.html)
+
+    def test_pending_badge_matches_queue(self):
+        pending = len(self.data.pending_items())
+        self.assertIn(f'<span class="nav-badge">{pending}</span>', self.html)
+
+    def test_result_view_shows_verdict_source_and_reference(self):
+        for source in VERDICT_SOURCES:
+            self.assertIn(f"来源：{source}", self.html)
+        for paper in self.data.papers:
+            for q in paper.questions:
+                if q.verdict == "错":
+                    self.assertIn(html_escape(q.reference_answer), self.html)
+                    self.assertIn("学生答案", self.html)
+
+    def test_confirm_queue_actions(self):
+        for label in ("确认", "改转写", "改为对", "改为错"):
+            self.assertIn(f'aria-label="{label}"', self.html)
+        self.assertIn("标注数据", self.html)  # the training-data footnote
+
+    def test_export_placeholder_names_backend_handoff(self):
+        self.assertIn('data-export-fn="export_labeled_data"', self.html)
 
     def test_self_contained_no_external_resources(self):
         self.assertNotIn("<script src", self.html)
@@ -113,18 +127,14 @@ class TestRendering(unittest.TestCase):
         self.assertNotIn("url(", self.html)
 
     def test_user_text_is_escaped(self):
-        from ..models import ClassData, ConsoleData, ReviewQuestionView
-
-        evil = ReviewQuestionView(
-            id="SYN-X", category="共同题",
-            stem="<script>alert(1)</script>",
-            skill_names=["计算重力做功"], answer="a", scoring_notes="b",
+        evil = PaperResult(
+            id="paper-x", title="<script>alert(1)</script>",
+            questions=[QuestionResult(
+                number=1, question_text="题干", student_answer="答案",
+                verdict="对", source="模型判定", ocr_reliability=0.9,
+            )],
         )
-        data = ConsoleData(classes=[ClassData(
-            key="g9-9", label="九年级9班", chapter_label="演示",
-            assignment_number="A-X", review_questions=[evil],
-        )])
-        html = render_console(data)
+        html = render_demo(StudentData(student_id="S-023", papers=[evil]))
         self.assertNotIn("<script>alert(1)</script>", html)
         self.assertIn("&lt;script&gt;", html)
 
@@ -133,7 +143,7 @@ class TestPrivacyRules(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.data = build_demo_data()
-        cls.html = render_console(cls.data)
+        cls.html = render_demo(cls.data)
 
     def test_no_name_like_fields_anywhere_in_fixtures(self):
         for _path, key, _value in _walk(asdict(self.data)):
@@ -142,53 +152,73 @@ class TestPrivacyRules(unittest.TestCase):
                     str(key).lower(), FORBIDDEN_KEYS,
                     f"name-like key leaked into fixtures: {key}")
 
-    def test_every_student_reference_is_an_id(self):
-        ids = _all_student_ids(self.data)
-        self.assertTrue(ids, "fixtures should reference students")
-        for sid in ids:
-            self.assertRegex(sid, STUDENT_ID_RE)
-        # No other S-### shaped tokens hide in fixture text.
+    def test_the_only_student_reference_is_the_demo_id(self):
+        self.assertRegex(self.data.student_id, STUDENT_ID_RE)
+        self.assertEqual(self.data.student_id, "S-023")
         for _path, _key, value in _walk(asdict(self.data)):
             if isinstance(value, str):
                 for token in re.findall(r"S-\d{3}", value):
-                    self.assertIn(token, ids)
+                    self.assertEqual(token, "S-023")
 
-    def test_no_mastery_percentages(self):
-        # Fixture and view-model text must never carry a percentage.
+    def test_no_percentages_anywhere(self):
         for _path, _key, value in _walk(asdict(self.data)):
             if isinstance(value, str):
                 self.assertNotIn("%", value)
                 self.assertNotIn("％", value)
-        # Visible page text (style/script stripped) shows no "NN %" either.
         text = re.sub(r"<(style|script)>.*?</\1>", "", self.html, flags=re.S)
         self.assertIsNone(re.search(r"\d\s*(%|％)", text))
 
-    def test_skill_states_are_only_the_five_judgments(self):
-        used = {h.state for cls in self.data.classes for h in cls.hypotheses}
-        self.assertTrue(used)
-        self.assertLessEqual(used, set(MASTERY_STATES))
-        # The legend in the UI lists all five states.
-        for state in MASTERY_STATES:
-            self.assertIn(state, self.html)
 
-    def test_reliability_and_mastery_are_separate(self):
-        # Recognition items carry OCR reliability and no mastery state.
-        item_fields = {f.name for f in fields(
-            type(self.data.classes[0].recognition[0]))}
-        self.assertIn("ocr_reliability", item_fields)
-        self.assertNotIn("state", item_fields)
-        # The recognition view shows all three reliability tiers...
-        for label in ("识别可靠", "识别存疑", "识别需手录"):
-            self.assertIn(label, self.html)
-        # ...and hypothesis VMs expose a state but no OCR number.
-        for cls in self.data.classes:
-            for h in cls.hypotheses:
-                vm = hypothesis_vm(h)
-                self.assertIn(vm["state"], MASTERY_STATES)
-                self.assertNotIn("ocr_reliability", vm)
+class TestVerdictRules(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.data = build_demo_data()
+
+    def test_vocabulary_is_exactly_three_states(self):
+        used = {
+            q.verdict
+            for paper in self.data.papers for q in paper.questions
+        }
+        self.assertLessEqual(used, set(VERDICTS))
+        # The main paper exercises all three.
+        self.assertEqual(
+            {q.verdict for q in _main_paper(self.data).questions},
+            set(VERDICTS),
+        )
+
+    def test_main_paper_mix_is_4_2_2(self):
+        counts = _main_paper(self.data).verdict_counts()
+        self.assertEqual(counts, {"对": 4, "错": 2, "待确认": 2})
+
+    def test_all_three_sources_appear(self):
+        used = {
+            q.source
+            for q in _main_paper(self.data).questions
+        }
+        self.assertEqual(used, set(VERDICT_SOURCES))
+
+    def test_wrong_questions_carry_a_reference_answer(self):
+        for paper in self.data.papers:
+            for q in paper.questions:
+                if q.verdict == "错":
+                    self.assertTrue(q.reference_answer, q.label)
+                    self.assertTrue(question_vm(q)["show_reference"])
+
+    def test_pending_questions_carry_a_proposal(self):
+        pending = self.data.pending_items()
+        self.assertEqual([q.label for _p, q in pending], ["第7题", "第8题"])
+        for _paper, q in pending:
+            self.assertIn(q.proposed_verdict, ("对", "错"))
+            vm = confirm_vm(_paper, q)
+            self.assertEqual(vm["paper_title"], _paper.title)
 
 
-class TestReliabilityTiers(unittest.TestCase):
+class TestReliabilitySeparation(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.data = build_demo_data()
+        cls.html = render_demo(cls.data)
+
     def test_thresholds(self):
         self.assertEqual(reliability_tier(0.95), ReliabilityTier.RELIABLE)
         self.assertEqual(reliability_tier(0.8), ReliabilityTier.RELIABLE)
@@ -201,49 +231,66 @@ class TestReliabilityTiers(unittest.TestCase):
         with self.assertRaises(ValueError):
             reliability_tier(1.5)
 
+    def test_exactly_one_low_reliability_question(self):
+        low = [
+            q for q in _main_paper(self.data).questions if q.low_reliability
+        ]
+        self.assertEqual([q.label for q in low], ["第7题"])
+        self.assertIn("识别可靠性低", self.html)
+
+    def test_low_reliability_does_not_decide_the_verdict(self):
+        # 第7题 was read shakily but the proposal stays 对： reliability
+        # routes to the queue; it never flips a verdict by itself.
+        q7 = next(
+            q for q in _main_paper(self.data).questions if q.number == 7)
+        self.assertTrue(q7.low_reliability)
+        self.assertEqual(q7.verdict, "待确认")
+        self.assertEqual(q7.proposed_verdict, "对")
+        vm = question_vm(q7)
+        self.assertTrue(vm["low_reliability"])
+        self.assertEqual(vm["verdict"], "待确认")
+        # 第8题 is the mirror image: read reliably, judgment uncertain.
+        q8 = next(
+            q for q in _main_paper(self.data).questions if q.number == 8)
+        self.assertFalse(q8.low_reliability)
+        self.assertEqual(q8.verdict, "待确认")
+
+    def test_model_validation(self):
+        base = dict(number=1, question_text="题", ocr_reliability=0.9)
+        with self.assertRaises(ValueError):
+            QuestionResult(verdict="错", **base)  # no 参考答案
+        with self.assertRaises(ValueError):
+            QuestionResult(verdict="待确认", **base)  # no proposal
+        with self.assertRaises(ValueError):
+            QuestionResult(verdict="大概对了", **base)
+        with self.assertRaises(ValueError):
+            QuestionResult(verdict="对", source="同学说的", **base)
+        with self.assertRaises(ValueError):
+            QuestionResult(
+                number=1, question_text="题", verdict="对",
+                ocr_reliability=1.2)
+
 
 class TestFixtureIntegrity(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.data = build_demo_data()
 
-    def test_every_question_is_reviewable(self):
-        for cls in self.data.classes:
-            self.assertTrue(cls.review_questions)
-            for q in cls.review_questions:
-                self.assertTrue(q.stem.strip(), q.id)
-                self.assertTrue(q.skill_names, q.id)       # 目标技能
-                self.assertTrue(q.answer.strip(), q.id)    # 参考答案
-                self.assertTrue(q.scoring_notes.strip(), q.id)  # 评分说明
-                self.assertTrue(q.solution_steps, q.id)
-                self.assertIn(q.category, MIX_CATEGORIES)
-                review_vm(q)  # builder must not choke
+    def test_three_papers_one_processing(self):
+        self.assertEqual(len(self.data.papers), 3)
+        processing = [p for p in self.data.papers if p.status == "处理中"]
+        self.assertEqual(len(processing), 1)
+        self.assertEqual(processing[0].questions, [])
 
-    def test_recognition_items_are_complete(self):
-        for cls in self.data.classes:
-            self.assertTrue(cls.recognition)
-            for item in cls.recognition:
-                vm = recognition_vm(item)
-                self.assertTrue(vm["question_label"])
-                self.assertTrue(vm["skill_name"])
-                if item.tier is not ReliabilityTier.MANUAL:
-                    self.assertTrue(vm["answer"])
-
-    def test_export_view_model(self):
-        for cls in self.data.classes:
-            vm = export_vm(cls)
-            self.assertTrue(vm["assignment_number"])
-            self.assertTrue(vm["students"])
-            for sid, pages in vm["students"]:
-                self.assertRegex(sid, STUDENT_ID_RE)
-                self.assertGreater(pages, 0)
-            self.assertGreater(vm["teacher_key_pages"], 0)
-
-    def test_export_placeholders_name_backend_functions(self):
-        html = render_console(self.data)
-        for fn in ("export_class", "export_teacher_key",
-                   "export_student_sheet"):
-            self.assertIn(f'data-export-fn="{fn}"', html)
+    def test_paper_vm_counts_match_model(self):
+        for paper in self.data.papers:
+            vm = paper_vm(paper)
+            self.assertEqual(vm["counts"], paper.verdict_counts())
+            self.assertEqual(vm["total"], len(paper.questions))
+            self.assertEqual(
+                sum(n for _v, n, _c in vm["count_chips"]),
+                sum(c for c in vm["counts"].values() if c),
+            )
 
 
 if __name__ == "__main__":
