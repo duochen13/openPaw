@@ -57,6 +57,9 @@ python3 build_chart.py            # writes chart.png
 python3 build_chart.py --out /tmp/test.png
 ```
 
+Or from `analysis/`: `make cds-chart` (issue #181; `OUT=/tmp/test.png`
+for the `--out` form).
+
 ## Follow-up (not in this PR)
 
 - The issue's optional item — wiring into the ai-slowdown-news-watch Track B as a

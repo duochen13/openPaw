@@ -72,6 +72,15 @@ Everything below works from a fresh clone with no build step. All commands were 
   - `review/` tests are pytest-style: `pip install pytest`. (stdlib `unittest` discovery finds 0 tests there — that is expected, not a failure.) A few export tests also call poppler's `pdftotext` / `pdfinfo` when available and skip otherwise.
   - Regenerating the synthetic pilot papers (`pilot-kit/tools/build_papers.py`) needs Pillow (`pip install pillow`) and Noto CJK fonts.
 
+### Makefile shortcuts
+
+Every command in this section also has a `make` form (issue #181):
+`make serve`, `make demo`, `make test`, `make test-<pkg>` (per package),
+`make test-review`, `make test-kit`, `make e2e`, `make student-mvp`,
+`make papers`. Run `make` (or `make help`) in `homework-pilot/` for the
+full list with the raw command each target wraps. The raw commands below
+stay canonical.
+
 ### Student web UI demo (`webui/`)
 
 Run from `homework-pilot/`:

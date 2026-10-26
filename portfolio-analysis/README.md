@@ -22,6 +22,14 @@ uv pip install -e ".[dev]"
 
 Network-dependent tests are excluded by default. Run them with `.venv/bin/pytest -m network`.
 
+Makefile shortcuts (issue #181): `make setup`, `make test`,
+`make test-network` and `make test-network-verbose` wrap the commands
+above, and the launcher commands below have make forms too — `make chart`,
+`make render`, `make dashboard`, `make factor-dashboard`,
+`make fetch-fundamentals`, `make ai-trade-dashboard`, `make ingest-prices`,
+`make detect-moves`, `make collect-events`. Run `make` in
+`portfolio-analysis/` for the full list.
+
 ## Usage
 
 ```bash
@@ -262,6 +270,9 @@ From the `openPaw` repository root:
 ./portfolio-analysis/run chart META --keyless
 ```
 
+Make equivalent (from `portfolio-analysis/`): `make chart` — defaults
+`TICKER=META`, `FLAGS=--keyless`.
+
 This produces **`portfolio-analysis/out/META.html`**. Open it in a browser.
 It uses stored prices if available, detects unusual moves, collects SEC/HN/macro
 context, and renders the chart. `--keyless` deliberately omits Alpha Vantage;
@@ -326,6 +337,10 @@ P/E and supported business KPIs, fetch quarterly fundamentals before rendering:
 ./portfolio-analysis/run render
 ```
 
+Make equivalents (from `portfolio-analysis/`): `make fetch-fundamentals`,
+`make render` (add `TICKER=META` for one stock); also `make detect-moves`,
+`make dashboard`, `make factor-dashboard`.
+
 Factor trajectories (beta/alpha over time) remain available per stock in the
 "Beta, R² & alpha over time" section of each chart page.
 
@@ -343,6 +358,9 @@ or view time.
 ./portfolio-analysis/run ai-trade-dashboard
 open portfolio-analysis/out/ai-trade.html
 ```
+
+Make equivalents (from `portfolio-analysis/`): `make ai-trade-dashboard`,
+`make open-ai-trade`.
 
 The data is a dated snapshot vendored into `data/ai_trade/` (the
 `data/insight/` convention from PR #38): `monthly.csv` (monthly aggregates

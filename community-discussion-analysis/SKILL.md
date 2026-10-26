@@ -43,6 +43,7 @@ targeting in Step 2. Skip for pure pain-point topics (e.g. "daily SWE workflow")
 ```bash
 python3 scripts/collect_hn.py --domain <slug> --queries "term1,term2,term3,..."
 ```
+(Make, from this directory: `make collect-hn DOMAIN=<slug> QUERIES="term1,term2,..."` — issue #181.)
 Use 8–12 *focused* keyword queries, not one long sentence (Algolia ranks by keyword match).
 
 **Reddit** — `scripts/collect_reddit.py` with a JSON config. Reddit is **bot-protected**;
@@ -56,6 +57,8 @@ desktop User-Agent. Two task types:
 ```bash
 python3 scripts/collect_reddit.py --config /tmp/reddit_<slug>.json
 ```
+
+(Make, from this directory: `make collect-reddit CONFIG=/tmp/reddit_<slug>.json` — issue #181.)
 Config schema and gotchas are documented at the top of `scripts/collect_reddit.py` — read it.
 
 ### Step 3 — Merge (if both sources)

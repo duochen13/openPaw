@@ -24,6 +24,11 @@ PYTHONPATH=src .venv/bin/python -m stock_trading_bot.cli ingest NVDA
 PYTHONPATH=src .venv/bin/python -m stock_trading_bot.cli ingest ServiceNow
 ```
 
+Makefile shortcuts (issue #181): `make setup`, `make ingest`
+(`TICKER=ServiceNow` etc.), `make test`, `make lint`, `make typecheck`,
+`make check`. Run `make` in `stock-trading-bot/` for the list; the raw
+commands stay canonical.
+
 A ticker, company name, or watchlist alias all resolve.
 A `stock-trading` console script also exists, but prefer the module form — see the environment note below.
 

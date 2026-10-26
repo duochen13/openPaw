@@ -21,6 +21,13 @@ portfolio-analysis/.venv/bin/python -m unittest discover -s bearish-challenger/t
 node bearish-challenger/tests/check_dashboard.cjs
 ```
 
+Makefile shortcuts (issue #181): the same commands exist as targets in
+`bearish-challenger/Makefile` — from the repo root,
+`make -C bearish-challenger build|open|report|alerts|collect|test|check-dashboard`.
+The launcher and the tests resolve their own paths, so running them from
+inside `bearish-challenger/` is equivalent. Run
+`make -C bearish-challenger` for the list.
+
 The browser check verifies investor/evidence/ticker filters, the empty-position
 state, mobile overflow and JavaScript errors. Set `PLAYWRIGHT_MODULE` and
 `CHROME_PATH` to use installations other than this workspace's local defaults.
