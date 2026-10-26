@@ -24,6 +24,12 @@ Automated AWS Lambda function that sends daily email digests at 10am PT with:
 npm install
 ```
 
+Make equivalent: `make install`. The other documented commands have make
+forms too — `make test`, `make test-coverage`, `make test-receipts`,
+`make build`, `make env`; run `make` in `daily-report/` for the full list
+(issue #181). `make deploy` and `make test-watch` exist as well and are
+labeled interactive in the Makefile help.
+
 ### Testing
 
 ```bash
