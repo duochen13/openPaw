@@ -58,11 +58,20 @@ Makefile targets (all run inside `.venv`, no activation needed):
 
 | Target      | What it does                                             |
 |-------------|----------------------------------------------------------|
+| `make` / `make help` | list all targets (default goal)                 |
 | `make setup`| create `.venv` + `pip install -r requirements.txt`       |
 | `make test` | install `requirements-dev.txt` + run the test suite       |
 | `make run ARGS="…"` | run the pipeline CLI, e.g. `make run ARGS="runs list"` |
 | `make ui`   | local map dashboard (http://127.0.0.1:8000)              |
 | `make api`  | async API service (http://127.0.0.1:8000)                |
+| `make research ARGS="…"` | research pipeline module, e.g. `ARGS="--from-analysis data/analysis/<file>.json"` |
+| `make runs-list` | `runs list`                                           |
+| `make runs-show N=3` | `runs show N --places`                             |
+| `make apikeys-create NAME=dev` | mint an API key (raw key printed once)   |
+| `make api-docs` | regenerate `docs/api-reference.md` + `docs/openapi.json` |
+| `make test-research` | end-to-end research test module                   |
+| `make test-mcp` | MCP server end-to-end test module                     |
+| `make install` | `pip install -e .` (the `travel-assistant` console script) |
 | `make clean`| remove `.venv`                                           |
 
 ## API documentation
