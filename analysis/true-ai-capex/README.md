@@ -56,6 +56,9 @@ python3 build_chart.py            # writes chart.png
 python3 build_chart.py --out /tmp/test.png
 ```
 
+Or from `analysis/`: `make capex-chart` (issue #181; `OUT=/tmp/test.png`
+for the `--out` form).
+
 ## Limitations / open questions
 
 - 2026 off-BS tracking is not exhaustive (only the El Paso deal verified so far).
