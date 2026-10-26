@@ -28,6 +28,18 @@ relevant to NVDA, MSFT, GOOGL, META, and NOW. Run
 `./bearish-challenger/run alerts` to preview qualifying reviewed alerts; it prints
 nothing when none qualify. Automatic notification delivery is not configured.
 
+## Makefiles
+
+Every project directory has a Makefile wrapping all of its documented
+commands (issue #181). Run `make` inside any project directory (or
+`make -C <project> help` from the repo root) to list its targets; the raw
+commands in each project's README stay canonical. A root Makefile
+forwards the common targets with per-project prefixes — `make hp-serve`,
+`make pa-chart`, `make bc-build`, `make ta-test`, and so on — and adds the
+repo-level `make hooks` for the docs-sync pre-push hook described below.
+`data/`, `docs/` and `reports/` are support directories and have no
+Makefile.
+
 ## Portfolio Analysis
 
 The package, configuration, scripts, and tests live in
