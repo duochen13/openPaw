@@ -125,10 +125,10 @@ ORCL_WATCH_BP = 250.0
 
 _CDS_COLORS = {"CRWV": "#6c3483", "ORCL": "#c0392b", "META": "#2e86c1", "NVDA": "#7f8c8d"}
 _CDS_LABELS = {
-    "CRWV": "CRWV 5Y CDS, bp (reported points: \u2265800 Jul-26; 1,117 Oct-14)",
-    "ORCL": "ORCL 5Y CDS, bp (227 Sep-24 \u2192 288 Oct-15, record)",
-    "META": "META 5Y CDS, bp (~100 Sep-29 \u2192 104 Oct-15)",
-    "NVDA": "NVDA 5Y CDS, bp (84 ~Oct-10 \u2192 90 Oct-15)",
+    "CRWV": "CRWV 5Y CDS, bp (reported points: \u2265800 Jul-26; 1,117 Oct-14; 1,148 Oct-26)",
+    "ORCL": "ORCL 5Y CDS, bp (227 Sep-24 \u2192 332 Oct-22, record; 304 Oct-26)",
+    "META": "META 5Y CDS, bp (~100 Sep-29 \u2192 121 Oct-26)",
+    "NVDA": "NVDA 5Y CDS, bp (84 ~Oct-10 \u2192 128 Oct-26)",
 }
 
 

@@ -3,9 +3,15 @@ ORCL,2026-09-24,227,Reuters (Sep-2026 record; AI slowdown watch baseline),Sep-24
 ORCL,2026-10-08,260,Reuters,"Level a week before Oct-15, per Reuters"
 ORCL,2026-10-14,262,Reuters (derived from the Oct-15 report),288 less the reported +26bp overnight move into Oct-15
 ORCL,2026-10-15,288,Reuters,Oct-15-2026 record
+ORCL,2026-10-21,308.25,"CNBC/FactSet via FourWeekMBA, Oct-22-2026","FactSet print for Oct-21, in the vendor-range note logged by the AI slowdown watch Oct-23"
+ORCL,2026-10-22,332,"S&P Capital IQ via AI slowdown watch log, Oct-22-2026","Oct-22 record; Cap IQ prints ran ~320-332bp that day"
+ORCL,2026-10-26,304,"S&P Global via Benzinga, Oct-26-2026","Oct-26 CDS table print; latest before the Oct-28 Investor Day, where Oracle capped new funding at $20B through FY30 (excl. refinancing) - no post-cap print yet"
 CRWV,2026-07-31,800,"Press reports, Jul-2026","Reported as 800bp+ in Jul-2026; plotted at the 800 floor, at Jul month-end"
 CRWV,2026-10-14,1117,"Press reports, Oct-14-2026",Oct-14-2026 close; reported +135bp day move
+CRWV,2026-10-26,1148,"S&P Global via Benzinga, Oct-26-2026","Oct-26 CDS table print; same table put the Oct-22 peak at 1,167bp and Sep-25 at 835bp"
 META,2026-09-29,100,Economic Times,"Approximately 100bp on Sep-29-2026, above the July peak"
 META,2026-10-15,104,"Reuters explainer, Oct-15-2026",
+META,2026-10-26,121,"S&P Global via Benzinga, Oct-26-2026",Oct-26 CDS table print
 NVDA,2026-10-10,84,MarketWatch,84bp at approximately Oct-10 (MarketWatch pair end)
 NVDA,2026-10-15,90,"Reuters explainer, Oct-15-2026",
+NVDA,2026-10-26,128,"S&P Global via Benzinga, Oct-26-2026",Oct-26 CDS table print
