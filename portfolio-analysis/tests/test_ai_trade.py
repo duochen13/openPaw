@@ -209,12 +209,18 @@ def test_shipped_cds_is_exactly_the_documented_prints():
         ("ORCL", "2026-10-08"): 260.0,
         ("ORCL", "2026-10-14"): 262.0,
         ("ORCL", "2026-10-15"): 288.0,
+        ("ORCL", "2026-10-21"): 308.25,
+        ("ORCL", "2026-10-22"): 332.0,
+        ("ORCL", "2026-10-26"): 304.0,
         ("CRWV", "2026-07-31"): 800.0,
         ("CRWV", "2026-10-14"): 1117.0,
+        ("CRWV", "2026-10-26"): 1148.0,
         ("META", "2026-09-29"): 100.0,
         ("META", "2026-10-15"): 104.0,
+        ("META", "2026-10-26"): 121.0,
         ("NVDA", "2026-10-10"): 84.0,
         ("NVDA", "2026-10-15"): 90.0,
+        ("NVDA", "2026-10-26"): 128.0,
     }
     for p in prints:
         assert p.source, f"{p.ticker} {p.date}: print without a press source"
@@ -274,7 +280,7 @@ def test_data_shape_eight_panels_no_cds_projection():
         assert s["proj"] is None, "Panel 7 must never carry a projection segment"
     assert cds_panel["hline"]["value"] == 250.0  # ORCL watch line
     assert data["asof"] == "2026-10-25"  # Chart C's fit notes are the newest
-    assert len(data["cds"]) == 10
+    assert len(data["cds"]) == 16
     assert len(data["notes"]) == 20  # 14 vendored + 3 cloud + 3 Chart C fit series
 
 
