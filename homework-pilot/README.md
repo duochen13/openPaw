@@ -60,6 +60,7 @@ so the design doc still lives under the misspelled folder.
 | [#167](https://github.com/duochen13/openPaw/issues/167) teacher console UI | this PR — built as a teacher console, then **pivoted to the student-side MVP (#176)** on the same branch; see the #176 row. |
 | [#176](https://github.com/duochen13/openPaw/issues/176) student-side MVP | UI merged (demo fixtures); **pipeline in this PR** — `grading/` runs scan → per-question 对 / 错 / 待确认 verdicts with a confirmation queue on the synthetic kit (segmentation/transcription backends are kit-deterministic in v1; self-solve is an interface + non-guessing stub). Real student data still gated on #108 Phase 2 (school stance / privacy). |
 | [#179](https://github.com/duochen13/openPaw/issues/179) local web server for the student MVP | **In this PR** — `webui/serve.py`: stdlib-only local server (`python3 -m webui --serve`) wiring the webui views to the `grading/` pipeline and the `confirm` store: PDF uploads graded through the kit-backed test-double path (non-kit uploads stored as 未识别, never judged), persisted confirmations, JSONL export. Real VLM/OCR backends and real student data remain out of scope (the latter still gated on #108 Phase 2). |
+| [#184](https://github.com/duochen13/openPaw/issues/184) Phase 2 real-paper grading backend | **Backend implemented** — `grading/realpaper.py` grades uploaded papers for any student ID behind the `grading/backends.py` interfaces (ingestion-recognizer transcription bridge, unchanged judge, ID-only guard); the web UI selects it via `--backend real`, default stays `kit`. **Acceptance evaluation still blocked on #108**: the 5 real sample papers have not been provided, so no decided-rate/agreement numbers on real papers exist yet; the issue stays open. |
 
 ## How to run
 
@@ -105,6 +106,8 @@ Routes: `GET /` （试卷 list + upload form), `POST /papers` (multipart PDF upl
 
 **v1 upload behavior, stated plainly:** the v1 segmentation/transcription backends are the synthetic kit's deterministic test doubles, so an upload is graded *by student ID* through the kit path (`grading.pipeline.grade_kit_paper`). For a kit student (S-001…S-005) the results page shows exactly the pipeline's output for that student's kit paper; the uploaded bytes are stored for provenance and hash-compared against the kit's `paper.pdf`, and the page says whether they matched (and says the grading came from the kit records when they did not). For any other student ID the upload is stored and marked **未识别**: v1 cannot read an arbitrary scan, so nothing is segmented and nothing is judged — no verdicts are invented. Inside a kit paper the pipeline's honesty rule is unchanged (unreadable/undecidable items land in 待确认 with a reason; pending items with no system lean get a manual-verdict form in the queue instead of a fabricated proposal).
 
+**Backend selection (#184):** the server picks its grading backend by configuration — `--backend kit|real` (or the `HOMEWORK_PILOT_BACKEND` env var), defaulting to `kit` until the real backend passes validation. With `--backend real`, uploads are graded by `grading/realpaper.py` from the uploaded bytes themselves, for any student ID: pages counted from the PDF (stdlib only), segmentation over the assignment's layout template (`--assignment-dir`, default the kit's assignment directory), transcription through the configured ingestion recognizer, then the unchanged judge. No OCR model is wired up yet, so the shipped default recognizer reads nothing and every item pends 待确认 / unreadable rather than being guessed; a PDF whose page count cannot be determined is still stored as 未识别 with nothing judged.
+
 Uploads and records live in `homework-pilot/.local-data/` (gitignored): one JSON record per paper under `papers/`, the uploaded PDF under `uploads/`. Every record passes `privacy.guard.assert_id_only` before it is written; students are IDs only and the client's original filename is never stored. Confirmations survive server restarts (records are re-read from disk) and export through `GET /export`.
 
 ### Student MVP pipeline (`grading/`)
@@ -117,6 +120,8 @@ python3 homework-pilot/pilot-kit/tools/run_student_mvp.py
 
 Expected: per-paper verdict counts for S-001…S-005, a series of `ok` lines ending in `ALL CHECKS PASSED`, exit code 0. Kit census: 67 items decided （对/错， all from red-pen marks) and 23 routed to 待确认 (19 partial-score 步骤分， 2 comment-only open answers, 2 unreadable) — zero guessed verdicts. In v1 the segmentation/transcription backends are deterministic over the kit's layout template and scripted recognition records; a VLM segmenter/recognizer and a real self-solve model plug into the same interfaces (`grading/backends.py`) later.
 
+**Real-paper backend (`grading/realpaper.py`, #184):** the Phase 2 backend behind the same interfaces. It pages an uploaded PDF/photos, segments over the assignment's layout template, transcribes through the ingestion package's `Recognizer` interface (`RecognizerTranscriber` — a real OCR/VLM recognizer plugs in there), and runs the unchanged judge, producing the same per-question record shape (page + crop, transcription, reliability, verdict + source, knowledge-point tag) for any student ID; every output record passes `privacy.guard.assert_id_only`. `evaluate_against_truth` / `summarize_evaluations` implement the acceptance report (decided-rate + verdict agreement vs teacher ground truth). **Validation gap, stated plainly:** that acceptance evaluation has NOT run on real papers — the 5 real sample graded papers from #108 have not been provided yet (human-blocked on Daniel/teacher). The backend's tests drive it over synthetic fixtures only (kit records replayed through the recognizer bridge, kit PDFs as upload bytes), so no real-paper accuracy number exists or is claimed; the kit backend remains the web UI's default until the samples land and the evaluation passes.
+
 ### Tests
 
 Per package, from `homework-pilot/`:
@@ -127,8 +132,8 @@ python3 -m unittest discover -s ingestion/tests -t .   # 14 tests
 python3 -m unittest discover -s taxonomy/tests -t .    # 26 tests
 python3 -m unittest discover -s assembly/tests -t .    # 33 tests
 python3 -m unittest discover -s privacy/tests -t .     # 25 tests
-python3 -m unittest discover -s webui/tests -t .       # 38 tests
-python3 -m unittest discover -s grading/tests -t .     # 58 tests
+python3 -m unittest discover -s webui/tests -t .       # 41 tests
+python3 -m unittest discover -s grading/tests -t .     # 73 tests
 python3 -m pytest review/tests                         # 32 tests (pytest required, see above)
 ```
 
@@ -142,7 +147,7 @@ python3 -m unittest discover -s tests                  # 13 tests
 Or the whole suite at once, from `homework-pilot/` (needs pytest):
 
 ```bash
-python3 -m pytest                                      # 261 passed
+python3 -m pytest                                      # 279 passed
 ```
 
 ### End-to-end smoke run (pilot-kit)
