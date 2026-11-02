@@ -32,8 +32,9 @@ above, and the launcher commands below have make forms too — `make chart`,
 the refresh together (issue #186): `make all` runs `make render`,
 `make dashboard` and `make ai-trade-dashboard`, then opens both
 dashboards — if any build step fails it stops and opens nothing, and
-`OPEN=0` builds without opening. From the repo root the same is
-`make pa-all` (or its alias `make all`).
+`OPEN=0` builds without opening. From the repo root the same command is
+`make all` — that is the canonical form; `make pa-all` remains only as a
+legacy alias for it.
 
 ## Usage
 
