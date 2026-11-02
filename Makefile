@@ -13,9 +13,9 @@
 
 .DEFAULT_GOAL := help
 
-.PHONY: help hooks \
+.PHONY: help hooks all \
 	hp-help hp-serve hp-demo hp-test \
-	pa-help pa-setup pa-test pa-chart pa-render pa-dashboard pa-ai-trade \
+	pa-help pa-setup pa-test pa-chart pa-render pa-dashboard pa-ai-trade pa-all \
 	stb-help stb-setup stb-test stb-check stb-ingest \
 	bc-help bc-build bc-report bc-alerts bc-collect bc-test \
 	dr-help dr-install dr-test dr-build \
@@ -28,11 +28,13 @@ help:
 	@echo "openPaw — root make targets (delegation to per-project Makefiles + hooks):"
 	@echo ""
 	@echo "  make hooks            install the docs-sync pre-push hook (git config core.hooksPath githooks && chmod +x githooks/pre-push)"
+	@echo "  make all              alias for pa-all (portfolio-analysis full build + open, below)"
 	@echo ""
 	@echo "  homework-pilot/        prefix hp-   (make hp-help for its full list)"
 	@echo "    hp-serve hp-demo hp-test"
 	@echo "  portfolio-analysis/    prefix pa-   (make pa-help for its full list)"
-	@echo "    pa-setup pa-test pa-chart pa-render pa-dashboard pa-ai-trade"
+	@echo "    pa-setup pa-test pa-chart pa-render pa-dashboard pa-ai-trade pa-all"
+	@echo "    pa-all = render + build both dashboards + open them   [OPEN=0: build only]"
 	@echo "  stock-trading-bot/     prefix stb-  (make stb-help for its full list)"
 	@echo "    stb-setup stb-test stb-check stb-ingest"
 	@echo "  bearish-challenger/    prefix bc-   (make bc-help for its full list)"
@@ -84,6 +86,11 @@ pa-dashboard:
 
 pa-ai-trade:
 	$(MAKE) -C portfolio-analysis ai-trade-dashboard
+
+pa-all:
+	$(MAKE) -C portfolio-analysis all
+
+all: pa-all
 
 stb-help:
 	$(MAKE) -C stock-trading-bot help
