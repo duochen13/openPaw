@@ -34,20 +34,39 @@ record per paper under ``papers/``, the uploaded file under
 before it is written: students are IDs only, and the client's original
 filename is never stored (it could carry a name).
 
-How v1 grades an upload -- stated plainly, because the backends are
-test doubles: the v1 segmentation/transcription backends are the
-synthetic kit's deterministic ones (see :mod:`grading.backends`), so
-an upload is graded **by student ID through the kit path**
-(:func:`grading.pipeline.grade_kit_paper`). For a kit student
-(S-001..S-005) the verdicts are exactly the pipeline output for that
-student's kit paper; the uploaded bytes are stored for provenance and
-hash-compared against the kit's ``paper.pdf`` -- the results page says
-whether they matched, and says the grading came from the kit records
-when they did not. For any other student ID the upload is stored as
-**未识别 (unrecognized)**: v1 cannot read an arbitrary scan, so nothing
-is segmented and nothing is judged -- no verdicts are invented. Inside
-a kit paper, the pipeline's own honesty rule applies unchanged:
-anything unreadable or undecidable lands in 待确认 with a reason.
+How an upload is graded depends on the configured backend
+(``StudentApp(backend=...)``, ``--backend`` flag, or the
+``HOMEWORK_PILOT_BACKEND`` env var), stated plainly:
+
+* ``kit`` (the default, until the real backend passes validation on
+  the #108 sample papers): the segmentation/transcription backends
+  are the synthetic kit's deterministic test doubles (see
+  :mod:`grading.backends`), so an upload is graded **by student ID
+  through the kit path** (:func:`grading.pipeline.grade_kit_paper`).
+  For a kit student (S-001..S-005) the verdicts are exactly the
+  pipeline output for that student's kit paper; the uploaded bytes
+  are stored for provenance and hash-compared against the kit's
+  ``paper.pdf`` -- the results page says whether they matched, and
+  says the grading came from the kit records when they did not. For
+  any other student ID the upload is stored as **未识别
+  (unrecognized)**: the kit backend cannot read an arbitrary scan, so
+  nothing is segmented and nothing is judged -- no verdicts are
+  invented.
+* ``real`` (issue #184): :mod:`grading.realpaper` grades the uploaded
+  bytes themselves, for any student ID -- pages counted from the PDF,
+  segmentation over the assignment's layout template (from
+  ``--assignment-dir``, default the kit's assignment directory; the
+  teacher's real assignment swaps the files' contents, not their
+  shape), transcription through the configured ingestion recognizer,
+  then the unchanged judge. The shipped default recognizer reads
+  nothing (no OCR model is wired up), so every item is recorded and
+  pends 待确认 / unreadable rather than being guessed. An upload
+  whose page count cannot be determined is stored as 未识别, again
+  with nothing judged.
+
+Inside either backend, the pipeline's own honesty rule applies
+unchanged: anything unreadable or undecidable lands in 待确认 with a
+reason.
 
 The results page renders stored ``ItemResult`` records directly
 rather than through :mod:`grading.adapter`: the adapter intentionally
@@ -110,6 +129,13 @@ def _deps():
     from grading.backends import load_kit_manifest
     from grading.models import PENDING_REASONS, GradedPaper, ItemResult
     from grading.pipeline import grade_kit_paper
+    from grading.realpaper import (
+        UnreadableUploadError,
+        grade_real_paper,
+        load_assignment,
+        pages_from_pdf,
+        unavailable_recognizer,
+    )
     from privacy.guard import NameFieldError, assert_id_only
 
     return {
@@ -120,6 +146,11 @@ def _deps():
         "GradedPaper": GradedPaper,
         "ItemResult": ItemResult,
         "grade_kit_paper": grade_kit_paper,
+        "grade_real_paper": grade_real_paper,
+        "load_assignment": load_assignment,
+        "pages_from_pdf": pages_from_pdf,
+        "unavailable_recognizer": unavailable_recognizer,
+        "UnreadableUploadError": UnreadableUploadError,
         "NameFieldError": NameFieldError,
         "assert_id_only": assert_id_only,
     }
@@ -173,13 +204,20 @@ class PaperStore:
     def _record_path(self, paper_id: str) -> Path:
         return self.papers_dir / f"{paper_id}.json"
 
+    def reserve_paper_id(self, student_id: str) -> str:
+        """The paper ID :meth:`add_paper` will assign next for a student
+        (provided no paper for that student is added in between). The
+        real backend uses it to name the stored upload before grading,
+        so item records can reference the upload's pages."""
+        n = 1
+        while self._record_path(f"{student_id}-{n:02d}").exists():
+            n += 1
+        return f"{student_id}-{n:02d}"
+
     def add_paper(self, paper, upload_meta: dict, content: bytes) -> str:
         """Store a fresh upload end to end; returns its new paper ID."""
         with self._lock:
-            n = 1
-            while self._record_path(f"{paper.student_id}-{n:02d}").exists():
-                n += 1
-            paper_id = f"{paper.student_id}-{n:02d}"
+            paper_id = self.reserve_paper_id(paper.student_id)
             self.save_upload(paper_id, content)
             self.save(paper_id, paper, upload_meta)
             return paper_id
@@ -247,11 +285,34 @@ class PaperStore:
 
 
 class StudentApp:
-    """Holds the store + kit manifest; grades uploads (see module docs)."""
+    """Holds the store + kit manifest; grades uploads (see module docs).
 
-    def __init__(self, store: PaperStore, kit_dir: Path) -> None:
+    ``backend`` selects the grading backend: ``"kit"`` (default -- the
+    synthetic-kit test double) or ``"real"`` (:mod:`grading.realpaper`,
+    issue #184). ``assignment_dir`` is the real backend's assignment
+    definition (questions + layout template); it defaults to the kit's
+    assignment directory. ``recognizer`` is the real backend's
+    ingestion recognizer; the default reads nothing.
+    """
+
+    def __init__(
+        self,
+        store: PaperStore,
+        kit_dir: Path,
+        *,
+        backend: str = "kit",
+        assignment_dir: Path | None = None,
+        recognizer=None,
+    ) -> None:
+        if backend not in ("kit", "real"):
+            raise ValueError(f"unknown grading backend: {backend!r}")
         self.store = store
         self.kit_dir = Path(kit_dir)
+        self.backend = backend
+        self.assignment_dir = (
+            Path(assignment_dir) if assignment_dir else self.kit_dir / "assignment"
+        )
+        self.recognizer = recognizer
         self.kit_students: set[str] = set()
         manifest = self.kit_dir / "papers" / "manifest.json"
         if manifest.exists():
@@ -262,6 +323,11 @@ class StudentApp:
         """Grade one uploaded PDF; returns ``(paper, upload_meta)``."""
         deps = _deps()
         digest = hashlib.sha256(content).hexdigest()
+        uploaded_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        if self.backend == "real":
+            return self._grade_upload_real(
+                student_id, content, digest, uploaded_at
+            )
         matches = False
         if student_id in self.kit_students:
             kit_pdf = self.kit_dir / "papers" / student_id / "paper.pdf"
@@ -269,9 +335,10 @@ class StudentApp:
                 matches = hashlib.sha256(kit_pdf.read_bytes()).hexdigest() == digest
             paper = deps["grade_kit_paper"](self.kit_dir, student_id)
         else:
-            # v1 cannot read an arbitrary scan: store the upload, judge
-            # nothing. An empty, explicitly-unrecognized paper -- never
-            # a fabricated question list with guessed verdicts.
+            # The kit backend cannot read an arbitrary scan: store the
+            # upload, judge nothing. An empty, explicitly-unrecognized
+            # paper -- never a fabricated question list with guessed
+            # verdicts.
             paper = deps["GradedPaper"](
                 student_id=student_id,
                 title="上传的试卷",
@@ -280,9 +347,55 @@ class StudentApp:
             )
         meta = {
             "sha256": digest,
+            "backend": "kit",
             "matches_kit_paper": matches,
-            "uploaded_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "uploaded_at": uploaded_at,
         }
+        return paper, meta
+
+    def _grade_upload_real(
+        self, student_id: str, content: bytes, digest: str, uploaded_at: str
+    ):
+        """Grade the uploaded bytes themselves (issue #184 backend)."""
+        deps = _deps()
+        meta = {
+            "sha256": digest,
+            "backend": "real",
+            "uploaded_at": uploaded_at,
+        }
+        paper_id = self.store.reserve_paper_id(student_id)
+        location = str(self.store.uploads_dir / f"{paper_id}.pdf")
+        try:
+            pages = deps["pages_from_pdf"](content, location)
+        except deps["UnreadableUploadError"] as exc:
+            # Cannot even page the scan: store it as unrecognized and
+            # judge nothing -- the same honesty rule as the kit path.
+            meta["backend_error"] = str(exc)
+            paper = deps["GradedPaper"](
+                student_id=student_id,
+                title="上传的试卷",
+                status=UNRECOGNIZED_STATUS,
+                items=(),
+            )
+            return paper, meta
+        questions, template, assignment_meta = deps["load_assignment"](
+            self.assignment_dir
+        )
+        recognizer = self.recognizer or deps["unavailable_recognizer"]()
+        meta["recognizer"] = type(recognizer).__name__
+        paper = deps["grade_real_paper"](
+            student_id=student_id,
+            pages=pages,
+            questions=questions,
+            template=template,
+            recognizer=recognizer,
+            assignment_id=(
+                template.get("assignment_number")
+                or assignment_meta.get("assignment_number", "")
+            ),
+            title=template.get("title") or "上传的试卷",
+            date_label="真实试卷（real backend）",
+        )
         return paper, meta
 
 
@@ -416,7 +529,10 @@ def _papers_page(app: StudentApp) -> str:
         counts = _counts(paper)
         date_label = (meta.get("uploaded_at") or "")[:10]
         if paper.status == UNRECOGNIZED_STATUS:
-            meta_line = f"{paper.student_id} · {date_label} · 未识别（v1 无法读取这份扫描）"
+            if meta.get("backend") == "real":
+                meta_line = f"{paper.student_id} · {date_label} · 未识别（真实后端无法确定这份扫描的页数）"
+            else:
+                meta_line = f"{paper.student_id} · {date_label} · 未识别（v1 无法读取这份扫描）"
             chips = ""
         else:
             meta_line = (
@@ -437,14 +553,23 @@ def _papers_page(app: StudentApp) -> str:
         '<div class="card"><p class="muted">还没有上传的试卷。'
         "用上面的表单上传第一份吧。</p></div>"
     )
+    if app.backend == "real":
+        upload_sub = (
+            "判定来自真实后端：按作业模板切分上传的扫描本身，逐题转写并判定，"
+            "任何学生编号都可以。识别器读不出的题目会进入待确认，不会猜测。"
+        )
+    else:
+        upload_sub = (
+            "v1 的判定来自合成试卷包的测试替身后端：按学生编号匹配试卷包"
+            "（S-001…S-005），其他编号的扫描会被存档并标记为未识别，不做判定。"
+        )
     body = f"""
 <header class="view-head"><h1>试卷</h1>
   <p class="view-sub">上传做完的试卷（扫描 PDF），系统会逐题给出判定。</p></header>
 <form class="upload-card" method="post" action="/papers" enctype="multipart/form-data">
   <span class="upload-icon">{_svg(_ACTION_ICONS["upload"], 30)}</span>
   <div class="upload-title">上传已完成试卷（扫描 PDF）</div>
-  <p class="upload-sub">v1 的判定来自合成试卷包的测试替身后端：按学生编号匹配试卷包
-  （S-001…S-005），其他编号的扫描会被存档并标记为未识别，不做判定。</p>
+  <p class="upload-sub">{upload_sub}</p>
   <div class="upload-form-fields">
     <label class="field-label-inline" for="f-student">学生编号</label>
     <input class="text-input" id="f-student" type="text" name="student_id"
@@ -462,11 +587,24 @@ def _result_page(app: StudentApp, paper_id: str, paper, meta: dict) -> str:
     date_label = (meta.get("uploaded_at") or "")[:10]
     banners = []
     if paper.status == UNRECOGNIZED_STATUS:
+        if meta.get("backend") == "real":
+            banners.append(
+                '<div class="notice">这份上传已存档并标记为「未识别」：真实后端'
+                "无法确定这份扫描的页数，因此没有做任何切分或判定，"
+                "也没有猜测任何结果。</div>"
+            )
+        else:
+            banners.append(
+                '<div class="notice">这份上传已存档并标记为「未识别」：v1 的测试替身'
+                "后端只认识合成试卷包（S-001…S-005）的试卷，无法读取这份扫描——"
+                "没有做任何切分或判定，也没有猜测任何结果。"
+                "真实的识别后端接入后，这里会给出逐题判定。</div>"
+            )
+    elif meta.get("backend") == "real":
         banners.append(
-            '<div class="notice">这份上传已存档并标记为「未识别」：v1 的测试替身'
-            "后端只认识合成试卷包（S-001…S-005）的试卷，无法读取这份扫描——"
-            "没有做任何切分或判定，也没有猜测任何结果。"
-            "真实的识别后端接入后，这里会给出逐题判定。</div>"
+            '<div class="notice">这份试卷由真实后端判定：切分与转写来自上传文件'
+            f"本身（识别器：{_esc(meta.get('recognizer', ''))}）。"
+            "识别可靠性低的转写已进入待确认队列，判定规则与试卷包一致。</div>"
         )
     elif meta.get("matches_kit_paper"):
         banners.append(
@@ -701,9 +839,18 @@ def make_server(
     *,
     data_dir: Path,
     kit_dir: Path,
+    backend: str = "kit",
+    assignment_dir: Path | None = None,
+    recognizer=None,
 ) -> ThreadingHTTPServer:
     """Build (but do not start) the student MVP server."""
-    app = StudentApp(PaperStore(Path(data_dir)), Path(kit_dir))
+    app = StudentApp(
+        PaperStore(Path(data_dir)),
+        Path(kit_dir),
+        backend=backend,
+        assignment_dir=assignment_dir,
+        recognizer=recognizer,
+    )
 
     class Handler(BaseHTTPRequestHandler):
         server_version = "HomeworkPilotStudentMVP/0.1"
@@ -902,17 +1049,33 @@ def serve_main(argv: list[str] | None = None) -> int:
                         help="where uploads + records live (gitignored)")
     parser.add_argument("--kit-dir", default=str(DEFAULT_KIT_DIR),
                         help="synthetic pilot kit the v1 backends read")
+    parser.add_argument(
+        "--backend",
+        choices=("kit", "real"),
+        default=os.environ.get("HOMEWORK_PILOT_BACKEND", "kit"),
+        help="grading backend: kit test double (default) or the real "
+             "backend of grading.realpaper (issue #184); the "
+             "HOMEWORK_PILOT_BACKEND env var sets the default",
+    )
+    parser.add_argument(
+        "--assignment-dir",
+        default=None,
+        help="real backend only: assignment directory holding "
+             "questions.json + template.json (default: <kit-dir>/assignment)",
+    )
     args = parser.parse_args(argv)
     server = make_server(
         args.host,
         args.port,
         data_dir=Path(args.data_dir),
         kit_dir=Path(args.kit_dir),
+        backend=args.backend,
+        assignment_dir=Path(args.assignment_dir) if args.assignment_dir else None,
     )
     host, port = server.server_address[:2]
     print(
         f"homework-pilot student MVP: http://{host}:{port}/"
-        f"  (data dir: {args.data_dir})"
+        f"  (data dir: {args.data_dir}, backend: {args.backend})"
     )
     try:
         server.serve_forever()
