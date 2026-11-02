@@ -16,6 +16,14 @@ synthetic-kit one without touching the judge:
 * :class:`SelfSolver` -- the third verdict source (model self-solve).
   v1 ships only :class:`UnavailableSelfSolver`, which always declines:
   no real model calls in this PR, and declining is the honest default.
+
+The real-paper backend (issue #184) lives in :mod:`grading.realpaper`:
+it implements these same interfaces over the ingestion package's
+recognizer interface, paging and transcribing the uploaded paper
+itself instead of replaying kit records. The kit backends below stay
+in place as test fixtures, and the web UI selects the backend by
+configuration, defaulting to the kit backend until the real one
+passes validation on the #108 sample papers.
 """
 
 from __future__ import annotations
