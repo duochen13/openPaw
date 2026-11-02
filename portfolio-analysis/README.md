@@ -28,7 +28,12 @@ above, and the launcher commands below have make forms too — `make chart`,
 `make render`, `make dashboard`, `make factor-dashboard`,
 `make fetch-fundamentals`, `make ai-trade-dashboard`, `make ingest-prices`,
 `make detect-moves`, `make collect-events`. Run `make` in
-`portfolio-analysis/` for the full list.
+`portfolio-analysis/` for the full list. One composition target ties
+the refresh together (issue #186): `make all` runs `make render`,
+`make dashboard` and `make ai-trade-dashboard`, then opens both
+dashboards — if any build step fails it stops and opens nothing, and
+`OPEN=0` builds without opening. From the repo root the same is
+`make pa-all` (or its alias `make all`).
 
 ## Usage
 
