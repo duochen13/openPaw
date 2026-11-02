@@ -15,6 +15,7 @@
   #110/#111 upload-matching pipeline.
 """
 
+from .cjk_font import missing_glyphs, render_text
 from .export import (
     ClassExport,
     export_class,
@@ -56,5 +57,7 @@ __all__ = [
     "export_class",
     "export_student_sheet",
     "export_teacher_key",
+    "missing_glyphs",
+    "render_text",
     "verify_pdf_structure",
 ]
