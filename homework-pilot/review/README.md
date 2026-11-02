@@ -14,6 +14,9 @@ separate teacher key （教师版） with answers and scoring notes （评分说
 | `models.py` | Self-contained input dataclasses (`Question`, `HomeworkPlan`, `PublishedPlan`) mirroring the assembly shapes. See the module docstring for the intended wiring once `assembly` lands on main. |
 | `review.py` | `ReviewSession`: `approve` / `reject` / `replace` / `adjust` at shared-question level, per-student overrides (`replace_for_student`, `adjust_for_student`), `approve_all()`, the approval gate (`is_approved`, `publish` raises `ApprovalError` unless every question cleared), and a full audit trail. |
 | `export.py` | Stdlib-only PDF 1.4 writer: `export_student_sheet`, `export_teacher_key`, `export_class` (whole-class batch + round-trip manifest). |
+| `cjk_font.py` | Bundled CJK font for the print PDFs (issue #185): stdlib TrueType parsing + Type0/CIDFontType2 embedding with a ToUnicode map. |
+| `assets/fonts/` | Noto Sans SC subset TTFs (Regular + Bold) and the font license (`OFL.txt`). |
+| `tools/build_cjk_fonts.py` | Build-time-only regeneration of the font subsets (needs fontTools; the export path never imports it). |
 
 ## Review workflow
 
@@ -61,7 +64,7 @@ Decisions and their propagation:
 Student sheet: title header with 学号 (student ID) + 作业编号 (assignment
 number) on every page, numbered stems with skill tags and category
 （共同题 → "common question"), figure placeholders as labeled boxes
-("FIGURE NEEDED / tu dai bu chong" + the teacher's figure description),
+("FIGURE NEEDED / 图待补充" + the teacher's figure description),
 ruled answer space (5–8 lines by difficulty), page numbers, and a
 keep-together rule so a question's stem block never splits awkwardly
 across pages.
@@ -78,14 +81,19 @@ upload-matching pipeline can map printed pages back to students.
 
 ## Honest limits of the PDF writer
 
-* **Fonts**: built-in Helvetica/Helvetica-Bold only (Latin-1). Chinese in
-  the *rendered* text is transliterated to spaced toneless pinyin from a
-  documented vocabulary (`_PINYIN` in `export.py`: domain terms +
-  chapter-3 physics core + common function words + CJK punctuation);
-  unmapped characters render as "?". The real Chinese terms are embedded
-  verbatim in the PDF metadata (UTF-16BE), so they survive in the file.
-  Before real print production, embed a CJK font (e.g. Noto Sans CJK) --
-  the writer's font table is the single place to change.
+* **Fonts** (issue #185): Latin body text uses the built-in
+  Helvetica/Helvetica-Bold; Chinese (and CJK punctuation / math symbols)
+  uses a **bundled Noto Sans SC subset** -- Noto Sans SC, version
+  2.004-H2, SIL Open Font License 1.1 (license text in
+  `assets/fonts/OFL.txt`) -- embedded in every PDF, so Chinese renders
+  verbatim in both the student sheet and the teacher key. The subset
+  (Regular 2,158,288 bytes; Bold 2,155,896 bytes) covers printable ASCII
+  + Latin-1, general/CJK punctuation, common math symbols, and the full
+  GB2312-80 Han repertoire (6,763 characters; all Chapter 3 vocabulary).
+  Characters outside the subset render as "?"; superscript digits render
+  as `^n` (the upstream font itself lacks most of them). Glyph coverage
+  for the Chapter 3 sample set is asserted in `tests/test_cjk_font.py`;
+  regenerate or widen the subset with `tools/build_cjk_fonts.py`.
 * **Figures**: labeled placeholder boxes only. No raster/vector figure
   rendering -- real artwork comes from the teacher (flagged upstream by
   the PLACEHOLDER figure status).
@@ -105,7 +113,10 @@ upload-matching pipeline can map printed pages back to students.
   (original teacher materials) are pending #108 field work.
 * Figure placeholder boxes ("FIGURE NEEDED") are tasks for the teacher:
   supply or draw the figure, then re-export.
-* The `_PINYIN` vocabulary covers chapter 3; extend it as new chapters
-  add vocabulary, or embed a CJK font and drop transliteration.
+* The bundled font subset covers the GB2312-80 repertoire (all of
+  Chapter 3 and common Simplified Chinese); a future chapter needing
+  characters outside GB2312 would need the subset widened
+  (`tools/build_cjk_fonts.py`) -- `review.cjk_font.missing_glyphs` is
+  the coverage check to run first.
 * `ReviewSession` is the data/API layer; the clickable teacher UI is a
   separate piece (this issue's scope was review logic + export).
