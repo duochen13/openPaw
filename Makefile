@@ -28,13 +28,14 @@ help:
 	@echo "openPaw — root make targets (delegation to per-project Makefiles + hooks):"
 	@echo ""
 	@echo "  make hooks            install the docs-sync pre-push hook (git config core.hooksPath githooks && chmod +x githooks/pre-push)"
-	@echo "  make all              alias for pa-all (portfolio-analysis full build + open, below)"
+	@echo "  make all              portfolio-analysis full build + open (canonical command, below)"
 	@echo ""
 	@echo "  homework-pilot/        prefix hp-   (make hp-help for its full list)"
 	@echo "    hp-serve hp-demo hp-test"
 	@echo "  portfolio-analysis/    prefix pa-   (make pa-help for its full list)"
 	@echo "    pa-setup pa-test pa-chart pa-render pa-dashboard pa-ai-trade pa-all"
-	@echo "    pa-all = render + build both dashboards + open them   [OPEN=0: build only]"
+	@echo "    all = render + build both dashboards + open them   [OPEN=0: build only]"
+	@echo "    pa-all = legacy alias for all"
 	@echo "  stock-trading-bot/     prefix stb-  (make stb-help for its full list)"
 	@echo "    stb-setup stb-test stb-check stb-ingest"
 	@echo "  bearish-challenger/    prefix bc-   (make bc-help for its full list)"
@@ -87,10 +88,10 @@ pa-dashboard:
 pa-ai-trade:
 	$(MAKE) -C portfolio-analysis ai-trade-dashboard
 
-pa-all:
+all:
 	$(MAKE) -C portfolio-analysis all
 
-all: pa-all
+pa-all: all
 
 stb-help:
 	$(MAKE) -C stock-trading-bot help
