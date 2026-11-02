@@ -111,7 +111,14 @@ def test_figure_placeholder_renders_labeled_box(three_students):
     with open(by_id["S001"], "rb") as f:
         data = f.read()
     assert b"FIGURE NEEDED" in data
-    assert b"tu dai bu chong" in data  # pinyin for 图待补充
+    # 图待补充 is drawn with the bundled CJK font (issue #185): glyph IDs
+    # in the content stream, real characters on extraction
+    assert b"NotoSansSC" in data
+    if HAS_PDFTOTEXT:
+        text = subprocess.run(
+            ["pdftotext", by_id["S001"], "-"], capture_output=True,
+            text=True, check=True).stdout
+        assert "图待补充" in text
 
 
 def test_chinese_terms_embedded_in_metadata(three_students):
@@ -197,7 +204,7 @@ def test_teacher_key_is_separate_and_has_answers(three_students, tmp_path):
     assert check["ok"] and check["page_count"] >= 1
     assert b"TEACHER KEY" in data
     assert b"100 J" in data                       # the answers
-    assert b"Ping fen shuo ming" in data          # 评分说明 label
+    assert b"NotoSansSC" in data  # 评分说明 label via bundled CJK font
     assert b"Solution steps" in data
 
 
@@ -207,7 +214,11 @@ def test_teacher_key_has_no_answer_space(three_students):
     with open(out.teacher_key_path, "rb") as f:
         data = f.read()
     assert b"Your answer" not in data
-    assert b"xue hao" not in data  # no per-student ID block
+    if HAS_PDFTOTEXT:
+        text = subprocess.run(
+            ["pdftotext", out.teacher_key_path, "-"], capture_output=True,
+            text=True, check=True).stdout
+        assert "学号" not in text  # no per-student ID block
 
 
 @pytest.mark.skipif(not HAS_PDFTOTEXT, reason="pdftotext not installed")
@@ -219,6 +230,8 @@ def test_teacher_key_text_extracts(three_students):
     assert "100 J" in text
     assert "Solution steps" in text
     assert "scoring notes" in text
+    assert "评分说明" in text          # real Chinese, not pinyin (#185)
+    assert "教师版" in text
 
 
 def test_teacher_key_standalone(tmp_path):

@@ -178,5 +178,5 @@ Student-ID-only: there is no name field anywhere in the repo. See `docs/privacy-
 - Teacher sign-off on the skill taxonomy (#112) and on the validation protocol.
 - Field materials (Phase 2 of #108): 5 **real** sample graded papers, the teacher's real assignment + reference answers, teacher consent + data-use consent forms. A synthetic stand-in kit exists (`pilot-kit/`) so engineering is not blocked meanwhile.
 - Real question bank (current generator output is AI-drafted and unvalidated by the teacher).
-- CJK font for print PDFs (PDF export is stdlib-only; Chinese typesetting needs a bundled font).
+- ~~CJK font for print PDFs~~ — **done (#185)**: print PDFs bundle a subset **Noto Sans SC** font (version 2.004-H2, SIL Open Font License 1.1; Regular 2,158,288 bytes + Bold 2,155,896 bytes in `review/assets/fonts/`, GB2312-80 coverage), so student sheets and the teacher key render Chinese verbatim. Details in `review/README.md`; coverage tests in `review/tests/test_cjk_font.py`.
 - Student UI wiring — the student-side MVP UI exists in `webui/` (#176) and, since #179, a local web server (`webui/serve.py`) wires it to the live `grading/` pipeline + confirmation store on the synthetic kit. Using **real** student papers at all still waits on #108 field materials and the Phase 2 school-stance decision. Until then the pilot runs on scripts + generated PDFs.
