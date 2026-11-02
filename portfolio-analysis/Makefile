@@ -1,6 +1,7 @@
 # portfolio-analysis — Makefile shortcuts for the commands documented in
 # README.md. The raw commands in the README stay canonical; every target
-# below wraps one of them and adds no behavior of its own.
+# below wraps one of them and adds no behavior of its own — except `all`,
+# the one composition target at the bottom (issue #186).
 #
 # Targets assume cwd = portfolio-analysis/. From the repo root:
 #   make -C portfolio-analysis <target>
@@ -18,12 +19,13 @@
 TICKER ?=
 DATE ?=
 FLAGS ?= --keyless
+OPEN ?= 1
 
 .DEFAULT_GOAL := help
 
 .PHONY: help setup test test-network test-network-verbose ingest-prices \
 	detect-moves collect-events chart render dashboard factor-dashboard \
-	fetch-fundamentals ai-trade-dashboard open open-ai-trade
+	fetch-fundamentals ai-trade-dashboard open open-ai-trade all
 
 help:
 	@echo "portfolio-analysis — make targets (each wraps the README command shown):"
@@ -42,6 +44,7 @@ help:
 	@echo "  make ai-trade-dashboard  ./run ai-trade-dashboard"
 	@echo "  make open                open out/index.html   [macOS]"
 	@echo "  make open-ai-trade       open out/ai-trade.html   [macOS]"
+	@echo "  make all                 make render + make dashboard + make ai-trade-dashboard, then open both   [OPEN=0: build only, no open]"
 
 setup:
 	uv venv -p 3.13
@@ -88,3 +91,16 @@ open:
 
 open-ai-trade:
 	open out/ai-trade.html
+
+# `all` is the one composition target (issue #186): it chains the
+# wrappers above instead of wrapping a single README command. The
+# prerequisites give fail-fast for free — if render or either
+# dashboard build fails, make stops and nothing is opened, so a stale
+# dashboard is never presented as fresh. OPEN=0 skips the open step
+# so the same target can run headless (scripts/cron).
+all: render dashboard ai-trade-dashboard
+	@if [ "$(OPEN)" != "0" ]; then \
+		$(MAKE) open open-ai-trade; \
+	else \
+		echo "OPEN=0 — dashboards built in out/, not opened."; \
+	fi
