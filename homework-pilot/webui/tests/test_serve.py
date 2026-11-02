@@ -302,5 +302,96 @@ class TestConfirmFlow(ServeTestCase):
         self.assertEqual(data, b"")
 
 
+class RealBackendServeTest(unittest.TestCase):
+    """Backend selection (issue #184): with backend="real" the server
+    grades the uploaded bytes themselves for ANY student ID, through
+    grading.realpaper. The recognizer here is scripted from a kit
+    student's records -- the backend wiring is what is under test, not
+    OCR accuracy (that waits on the #108 sample papers)."""
+
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory()
+        self.data_dir = Path(self._tmp.name) / "data"
+        from grading.backends import load_kit_records
+        from grading.realpaper import recognizer_from_records
+
+        recognizer = recognizer_from_records(load_kit_records(KIT, "S-001"))
+        self.server = make_server(
+            "127.0.0.1", 0,
+            data_dir=self.data_dir, kit_dir=KIT,
+            backend="real", recognizer=recognizer,
+        )
+        self.port = self.server.server_address[1]
+        self._thread = threading.Thread(
+            target=self.server.serve_forever, daemon=True
+        )
+        self._thread.start()
+
+    def tearDown(self) -> None:
+        self.server.shutdown()
+        self.server.server_close()
+        self._thread.join(timeout=5)
+        self._tmp.cleanup()
+
+    def _upload(self, student_id: str, content: bytes):
+        body, content_type = _multipart(
+            {"student_id": student_id}, {"file": ("paper.pdf", content)}
+        )
+        conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=10)
+        try:
+            conn.request(
+                "POST", "/papers", body=body,
+                headers={"Content-Type": content_type},
+            )
+            response = conn.getresponse()
+            response.read()
+            return response.status, dict(response.getheaders())
+        finally:
+            conn.close()
+
+    def test_unknown_student_is_graded_not_unrecognized(self):
+        # S-006 is not a kit student: the kit backend would store this
+        # as 未识别. The real backend grades the upload itself.
+        content = (KIT / "papers" / "S-001" / "paper.pdf").read_bytes()
+        status, headers = self._upload("S-006", content)
+        self.assertEqual(status, 303)
+        paper_id = headers["Location"].rsplit("/", 1)[1]
+        paper, meta = PaperStore(self.data_dir).load(paper_id)
+        self.assertEqual(meta["backend"], "real")
+        self.assertEqual(paper.status, "已出结果")
+        self.assertEqual(len(paper.items), 18)
+        self.assertTrue(paper.decided())  # red marks in the script decide
+        for item in paper.decided():
+            self.assertEqual(item.source, "红笔标记")
+
+    def test_default_recognizer_decides_nothing(self):
+        # A second server with backend="real" and no recognizer wired:
+        # items are recorded, every one pending -- never guessed.
+        server = make_server(
+            "127.0.0.1", 0,
+            data_dir=Path(self._tmp.name) / "data2", kit_dir=KIT,
+            backend="real",
+        )
+        try:
+            app = server.app
+            content = (KIT / "papers" / "S-002" / "paper.pdf").read_bytes()
+            paper, meta = app.grade_upload("S-007", content)
+            self.assertEqual(meta["backend"], "real")
+            self.assertEqual(len(paper.items), 18)
+            self.assertEqual(paper.decided(), ())
+            self.assertTrue(
+                all(i.pending_reason == "unreadable" for i in paper.items)
+            )
+        finally:
+            server.server_close()
+
+    def test_unpageable_pdf_is_stored_unrecognized(self):
+        app = self.server.app
+        paper, meta = app.grade_upload("S-006", b"%PDF-1.4\n%%EOF\n")
+        self.assertEqual(paper.status, "未识别")
+        self.assertEqual(paper.items, ())
+        self.assertIn("backend_error", meta)
+
+
 if __name__ == "__main__":
     unittest.main()
