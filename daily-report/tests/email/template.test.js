@@ -178,7 +178,7 @@ describe('Email Template Builder', () => {
     expect(html).toContain('quickchart.io/chart');
     expect(html).toContain('NVDA');
     expect(html).toContain('42.10%');
-    expect(html).toContain('S&P 500');
+    expect(html).toContain('S&amp;P 500'); // label is HTML-escaped; renders as "S&P 500"
     expect(html).toContain('—'); // SPY null P/E
   });
 
@@ -193,5 +193,56 @@ describe('Email Template Builder', () => {
   test('shows unavailable state when stock data missing', () => {
     const html = buildEmailTemplate(mockPHProducts, mockHNStories, null, null, null);
     expect(html).toContain('Market data unavailable today');
+  });
+
+  describe('HTML injection hardening (issue #151)', () => {
+    const evilPH = [{
+      id: 9,
+      name: '<script>alert(1)</script>',
+      tagline: '<img src=x onerror=alert(2)>',
+      upvotes: 1,
+      comments: 0,
+      url: 'javascript:alert(3)',
+      videoUrl: 'data:text/html;base64,PHNjcmlwdD4='
+    }];
+    const evilHN = [{
+      id: 9,
+      title: '"><svg onload=alert(4)>',
+      url: 'https://example.com/"><script>alert(5)</script>',
+      points: 1,
+      comments: 0
+    }];
+
+    test('escapes Product Hunt name and tagline', () => {
+      const html = buildEmailTemplate(evilPH, mockHNStories);
+      expect(html).not.toContain('<script>alert(1)</script>');
+      expect(html).toContain('&lt;script&gt;alert(1)&lt;/script&gt;');
+      expect(html).not.toContain('<img src=x onerror=alert(2)>');
+      expect(html).toContain('&lt;img src=x onerror=alert(2)&gt;');
+    });
+
+    test('drops non-http(s) Product Hunt link and video URLs', () => {
+      const html = buildEmailTemplate(evilPH, mockHNStories);
+      expect(html).not.toContain('javascript:alert(3)');
+      expect(html).not.toContain('data:text/html');
+      expect(html).not.toContain('<video');
+    });
+
+    test('escapes Hacker News title and neutralises a quote-breakout URL', () => {
+      const html = buildEmailTemplate(mockPHProducts, evilHN);
+      expect(html).not.toContain('<svg onload=alert(4)>');
+      expect(html).toContain('&lt;svg onload=alert(4)&gt;');
+      expect(html).not.toContain('"><script>alert(5)</script>');
+    });
+
+    test('escapes spending merchant names', () => {
+      const evilSpending = {
+        total: 1.00,
+        transactions: [{ merchant: '<b>Fake</b>', amount: 1.00, date: '2026-05-31', category: 'Other' }]
+      };
+      const html = buildEmailTemplate(mockPHProducts, mockHNStories, evilSpending);
+      expect(html).not.toContain('<b>Fake</b>');
+      expect(html).toContain('&lt;b&gt;Fake&lt;/b&gt;');
+    });
   });
 });

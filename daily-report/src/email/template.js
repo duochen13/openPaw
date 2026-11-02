@@ -1,5 +1,33 @@
 const { getStyles } = require('./styles');
 
+// Issue #151: third-party strings (Product Hunt / Hacker News titles,
+// Plaid merchant names, receipt-parsed restaurant and item names) were
+// interpolated into the digest HTML unescaped, so a crafted title or
+// merchant string could inject markup into the email. Escape every
+// dynamic text value, and only let http(s) URLs into href/src slots.
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// Returns an attribute-safe URL, or null when the value is not a valid
+// http(s) URL (e.g. javascript:, data:, protocol-relative, or malformed).
+function safeHttpUrl(value) {
+  if (typeof value !== 'string' || value.trim() === '') return null;
+  let parsed;
+  try {
+    parsed = new URL(value);
+  } catch {
+    return null;
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
+  return escapeHtml(parsed.toString());
+}
+
 // Tech/startup-themed jokes personalized for a Columbia CS student
 const JOKES = [
   "Why do Columbia CS students love Product Hunt? Because launching products is easier than finding laundry machines in the dorms! 🎓",
@@ -39,7 +67,7 @@ function buildSpendingSummarySection(spendingData) {
 
   const transactionLines = spendingData.transactions.map(t => {
     const emoji = categoryEmojis[t.category] || categoryEmojis['Other'];
-    return `${emoji} ${t.merchant} - $${t.amount.toFixed(2)}`;
+    return `${emoji} ${escapeHtml(t.merchant)} - $${t.amount.toFixed(2)}`;
   }).join('<br>');
 
   return `
@@ -103,7 +131,7 @@ function buildFoodOrdersSection(foodOrdersData) {
 
       return `
         <div style="margin: 8px 0; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 4px;">
-          <div style="font-weight: bold;">${item.name} ${item.quantity > 1 ? `x${item.quantity}` : ''}</div>
+          <div style="font-weight: bold;">${escapeHtml(item.name)} ${item.quantity > 1 ? `x${item.quantity}` : ''}</div>
           <div style="font-size: 13px; margin-top: 4px; opacity: 0.9;">
             ${nutrition.totalCalories} cal | ${nutrition.totalProtein}g protein | ${nutrition.totalCarbs}g carbs | ${nutrition.totalFat}g fat
             ${estimateBadge}
@@ -115,7 +143,7 @@ function buildFoodOrdersSection(foodOrdersData) {
     return `
       <div style="margin: 15px 0; padding: 12px; background: rgba(255,255,255,0.15); border-radius: 6px;">
         <div style="font-weight: bold; font-size: 16px; margin-bottom: 8px;">
-          ${platformEmoji} ${orderTime} - ${order.restaurant}
+          ${platformEmoji} ${orderTime} - ${escapeHtml(order.restaurant)}
         </div>
         ${itemsHTML}
         <div style="margin-top: 8px; font-size: 14px; opacity: 0.9;">
@@ -236,7 +264,7 @@ function buildUberEatsHighlightsSection(foodOrdersData) {
 
       <div style="padding: 12px; background: rgba(255,255,255,0.2); border-radius: 6px; border-left: 4px solid rgba(255,255,255,0.5);">
         <p style="font-size: 14px; opacity: 0.9; margin: 0 0 5px 0;">🏆 Biggest Order</p>
-        <p style="font-size: 16px; font-weight: bold; margin: 0;">${topOrder.restaurant} - $${topOrder.total.toFixed(2)}</p>
+        <p style="font-size: 16px; font-weight: bold; margin: 0;">${escapeHtml(topOrder.restaurant)} - $${topOrder.total.toFixed(2)}</p>
         <p style="font-size: 13px; opacity: 0.9; margin: 5px 0 0 0;">${topOrder.items.length} items • ${topOrder.items.reduce((sum, item) => sum + (item.nutrition?.totalCalories || 0), 0)} cal</p>
       </div>
 
@@ -250,7 +278,7 @@ function buildUberEatsHighlightsSection(foodOrdersData) {
           });
           return `
             <div style="padding: 10px; background: rgba(255,255,255,0.15); border-radius: 6px; margin-bottom: 8px;">
-              <div style="font-weight: bold; font-size: 15px;">${order.restaurant}</div>
+              <div style="font-weight: bold; font-size: 15px;">${escapeHtml(order.restaurant)}</div>
               <div style="font-size: 13px; opacity: 0.9; margin-top: 4px;">
                 🕐 ${orderTime} • $${order.total.toFixed(2)} • ${order.items.length} items
               </div>
@@ -274,7 +302,7 @@ function buildStockSection(stockData) {
   }
 
   const { buildPeBarChartUrl } = require('./stockChart');
-  const chartUrl = buildPeBarChartUrl(stockData.holdings);
+  const chartUrl = safeHttpUrl(buildPeBarChartUrl(stockData.holdings));
   const chartImg = chartUrl
     ? `<img src="${chartUrl}" alt="P/E ratio by symbol for the watchlist" width="100%" style="border-radius: 6px; background: white; margin-bottom: 15px;">`
     : '';
@@ -290,7 +318,7 @@ function buildStockSection(stockData) {
     const pe = (h.peRatio === null || h.peRatio === undefined) ? '—' : h.peRatio.toFixed(1);
     return `
       <tr>
-        <td style="padding: 6px 8px;"><strong>${h.symbol}</strong> <span style="opacity: 0.8; font-size: 13px;">${h.label}</span></td>
+        <td style="padding: 6px 8px;"><strong>${escapeHtml(h.symbol)}</strong> <span style="opacity: 0.8; font-size: 13px;">${escapeHtml(h.label)}</span></td>
         <td style="padding: 6px 8px; text-align: right;">$${h.price.toFixed(2)}</td>
         <td style="padding: 6px 8px; text-align: right; color: ${color}; font-weight: bold;">${arrow} ${h.ytdReturnPct.toFixed(2)}%</td>
         <td style="padding: 6px 8px; text-align: right;">${pe}</td>
@@ -408,21 +436,28 @@ function buildEmailTemplate(phProducts, hnStories, spendingData, foodOrdersData 
 
 function buildProductHuntSection(products) {
   return products.map(product => {
-    const videoEmbed = product.videoUrl
+    const videoUrl = safeHttpUrl(product.videoUrl);
+    const videoEmbed = videoUrl
       ? `<div class="video-container">
            <video controls width="100%" style="max-height: 300px;">
-             <source src="${product.videoUrl}" type="video/mp4">
+             <source src="${videoUrl}" type="video/mp4">
              Your email client doesn't support video.
            </video>
          </div>`
       : '';
 
+    const productUrl = safeHttpUrl(product.url);
+    const nameHtml = escapeHtml(product.name);
+    const titleHtml = productUrl
+      ? `<a href="${productUrl}">${nameHtml}</a>`
+      : nameHtml;
+
     return `
       <div class="item">
         <div class="item-title">
-          <a href="${product.url}">${product.name}</a>
+          ${titleHtml}
         </div>
-        <div class="item-tagline">${product.tagline}</div>
+        <div class="item-tagline">${escapeHtml(product.tagline)}</div>
         ${videoEmbed}
         <div class="item-meta">
           👍 ${product.upvotes} upvotes • 💬 ${product.comments} comments
@@ -434,10 +469,16 @@ function buildProductHuntSection(products) {
 
 function buildHackerNewsSection(stories) {
   return stories.map(story => {
+    const storyUrl = safeHttpUrl(story.url);
+    const titleHtmlText = escapeHtml(story.title);
+    const titleHtml = storyUrl
+      ? `<a href="${storyUrl}">${titleHtmlText}</a>`
+      : titleHtmlText;
+
     return `
       <div class="item">
         <div class="item-title">
-          <a href="${story.url}">${story.title}</a>
+          ${titleHtml}
         </div>
         <div class="item-meta">
           ⬆️ ${story.points} points • 💬 ${story.comments} comments
@@ -447,4 +488,4 @@ function buildHackerNewsSection(stories) {
   }).join('');
 }
 
-module.exports = { buildEmailTemplate };
+module.exports = { buildEmailTemplate, escapeHtml, safeHttpUrl };
