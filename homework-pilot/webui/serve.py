@@ -13,7 +13,12 @@ Run it from ``homework-pilot/``::
 It binds **127.0.0.1 only** by default: a single-student local tool,
 no accounts, no auth, no deployment story. Everything is stdlib
 (``http.server.ThreadingHTTPServer``); there is no build step and the
-static render path is untouched.
+static render path is untouched. Binding loopback is not by itself a
+boundary, though: since issue #191 the handler validates ``Host`` on
+every request (loopback allowlist -- this also closes DNS-rebinding
+reads of the GET pages) and, on the state-changing POSTs, requires a
+present ``Origin`` to be the server's own, so a web page the operator
+happens to visit cannot drive the upload/confirm endpoints (CSRF).
 
 Routes (deliberately small):
 
@@ -114,6 +119,33 @@ STUDENT_ID_RE = re.compile(r"^S-\d{3}$")
 UNRECOGNIZED_STATUS = "未识别"
 
 _PAGE_ID_RE = re.compile(r"^S-\d{3}-\d{2,}$")
+
+#: Hostnames the local server answers to (issue #191). Any other name
+#: in a Host or Origin header means the request did not come from the
+#: shipped pages: a cross-site form/fetch POST, or a DNS-rebinding
+#: probe using a public name that resolves to loopback.
+_LOOPBACK_HOSTNAMES = frozenset({"127.0.0.1", "localhost", "::1"})
+
+
+def _split_authority(value: str) -> tuple[str, int]:
+    """Split a Host/Origin authority into (lowercased hostname, port).
+
+    The port falls back to the http default (80) when absent, so an
+    authority that omits it only ever matches a server bound to 80.
+    """
+    value = value.strip().lower()
+    if value.startswith("["):
+        end = value.find("]")
+        if end == -1:
+            return value, 80
+        hostname, rest = value[1:end], value[end + 1:]
+        if rest.startswith(":") and rest[1:].isdigit():
+            return hostname, int(rest[1:])
+        return hostname, 80
+    hostname, sep, port = value.rpartition(":")
+    if sep and port.isdigit():
+        return hostname, int(port)
+    return value, 80
 
 
 def _deps():
@@ -888,8 +920,51 @@ def make_server(
                 return None
             return self.rfile.read(length)
 
+        # -- origin/host guard (issue #191) --------------------------
+        def _authority_trusted(self, hostname: str, port: int) -> bool:
+            bound_host, bound_port = self.server.server_address[:2]
+            if port != bound_port:
+                return False
+            return (
+                hostname in _LOOPBACK_HOSTNAMES
+                or hostname == str(bound_host).lower()
+            )
+
+        def _host_trusted(self) -> bool:
+            raw = self.headers.get("Host")
+            if raw is None:
+                return False
+            return self._authority_trusted(*_split_authority(raw))
+
+        def _origin_trusted(self) -> bool:
+            origin = self.headers.get("Origin")
+            if origin is None:
+                # Non-browser clients (curl, these tests) send no
+                # Origin; the Host allowlist above is their gate.
+                return True
+            parsed = urlparse(origin)
+            if parsed.scheme != "http" or not parsed.netloc:
+                return False
+            return self._authority_trusted(*_split_authority(parsed.netloc))
+
+        def _guard(self, *, state_changing: bool) -> bool:
+            """Refuse requests that did not come from the shipped pages.
+
+            Returns True when the request may proceed; otherwise a
+            403 has already been sent and no state has been touched.
+            """
+            if not self._host_trusted():
+                self._error(403, "请求被拒绝：Host 不在本机允许范围内。")
+                return False
+            if state_changing and not self._origin_trusted():
+                self._error(403, "请求被拒绝：Origin 与本机服务不一致。")
+                return False
+            return True
+
         # -- routes ---------------------------------------------------
         def do_GET(self):
+            if not self._guard(state_changing=False):
+                return
             path = urlparse(self.path).path
             if path == "/":
                 self._send_html(200, _papers_page(app))
@@ -916,6 +991,8 @@ def make_server(
                 self._error(404, "没有这个页面。")
 
         def do_POST(self):
+            if not self._guard(state_changing=True):
+                return
             path = urlparse(self.path).path
             if path == "/papers":
                 self._post_paper()
