@@ -393,5 +393,115 @@ class RealBackendServeTest(unittest.TestCase):
         self.assertIn("backend_error", meta)
 
 
+class TestOriginHostGuard(ServeTestCase):
+    """Issue #191: state-changing POSTs are only accepted from the
+    server's own pages. A cross-origin simple request (foreign Origin,
+    or a non-loopback Host as in DNS rebinding) is refused with 403
+    and mutates no state; same-origin browser flows and Origin-less
+    local clients keep working."""
+
+    EVIL_ORIGIN = "http://evil.example:8000"
+
+    def confirm_with(self, headers, paper_id, item_key, **fields):
+        from urllib.parse import urlencode
+
+        body = urlencode(
+            {"paper_id": paper_id, "item_key": item_key, **fields}
+        ).encode("utf-8")
+        merged = {"Content-Type": "application/x-www-form-urlencoded"}
+        merged.update(headers)
+        return self.request("POST", "/confirm", body=body, headers=merged)
+
+    def item(self, paper_id, item_key):
+        paper, _meta = PaperStore(self.data_dir).load(paper_id)
+        return next(i for i in paper.items if i.item_key == item_key)
+
+    def test_foreign_origin_confirm_rejected_and_mutates_nothing(self):
+        paper_id = self.upload_kit_paper("S-005")
+        status, _h, _d = self.confirm_with(
+            {"Origin": self.EVIL_ORIGIN}, paper_id, "Q11#c", action="accept"
+        )
+        self.assertEqual(status, 403)
+        item = self.item(paper_id, "Q11#c")
+        self.assertFalse(item.confirmed)
+        self.assertEqual(item.verdict, "待确认")
+        # The same submission without the foreign Origin still works,
+        # proving the 403 left the queue item untouched.
+        status, _h, _d = self.confirm(paper_id, "Q11#c", action="accept")
+        self.assertEqual(status, 303)
+        self.assertTrue(self.item(paper_id, "Q11#c").confirmed)
+
+    def test_foreign_origin_upload_rejected_and_stores_nothing(self):
+        content = (KIT / "papers" / "S-001" / "paper.pdf").read_bytes()
+        body, content_type = _multipart(
+            {"student_id": "S-001"}, {"file": ("paper.pdf", content)}
+        )
+        status, _h, _d = self.request(
+            "POST",
+            "/papers",
+            body=body,
+            headers={"Content-Type": content_type, "Origin": self.EVIL_ORIGIN},
+        )
+        self.assertEqual(status, 403)
+        status, page = self.get("/")
+        self.assertEqual(status, 200)
+        self.assertIn("还没有上传的试卷", page)
+
+    def test_opaque_origin_rejected(self):
+        paper_id = self.upload_kit_paper("S-005")
+        status, _h, _d = self.confirm_with(
+            {"Origin": "null"}, paper_id, "Q11#c", action="accept"
+        )
+        self.assertEqual(status, 403)
+        self.assertFalse(self.item(paper_id, "Q11#c").confirmed)
+
+    def test_wrong_port_origin_rejected(self):
+        paper_id = self.upload_kit_paper("S-005")
+        status, _h, _d = self.confirm_with(
+            {"Origin": "http://127.0.0.1:1"}, paper_id, "Q11#c", action="accept"
+        )
+        self.assertEqual(status, 403)
+        self.assertFalse(self.item(paper_id, "Q11#c").confirmed)
+
+    def test_foreign_host_post_rejected(self):
+        paper_id = self.upload_kit_paper("S-005")
+        status, _h, _d = self.confirm_with(
+            {"Host": f"evil.example:{self.port}"},
+            paper_id, "Q11#c", action="accept",
+        )
+        self.assertEqual(status, 403)
+        self.assertFalse(self.item(paper_id, "Q11#c").confirmed)
+
+    def test_foreign_host_get_rejected(self):
+        # The Host allowlist also closes DNS-rebinding reads.
+        status, _h, _d = self.request(
+            "GET", "/", headers={"Host": "evil.example"}
+        )
+        self.assertEqual(status, 403)
+
+    def test_same_origin_posts_accepted(self):
+        content = (KIT / "papers" / "S-001" / "paper.pdf").read_bytes()
+        body, content_type = _multipart(
+            {"student_id": "S-001"}, {"file": ("paper.pdf", content)}
+        )
+        status, headers, _d = self.request(
+            "POST",
+            "/papers",
+            body=body,
+            headers={
+                "Content-Type": content_type,
+                "Origin": f"http://localhost:{self.port}",
+            },
+        )
+        self.assertEqual(status, 303)
+        paper_id = self.upload_kit_paper("S-005")
+        status, _h, _d = self.confirm_with(
+            {"Origin": f"http://127.0.0.1:{self.port}"},
+            paper_id, "Q11#c", action="accept",
+        )
+        self.assertEqual(status, 303)
+        self.assertTrue(self.item(paper_id, "Q11#c").confirmed)
+
+
 if __name__ == "__main__":
     unittest.main()
